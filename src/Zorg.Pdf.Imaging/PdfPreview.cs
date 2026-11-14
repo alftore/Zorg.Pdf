@@ -15,7 +15,6 @@ namespace Zorg.Pdf.Imaging;
 /// Pictures of pages of a PDF that Zorg.Pdf wrote, for checking a layout by looking: an agent after rendering, a
 /// person in <c>zorg-pdf watch</c>, a thumbnail in an app. It reads only Zorg.Pdf's own output (anything else throws
 /// <see cref="PdfPreviewException"/>), draws with Zorg.Imaging's canvas, and gives the same pixels on every machine.
-/// The canvas is experimental in Zorg.Imaging, so this API may change too.
 /// </summary>
 /// <example>
 /// <code>

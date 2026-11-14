@@ -3,8 +3,6 @@
   <PropertyGroup>
     <Description>Image handling for Zorg.Pdf built on Zorg.Imaging: WebP, GIF, BMP and TIFF, EXIF orientation, sRGB conversion, and photos shrunk to the resolution they're printed at.</Description>
     <PackageTags>pdf;images;webp;exif;jpeg;png;report</PackageTags>
-    <!-- Previews draw with Zorg.Imaging's canvas, which is experimental (ZORGDRAW); PdfPreview says so in its docs. -->
-    <NoWarn>$(NoWarn);ZORGDRAW</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -45,6 +45,23 @@ public sealed class ImagingProcessorTests
     }
 
     [Fact]
+    public async Task CmykPhotosBecomeSrgbUnlessTheirInksAreKept()
+    {
+        byte[] cmyk = TestImages.Jpeg(400, 200, components: 4);
+        var keep = new ImagingProcessor { KeepCmyk = true, Resolution = 72 };
+
+        PdfImage? converted = await new ImagingProcessor().ProcessAsync(Request(cmyk, 400, 200), TestContext.Current.CancellationToken);
+        PdfImage? untouched = await keep.ProcessAsync(Request(cmyk, 400, 200), TestContext.Current.CancellationToken);
+        PdfImage? shrunk = await keep.ProcessAsync(Request(cmyk, 100, 50), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(converted); // Decoded to sRGB, as the screen wants (see the test above).
+        Assert.Null(untouched); // Left to Zorg.Pdf, which embeds a CMYK JPEG as DeviceCMYK.
+        (byte[] file, _) = await RenderAsync(cmyk, width: Length.Pt(100), keep);
+        Assert.Matches(@"/Width 100 /Height 50 /ColorSpace /DeviceCMYK /BitsPerComponent 8 /Filter /FlateDecode", PdfInspect.Text(file));
+        Assert.NotNull(shrunk);
+    }
+
+    [Fact]
     public async Task ACmykJpegWithoutAProfileBecomesSrgbToo()
     {
         // Zorg.Pdf alone embeds it as DeviceCMYK, which PDF/A with an sRGB output intent rejects; the processor converts it.

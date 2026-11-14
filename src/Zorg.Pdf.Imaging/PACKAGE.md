@@ -8,7 +8,7 @@ Zorg.Pdf reads JPEG and PNG by itself. With `ImagingProcessor` it also:
 
 - reads **WebP, GIF, BMP and TIFF**;
 - turns camera photos **the right way up** from their EXIF orientation;
-- converts **CMYK and ICC-profiled** images to sRGB;
+- converts **CMYK and ICC-profiled** images to sRGB, or with `KeepCmyk = true` keeps CMYK inks for print;
 - **shrinks** images larger than they're printed at, to 300 dpi by default, and draws them at their original size.
 
 JPEG and PNG that need none of that are embedded untouched.
@@ -29,7 +29,7 @@ await document.RenderAsync(output, options, cancellationToken);
 
 `PdfPreview` draws pages of a PDF that Zorg.Pdf wrote as PNG, so a person or an agent can check a layout by looking.
 It reads only Zorg.Pdf's own output and refuses anything else, and gives the same pixels on every machine. It draws
-with Zorg.Imaging's canvas, which is experimental, so this API may change too.
+with Zorg.Imaging's canvas.
 
 ```csharp
 byte[] png = await PdfPreview.RenderPagePngAsync(pdf, page: 0, new PreviewOptions { Dpi = 96 }, cancellationToken);

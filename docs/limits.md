@@ -33,7 +33,7 @@ Fonts come from the caller, never from a document; a damaged font is ZPDF-F005.
 - **Links** work in headings, paragraphs and list items; not yet in table cells, text boxes, headers or footers. They're coloured, not underlined.
 - **Ids and bookmarks:** ids work on top-level blocks only; a table, image or list that moves to the next page whole is found a page early by its destination. Headings in lists, tables and boxes don't become bookmarks.
 - **PDF/A-2 only** (2b, 2u, 2a), with an sRGB output intent: no PDF/A-3 (attachments) or PDF/A-4 yet, and CMYK images must be converted to RGB (`ImagingProcessor` does).
-- **Page previews read only Zorg.Pdf's own PDFs** (`PdfPreview` refuses others), draw DeviceCMYK images with a plain conversion rather than a colour profile, and depend on Zorg.Imaging's experimental canvas.
+- **Page previews read only Zorg.Pdf's own PDFs** (`PdfPreview` refuses others), draw DeviceCMYK images with a plain conversion rather than a colour profile.
 - **Fonts:** TrueType outlines only (`.ttf`, and the TrueType faces of collections, `.ttc`); no CFF (`.otf` with PostScript outlines), no symbol fonts.
 - **Markdown** (`Zorg.Pdf.Markdown`): raw HTML is left out; strikethrough is drawn plain; an image inside a line of text keeps only its description; links in table cells keep only their text; headings, tables and code inside list items are flattened or left out; footnotes, definition lists and maths aren't read. Each is reported.
 - **Text:** pair kerning only. No ligatures, no Arabic joining or Indic shaping, no right-to-left text, hyphenation by patterns for English, German, French, Norwegian and Danish only (`Zorg.Pdf.Hyphenation`), greedy line breaking (no paragraph-wide optimisation).

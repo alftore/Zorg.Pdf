@@ -39,6 +39,18 @@ public sealed class ImagingProcessor : IImageProcessor
     /// <summary>Limits on the images read, before anything is allocated. Zorg.Pdf's own limits apply too.</summary>
     public ImageLimits Limits { get; init; } = ImageLimits.Default;
 
+    /// <summary>
+    /// Keeps CMYK images (four-component JPEG, separated TIFF) as their inks, written as <c>DeviceCMYK</c>, instead of
+    /// converting them to sRGB: for print, where the printer's separations should come through untouched. Off by
+    /// default. Not for PDF/A (<see cref="RenderOptions.Archive"/>), whose sRGB output intent forbids CMYK.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// var print = new RenderOptions { Fonts = fonts, ImageProcessor = new ImagingProcessor { KeepCmyk = true } };
+    /// </code>
+    /// </example>
+    public bool KeepCmyk { get; init; }
+
     /// <inheritdoc/>
     /// <remarks>The work is synchronous, so this processor also serves synchronous renders.</remarks>
     public ValueTask<PdfImage?> ProcessAsync(ImageRequest request, CancellationToken cancellationToken)
@@ -80,6 +92,19 @@ public sealed class ImagingProcessor : IImageProcessor
             return null; // Zorg.Pdf embeds it as it is.
         }
 
+        if (KeepCmyk && (cmyk || info.Format == ImageFormat.Tiff))
+        {
+            if (info.Format == ImageFormat.Jpeg && !tooLarge && !turned)
+            {
+                return null; // Zorg.Pdf embeds a CMYK JPEG as DeviceCMYK, untouched.
+            }
+
+            if (Inks(bytes, tooLarge ? (targetWidth, targetHeight) : null, targetWidth, targetHeight) is { } inks)
+            {
+                return inks with { NaturalWidth = info.DisplayWidth, NaturalHeight = info.DisplayHeight };
+            }
+        }
+
         // A JPEG larger than it's drawn decodes at 1/2, 1/4 or 1/8 size straight away (still at least twice the target).
         // Grey, RGB or RGBA go into a PDF image directly; anything else (16-bit, BGRA) is converted to RGBA.
         ZorgImage native = ZorgImage.Decode(bytes, new DecodeOptions { Limits = Limits, ApplyOrientation = true, ShrinkTo = tooLarge ? (targetWidth, targetHeight) : null });
@@ -119,6 +144,24 @@ public sealed class ImagingProcessor : IImageProcessor
                 image.Dispose();
             }
         }
+    }
+
+    /// <summary>A CMYK file as its inks, oriented and fitted, as DeviceCMYK pixels; null when the file isn't CMYK.</summary>
+    private PdfImage? Inks(ReadOnlyMemory<byte> bytes, (int Width, int Height)? shrinkTo, int targetWidth, int targetHeight)
+    {
+        using CmykImage? inks = ZorgImage.DecodeCmyk(bytes, new DecodeOptions { Limits = Limits, ApplyOrientation = true, ShrinkTo = shrinkTo });
+        if (inks is null)
+        {
+            return null;
+        }
+
+        if (inks.Width > targetWidth || inks.Height > targetHeight)
+        {
+            using CmykImage fitted = inks.Map(plane => plane.Fit(targetWidth, targetHeight));
+            return PdfImage.FromPixels(fitted.Width, fitted.Height, PdfPixelFormat.Cmyk32, fitted.ToInterleaved());
+        }
+
+        return PdfImage.FromPixels(inks.Width, inks.Height, PdfPixelFormat.Cmyk32, inks.ToInterleaved());
     }
 
     /// <summary>The number of colour components in a JPEG's frame header, or 0 when there's none.</summary>
