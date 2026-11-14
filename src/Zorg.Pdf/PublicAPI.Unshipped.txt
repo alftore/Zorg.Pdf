@@ -47,12 +47,16 @@ Zorg.Pdf.Cell.Align.get -> Zorg.Pdf.TextAlign?
 Zorg.Pdf.Cell.Align.init -> void
 Zorg.Pdf.Cell.Cell() -> void
 Zorg.Pdf.Cell.Cell(string! text) -> void
+Zorg.Pdf.Cell.ColumnSpan.get -> int
+Zorg.Pdf.Cell.ColumnSpan.init -> void
 Zorg.Pdf.Cell.Equals(Zorg.Pdf.Cell? other) -> bool
 override Zorg.Pdf.Cell.Equals(object? obj) -> bool
 static Zorg.Pdf.Cell.FromString(string! text) -> Zorg.Pdf.Cell!
 override Zorg.Pdf.Cell.GetHashCode() -> int
 Zorg.Pdf.Cell.Inlines.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Inline!>
 Zorg.Pdf.Cell.Inlines.init -> void
+Zorg.Pdf.Cell.RowSpan.get -> int
+Zorg.Pdf.Cell.RowSpan.init -> void
 override Zorg.Pdf.Cell.ToString() -> string!
 static Zorg.Pdf.Cell.implicit operator Zorg.Pdf.Cell!(string! text) -> Zorg.Pdf.Cell!
 static Zorg.Pdf.Cell.operator !=(Zorg.Pdf.Cell? left, Zorg.Pdf.Cell? right) -> bool

@@ -153,8 +153,14 @@ public readonly record struct ColumnWidth
 }
 
 /// <summary>
-/// A table cell. A string converts to a cell. In JSON a cell is a string, or <c>{ "inlines": [...], "align": "right" }</c>.
+/// A table cell. A string converts to a cell. In JSON a cell is a string, or
+/// <c>{ "inlines": [...], "align": "right", "columnSpan": 2, "rowSpan": 1 }</c>.
 /// </summary>
+/// <example>
+/// <code>
+/// var total = new Cell("Total") { ColumnSpan = 3, Align = TextAlign.Right };
+/// </code>
+/// </example>
 [JsonConverter(typeof(CellJsonConverter))]
 public sealed record Cell
 {
@@ -173,6 +179,12 @@ public sealed record Cell
 
     /// <summary>Alignment, overriding the column's.</summary>
     public TextAlign? Align { get; init; }
+
+    /// <summary>How many columns the cell covers, from its own: 1 by default.</summary>
+    public int ColumnSpan { get; init; } = 1;
+
+    /// <summary>How many rows the cell covers, from its own: 1 by default. Rows joined by a span stay on one page.</summary>
+    public int RowSpan { get; init; } = 1;
 
     /// <summary>A cell of plain text.</summary>
     /// <param name="text">The text.</param>

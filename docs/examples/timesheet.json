@@ -83,6 +83,91 @@
           }
         }
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "keepWithNext": true,
+      "inlines": [
+        "Summary by project"
+      ]
+    },
+    {
+      "type": "table",
+      "columns": [
+        {
+          "header": "Project",
+          "width": "2*"
+        },
+        {
+          "header": "Task",
+          "width": "3*"
+        },
+        {
+          "header": "Hours",
+          "width": "*",
+          "align": "right"
+        }
+      ],
+      "rows": [
+        [
+          {
+            "inlines": [
+              "Zorg.Pdf"
+            ],
+            "rowSpan": 2
+          },
+          "Tables and pagination",
+          "41.5"
+        ],
+        [
+          "Benchmarks",
+          "12.0"
+        ],
+        [
+          {
+            "inlines": [
+              "Zorg.Ssh"
+            ],
+            "rowSpan": 2
+          },
+          "Code review",
+          "18.5"
+        ],
+        [
+          "Documentation",
+          "9.0"
+        ],
+        [
+          "Internal",
+          "Planning",
+          "14.0"
+        ],
+        [
+          {
+            "inlines": [
+              {
+                "text": "Total",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ],
+            "columnSpan": 2,
+            "align": "right"
+          },
+          {
+            "inlines": [
+              {
+                "text": "95.0",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          }
+        ]
+      ]
     }
   ]
 }

@@ -217,19 +217,24 @@
       }
     },
     "cell": {
-      "description": "A cell: a string, or inlines with an alignment.",
+      "description": "A cell: a string, or inlines with an alignment and spans.",
       "oneOf": [
         { "type": "string" },
         {
           "type": "object",
           "required": ["inlines"],
           "additionalProperties": false,
-          "properties": { "inlines": { "$ref": "#/$defs/inlines" }, "align": { "$ref": "#/$defs/textAlign" } }
+          "properties": {
+            "inlines": { "$ref": "#/$defs/inlines" },
+            "align": { "$ref": "#/$defs/textAlign" },
+            "columnSpan": { "description": "How many columns the cell covers.", "type": "integer", "minimum": 1, "default": 1 },
+            "rowSpan": { "description": "How many rows the cell covers. Rows joined by a span stay on one page.", "type": "integer", "minimum": 1, "default": 1 }
+          }
         }
       ]
     },
     "table": {
-      "description": "A table with a header row of column titles. Rows never split across pages; the header repeats on each page.",
+      "description": "A table with a header row of column titles that repeats on each page. A row taller than a page splits across pages; other rows don't.",
       "type": "object",
       "required": ["type", "columns"],
       "additionalProperties": false,

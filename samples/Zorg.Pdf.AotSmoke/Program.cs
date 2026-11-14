@@ -245,6 +245,30 @@ byte[] font = File.ReadAllBytes(fontPath);
     }
 }
 
+// 0.2 slice 4: a table row taller than a page splits, one TR and TD across pages; cells span columns and rows.
+{
+    string tall = string.Join("\n", Enumerable.Range(1, 90).Select(i => $"Clause {i}: the parties agree to the terms set out here."));
+    var splitDocument = new PdfDocument("Terms")
+    {
+        Content =
+        [
+            new Heading("Terms"),
+            new Table([new Column("Section") { Width = ColumnWidth.Star(1) }, new Column("Text") { Width = ColumnWidth.Star(4) }, new Column("Pages") { Align = TextAlign.Right }])
+            {
+                Rows = TableRows.Inline([[new Cell("General") { RowSpan = 2 }, "Short clause.", "1"], ["Another short clause.", "1"], ["Details", tall, "1-3"], [new Cell("End of terms") { ColumnSpan = 3 }]]),
+            },
+        ],
+    };
+    var splitOptions = new RenderOptions { Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }), Conformance = PdfConformance.PdfUA1 };
+    using var split = new MemoryStream();
+    RenderResult splitResult = splitDocument.RenderAsync(split, splitOptions).AsTask().GetAwaiter().GetResult();
+    Check("tables: split row and spans", !splitResult.HasWarnings && splitResult.PageCount >= 2);
+    if (saveTo is not null)
+    {
+        File.WriteAllBytes(Path.Combine(saveTo, "tables.pdf"), split.ToArray());
+    }
+}
+
 // 0.1 slice 9: the agent tools, called as a chat client calls them, with JSON arguments.
 {
     var tools = Zorg.Pdf.Extensions.AI.PdfTools.Create(new Zorg.Pdf.Extensions.AI.PdfToolOptions

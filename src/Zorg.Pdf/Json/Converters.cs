@@ -33,7 +33,7 @@ internal sealed class PdfJsonException : JsonException
     /// A JSON pointer below the serializer's path, for problems inside a value a converter reads in parts. The
     /// serializer only knows the path to the converter's value.
     /// </summary>
-    public string Suffix { get; private init; } = "";
+    public string Suffix { get; init; } = "";
 
     /// <summary>Wraps a failure in a nested read, keeping its code, message and pointer under <paramref name="name"/>.</summary>
     public static PdfJsonException Nested(string name, JsonException inner)
@@ -390,11 +390,12 @@ internal sealed class CellJsonConverter : JsonConverter<Cell>
 
         if (reader.TokenType != JsonTokenType.StartObject)
         {
-            throw PdfJsonException.Invalid("Expected a cell: a string, or { \"inlines\": [...], \"align\": ... }.");
+            throw PdfJsonException.Invalid("Expected a cell: a string, or { \"inlines\": [...], \"align\": ..., \"columnSpan\": 2 }.");
         }
 
         ImmutableArray<Inline>? inlines = null;
         TextAlign? align = null;
+        int columnSpan = 1, rowSpan = 1;
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
             string name = reader.GetString()!;
@@ -407,19 +408,27 @@ internal sealed class CellJsonConverter : JsonConverter<Cell>
                 case "align":
                     align = PdfJsonException.Read<TextAlign>(ref reader, options, "align");
                     break;
+                case "columnSpan" when reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int columns):
+                    columnSpan = columns;
+                    break;
+                case "rowSpan" when reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int rows):
+                    rowSpan = rows;
+                    break;
+                case "columnSpan" or "rowSpan":
+                    throw new PdfJsonException(DiagnosticCodes.InvalidJson, $"\"{name}\" must be a whole number.") { Suffix = "/" + name };
                 default:
-                    throw PdfJsonException.UnknownProperty(name, "inlines or align");
+                    throw PdfJsonException.UnknownProperty(name, "inlines, align, columnSpan or rowSpan");
             }
         }
 
         return inlines is { } found
-            ? new Cell { Inlines = found, Align = align }
+            ? new Cell { Inlines = found, Align = align, ColumnSpan = columnSpan, RowSpan = rowSpan }
             : throw new PdfJsonException(DiagnosticCodes.MissingProperty, "A cell object needs \"inlines\".");
     }
 
     public override void Write(Utf8JsonWriter writer, Cell value, JsonSerializerOptions options)
     {
-        if (value.Align is null && value.Inlines is [TextRun { Style: null } run])
+        if (value.Align is null && value.ColumnSpan == 1 && value.RowSpan == 1 && value.Inlines is [TextRun { Style: null } run])
         {
             writer.WriteStringValue(run.Text);
             return;
@@ -432,6 +441,16 @@ internal sealed class CellJsonConverter : JsonConverter<Cell>
         {
             writer.WritePropertyName("align");
             JsonSerializer.Serialize(writer, align, (JsonTypeInfo<TextAlign>)options.GetTypeInfo(typeof(TextAlign)));
+        }
+
+        if (value.ColumnSpan != 1)
+        {
+            writer.WriteNumber("columnSpan", value.ColumnSpan);
+        }
+
+        if (value.RowSpan != 1)
+        {
+            writer.WriteNumber("rowSpan", value.RowSpan);
         }
 
         writer.WriteEndObject();

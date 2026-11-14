@@ -16,7 +16,7 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-J006 | Error | The JSON is larger than 16 MiB. | Move large data, such as table rows and images, to data slots. |
 | ZPDF-J010 | Error | A heading level isn't 1 to 6. | Use 1 for the main heading, 2 to 6 below it. |
 | ZPDF-J011 | Error | A table has no columns. | Add at least one column. |
-| ZPDF-J012 | Error | A row has a different number of cells from the table's columns. | Give every row one cell per column; use `""` for an empty cell. |
+| ZPDF-J012 | Error | A row's cells don't fill the columns it has (counting each cell's `columnSpan`, and leaving out columns a `rowSpan` from above covers), or a span is less than 1. | Give every row one cell per free column; use `""` for an empty cell. |
 | ZPDF-J013 | Error | A length is negative, zero where a size is needed, not finite, or a million points or more. | Use a positive length, such as `"12pt"` or `"2cm"`. |
 | ZPDF-J014 | Error | The page margins leave less than half an inch for content. | Make the margins smaller or the page larger. |
 | ZPDF-J015 | Warning | A block names a style that doesn't exist, so its default style is used. | Add the style under `styles`, or use a built-in name. |
@@ -38,8 +38,8 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-F005 | Error | A font file can't be read or used: damaged, not TrueType, or its licence forbids embedding. | Use another font file; the message says why. |
 | ZPDF-T001 | Warning | A word was wider than its column and was broken between characters. | Widen the column, make the text smaller, or add break points (spaces, soft hyphens). |
 | ZPDF-T002 | Error | The text has a control character that can't be drawn. | Remove it; use a line feed (`\n`) to break a line. |
-| ZPDF-L001 | Warning | A table row is taller than a whole page, so it runs past the bottom margin. Rows don't split across pages yet. | Shorten the cell text, or make the columns wider. |
-| ZPDF-L002 | Warning | A row from a data slot has a different number of cells from the table's columns; it's padded with empty cells or cut. | Give every row one cell per column. |
+| ZPDF-L001 | Warning | Rows joined by a `rowSpan` are taller together than a page, so they run past the bottom margin. A single row that tall splits across pages instead; rows joined by a span don't. | Shorten the spanned rows' text, or drop the span. |
+| ZPDF-L002 | Warning | A row from a data slot doesn't fill the columns it has (counting spans); it's padded with empty cells or cut. | Give every row one cell per free column. |
 | ZPDF-L003 | Warning | The fixed-width columns are wider than the page, so all columns are scaled to fit. | Make the fixed columns narrower, or use shares (`"2*"`). |
 | ZPDF-L004 | Error | The header and footer leave less than 36 pt of the page for the content. | Shorten the header or footer, use smaller text, or narrow the top and bottom margins. |
 | ZPDF-I001 | Error | An image can't be embedded: it isn't a JPEG or PNG, it's damaged, or it's a kind PDF can't hold (12-bit, lossless or arithmetic-coded JPEG). The message says which. | Save it again as an 8-bit baseline or progressive JPEG, or as a PNG. |

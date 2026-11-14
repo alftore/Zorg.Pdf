@@ -182,13 +182,22 @@ public sealed class TableRenderTests
     }
 
     [Fact]
-    public async Task ARowTallerThanAPageIsAWarning()
+    public async Task ARowTallerThanAPageSplitsAcrossPagesAsOneTaggedRow()
     {
         string tall = string.Join("\n", Enumerable.Range(0, 120).Select(i => $"line {i}"));
-        PdfDocument document = Invoice with { Content = [new Table([new Column("A")]) { Rows = TableRows.Inline([[tall]]) }] };
+        PdfDocument document = Invoice with { Content = [new Table([new Column("A"), new Column("B")]) { Rows = TableRows.Inline([["short", tall], ["after", "after"]]) }] };
 
-        (_, RenderResult result) = await RenderAsync(document, PdfInspect.Options());
-        Assert.Contains(result.Diagnostics, d => d is { Code: "ZPDF-L001", Path: "/content/0/rows/0" });
+        (byte[] file, RenderResult result) = await RenderAsync(document, PdfInspect.Options());
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.Code == "ZPDF-L001");
+        Assert.True(result.PageCount >= 2, $"{result.PageCount} pages");
+        PdfFile.CheckStructure(file);
+        Assert.Equal(3, PdfInspect.Elements(file, "TR").Count); // Header, the split row once, the row after.
+        Assert.Equal(4, PdfInspect.Elements(file, "TD").Count);
+        string[] pages = PdfInspect.PageContents(file);
+        Assert.Contains("/Artifact <</Type /Pagination>> BDC", pages[1], StringComparison.Ordinal); // The header repeats.
+        Assert.Contains("/TD <</MCID", pages[1], StringComparison.Ordinal); // The rest of the tall cell.
+        Assert.Matches(@"/Type /StructElem /S /TD .*?/K \[<</Type /MCR", PdfInspect.Text(file)); // One TD, marked on two pages.
     }
 
     [Fact]

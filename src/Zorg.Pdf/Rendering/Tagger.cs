@@ -162,15 +162,32 @@ internal sealed class Tagger
             _writer.EndDictionary();
         }
 
-        if (element.ColumnHeader)
+        if (element.ColumnHeader || element.ColumnSpan > 1 || element.RowSpan > 1)
         {
-            // Header cells say what they head (PDF/UA-1 7.5): every header here heads its column.
+            // Header cells say what they head (PDF/UA-1 7.5): every header here heads its column. Spanning cells say
+            // how far they span, so a screen reader can find a cell's headers.
             _writer.Name("A"u8);
             _writer.BeginDictionary();
             _writer.Name("O"u8);
             _writer.Name("Table"u8);
-            _writer.Name("Scope"u8);
-            _writer.Name("Column"u8);
+            if (element.ColumnHeader)
+            {
+                _writer.Name("Scope"u8);
+                _writer.Name("Column"u8);
+            }
+
+            if (element.RowSpan > 1)
+            {
+                _writer.Name("RowSpan"u8);
+                _writer.Integer(element.RowSpan);
+            }
+
+            if (element.ColumnSpan > 1)
+            {
+                _writer.Name("ColSpan"u8);
+                _writer.Integer(element.ColumnSpan);
+            }
+
             _writer.EndDictionary();
         }
 
@@ -236,6 +253,12 @@ internal sealed class Tagger
 
         /// <summary>A TH that heads its column.</summary>
         public bool ColumnHeader { get; init; }
+
+        /// <summary>How many columns a table cell spans.</summary>
+        public int ColumnSpan { get; set; } = 1;
+
+        /// <summary>How many rows a table cell spans.</summary>
+        public int RowSpan { get; set; } = 1;
 
         /// <summary>The ListNumbering attribute, for a list: Disc, Decimal, LowerAlpha and so on.</summary>
         public string? ListNumbering { get; set; }

@@ -264,12 +264,19 @@ internal sealed partial class DocumentValidator
         switch (table.Rows)
         {
             case InlineTableRows inline when !inline.Rows.IsDefault:
+                var grid = new Rendering.TableGrid(table.Columns.Length);
                 for (int r = 0; r < inline.Rows.Length; r++)
                 {
                     ImmutableArray<Cell> row = inline.Rows[r];
-                    if (row.IsDefault || row.Length != table.Columns.Length)
+                    (_, int free, int covered, int dropped) = grid.Place(row.IsDefault ? [] : row);
+                    if (covered != free || dropped > 0)
                     {
-                        Error(DiagnosticCodes.CellCount, Invariant($"Row {r} has {(row.IsDefault ? 0 : row.Length)} cells; the table has {table.Columns.Length} columns."), $"{path}/rows/{r}");
+                        string spans = free == table.Columns.Length ? "" : Invariant($" ({table.Columns.Length - free} are taken by row spans from above)");
+                        Error(DiagnosticCodes.CellCount, Invariant($"Row {r} fills {covered} of the {free} columns it has{spans}; {(dropped > 0 ? Invariant($"{dropped} cells don't fit") : "every column needs a cell")}. Count each cell's columnSpan."), $"{path}/rows/{r}");
+                    }
+
+                    if (row.IsDefault)
+                    {
                         continue;
                     }
 
@@ -282,6 +289,10 @@ internal sealed partial class DocumentValidator
                         }
 
                         Inlines(row[c].Inlines, $"{path}/rows/{r}/{c}/inlines");
+                        if (row[c].ColumnSpan < 1 || row[c].RowSpan < 1)
+                        {
+                            Error(DiagnosticCodes.CellCount, "A cell's columnSpan and rowSpan are 1 or more.", $"{path}/rows/{r}/{c}");
+                        }
                     }
                 }
 
