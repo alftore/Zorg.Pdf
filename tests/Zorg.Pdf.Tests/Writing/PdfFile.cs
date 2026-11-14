@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using Xunit;
 
@@ -14,10 +15,21 @@ internal static class PdfFile
 {
     public static string Text(byte[] file) => Encoding.Latin1.GetString(file);
 
-    /// <summary>Checks the header, the xref table and every offset in it. Returns the object offsets by number.</summary>
+    /// <summary>
+    /// Checks the header, the cross-reference data and every object it points at. A file with a cross-reference
+    /// stream (what renders write) is checked through <see cref="PdfReader"/>, which resolves every object, those in
+    /// object streams too. Returns the direct objects' offsets by number for a file with a table.
+    /// </summary>
     public static IReadOnlyList<long> CheckStructure(byte[] file)
     {
         string text = Text(file);
+        if (text.Contains("/Type /XRef", StringComparison.Ordinal))
+        {
+            SortedDictionary<int, PdfObjectView> objects = PdfReader.Read(file);
+            Assert.Equal(objects.Count, objects.Keys.Max()); // Every object from 1 up, none missing.
+            return [];
+        }
+
         Assert.StartsWith("%PDF-1.", text, StringComparison.Ordinal);
         Assert.EndsWith("%%EOF\n", text, StringComparison.Ordinal);
 

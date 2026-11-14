@@ -40,34 +40,8 @@ public sealed class RenderDiagnosticsTests
         Assert.Contains("<0000> <FFFD>", InflateAll(file), StringComparison.Ordinal); // .notdef copies as U+FFFD.
     }
 
-    /// <summary>Every Flate stream in the file, inflated and joined.</summary>
-    private static string InflateAll(byte[] file)
-    {
-        var text = new System.Text.StringBuilder();
-        string pdf = PdfInspect.Text(file);
-        for (int at = pdf.IndexOf("stream\n", StringComparison.Ordinal); at >= 0; at = pdf.IndexOf("stream\n", at + 1, StringComparison.Ordinal))
-        {
-            if (pdf[at - 1] == 'd')
-            {
-                continue; // "endstream".
-            }
-
-            try
-            {
-                int start = at + "stream\n".Length;
-                using var zlib = new System.IO.Compression.ZLibStream(new MemoryStream(file, start, file.Length - start), System.IO.Compression.CompressionMode.Decompress);
-                using var inflated = new MemoryStream();
-                zlib.CopyTo(inflated);
-                text.Append(System.Text.Encoding.Latin1.GetString(inflated.ToArray()));
-            }
-            catch (InvalidDataException)
-            {
-                // Not compressed.
-            }
-        }
-
-        return text.ToString();
-    }
+    /// <summary>Every stream in the file, decoded and joined.</summary>
+    private static string InflateAll(byte[] file) => PdfInspect.Text(file);
 
     [Fact]
     public async Task ControlCharactersAreErrors()

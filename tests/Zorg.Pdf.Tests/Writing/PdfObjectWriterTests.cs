@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -189,10 +190,57 @@ public sealed class PdfObjectWriterTests
         return text.Substring(at, 32);
     }
 
-    private static async Task<byte[]> WriteAsync(Func<PdfObjectWriter, PdfReference> body)
+    [Fact]
+    public async Task ObjectStreamsHoldEveryObjectButStreamsAndAnXrefStreamFindsThem()
+    {
+        const int Count = 450; // Three object streams: 200, 200, and the rest with the catalog.
+        Func<PdfObjectWriter, PdfReference> body = writer =>
+        {
+            PdfReference root = writer.Allocate();
+            PdfReference content = writer.Allocate();
+            writer.BeginStreamObject(content);
+            writer.EndStreamObject("BT ET"u8, compress: true);
+            for (int i = 0; i < Count; i++)
+            {
+                PdfReference item = writer.Allocate();
+                writer.BeginObject(item);
+                writer.BeginDictionary();
+                writer.Name("Index"u8);
+                writer.Integer(i);
+                writer.EndDictionary();
+                writer.EndObject();
+            }
+
+            writer.BeginObject(root);
+            writer.BeginDictionary();
+            writer.Name("Type"u8);
+            writer.Name("Catalog"u8);
+            writer.Name("Content"u8);
+            writer.Reference(content);
+            writer.EndDictionary();
+            writer.EndObject();
+            return root;
+        };
+        byte[] file = await WriteAsync(body, objectStreams: true);
+
+        PdfFile.CheckStructure(file);
+        string raw = PdfFile.Text(file);
+        Assert.DoesNotContain("\nxref\n", raw, StringComparison.Ordinal);
+        Assert.DoesNotContain("trailer", raw, StringComparison.Ordinal);
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Count(raw, "/Type /ObjStm"));
+
+        var objects = PdfReader.Read(file);
+        Assert.Equal("<</Type /Catalog /Content 2 0 R>>", objects[1].Value);
+        Assert.Equal(Count, objects.Values.Count(o => o.Value.StartsWith("<</Index ", StringComparison.Ordinal))); // Object streams get numbers in between.
+        Assert.Equal("BT ET", objects[2].DecodedText); // Streams stay outside object streams.
+        Assert.Matches(@"/Type /XRef /Size \d+ /W \[1 \d 2\] /Root 1 0 R /ID \[<[0-9A-F]{32}> <[0-9A-F]{32}>\]", raw);
+        Assert.Equal(file, await WriteAsync(body, objectStreams: true));
+    }
+
+    private static async Task<byte[]> WriteAsync(Func<PdfObjectWriter, PdfReference> body, bool objectStreams = false)
     {
         using var output = new MemoryStream();
-        using (var writer = new PdfObjectWriter(output, PdfVersion.Pdf17))
+        using (var writer = new PdfObjectWriter(output, PdfVersion.Pdf17, objectStreams: objectStreams))
         {
             PdfReference root = body(writer);
             await writer.FinishAsync(root, cancellationToken: TestContext.Current.CancellationToken);

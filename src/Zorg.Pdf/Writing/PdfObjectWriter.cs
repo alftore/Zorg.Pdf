@@ -16,6 +16,12 @@ namespace Zorg.Pdf.Writing;
 /// while later pages are still being laid out.
 /// </summary>
 /// <remarks>
+/// With object streams (PDF 1.5), objects other than streams are gathered into compressed object streams of up to
+/// <see cref="ObjectsPerStream"/> objects, and the file ends with a compressed cross-reference stream instead of a
+/// table. Structure elements, page objects and font dictionaries are most of a tagged file's objects, so this is
+/// most of its size.
+/// </remarks>
+/// <remarks>
 /// <para>
 /// The output is deterministic: the same calls give the same bytes. The file identifier is a hash of everything
 /// written before the trailer, not a clock or random value.
@@ -30,10 +36,22 @@ internal sealed class PdfObjectWriter : IDisposable
     /// <summary>The buffer is flushed to the output once this much has built up.</summary>
     internal const int FlushThreshold = 64 * 1024;
 
+    /// <summary>Objects per object stream: big enough to compress well, small enough for a reader to unpack one quickly.</summary>
+    internal const int ObjectsPerStream = 200;
+
+    /// <summary>The offset entry of an object that sits in an object stream; its place is in <see cref="_inStreams"/>.</summary>
+    private const long InObjectStream = -2;
+
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "The caller owns the output stream.")]
     private readonly Stream _output;
-    private readonly ArrayBufferWriter<byte> _buffer = new(FlushThreshold + 4096);
-    private readonly List<long> _offsets = [-1]; // Object 0 is the head of the free list.
+    private readonly ArrayBufferWriter<byte> _main = new(FlushThreshold + 4096);
+    private readonly List<long> _offsets = [-1]; // Object 0 is the head of the free list. -1: allocated, not written yet.
+    private readonly bool _objectStreams;
+    private readonly ArrayBufferWriter<byte> _objects = new(); // The object stream being filled.
+    private readonly List<(int Number, int Offset)> _pending = []; // Its objects and their offsets in it.
+    private readonly Dictionary<int, (int Stream, int Index)> _inStreams = [];
+    private ArrayBufferWriter<byte> _buffer; // Where values go: the file, or the object stream being filled.
+    private bool _openInObjectStream;
     private IncrementalHash? _hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
     private long _flushed;
     private int _hashedInBuffer;
@@ -51,8 +69,11 @@ internal sealed class PdfObjectWriter : IDisposable
     /// Writes with <see cref="Stream.Write(ReadOnlySpan{byte})"/>, so every returned <see cref="ValueTask"/> has already
     /// completed. Used by the synchronous render API, which must never block on a pending task.
     /// </param>
-    public PdfObjectWriter(Stream output, PdfVersion version, bool synchronous = false)
+    /// <param name="objectStreams">Gathers objects into object streams and ends with a cross-reference stream (PDF 1.5).</param>
+    public PdfObjectWriter(Stream output, PdfVersion version, bool synchronous = false, bool objectStreams = false)
     {
+        _buffer = _main;
+        _objectStreams = objectStreams;
         _synchronous = synchronous;
         ArgumentNullException.ThrowIfNull(output);
         if (!output.CanWrite)
@@ -68,7 +89,7 @@ internal sealed class PdfObjectWriter : IDisposable
     }
 
     /// <summary>The offset in the file of the next byte to be written.</summary>
-    public long Position => _flushed + _buffer.WrittenCount;
+    public long Position => _flushed + _main.WrittenCount;
 
     /// <summary>How many object numbers have been allocated so far.</summary>
     public int ObjectCount => _offsets.Count - 1;
@@ -84,7 +105,7 @@ internal sealed class PdfObjectWriter : IDisposable
     /// <summary>Starts an indirect object. Write exactly one value, then call <see cref="EndObject"/>.</summary>
     public void BeginObject(PdfReference reference)
     {
-        StartObject(reference);
+        StartObject(reference, stream: false);
         _openIsStream = false;
     }
 
@@ -95,9 +116,21 @@ internal sealed class PdfObjectWriter : IDisposable
             throw new InvalidOperationException("EndObject without a matching BeginObject, or with an open dictionary or array.");
         }
 
-        PdfFormat.WriteAscii(_buffer, "\nendobj\n"u8);
         _open = default;
         _needsSpace = false;
+        if (_openInObjectStream)
+        {
+            PdfFormat.WriteAscii(_buffer, "\n"u8);
+            (_buffer, _openInObjectStream) = (_main, false);
+            if (_pending.Count >= ObjectsPerStream)
+            {
+                WriteObjectStream();
+            }
+
+            return;
+        }
+
+        PdfFormat.WriteAscii(_buffer, "\nendobj\n"u8);
     }
 
     /// <summary>
@@ -106,7 +139,7 @@ internal sealed class PdfObjectWriter : IDisposable
     /// </summary>
     public void BeginStreamObject(PdfReference reference)
     {
-        StartObject(reference);
+        StartObject(reference, stream: true);
         _openIsStream = true;
         BeginDictionary();
     }
@@ -279,7 +312,7 @@ internal sealed class PdfObjectWriter : IDisposable
 
     /// <summary>Flushes the buffer to the output once it has passed <see cref="FlushThreshold"/>. Call it between objects.</summary>
     public ValueTask FlushIfNeededAsync(CancellationToken cancellationToken = default) =>
-        _buffer.WrittenCount >= FlushThreshold ? FlushAsync(cancellationToken) : ValueTask.CompletedTask;
+        _main.WrittenCount >= FlushThreshold ? FlushAsync(cancellationToken) : ValueTask.CompletedTask;
 
     /// <summary>
     /// Writes the cross-reference table and trailer, and flushes everything. Every allocated object must have been
@@ -321,12 +354,23 @@ internal sealed class PdfObjectWriter : IDisposable
             throw new InvalidOperationException($"Object {_open.Number} is still open.");
         }
 
+        if (_objectStreams)
+        {
+            WriteObjectStream();
+        }
+
         for (int i = 1; i < _offsets.Count; i++)
         {
-            if (_offsets[i] < 0)
+            if (_offsets[i] == -1)
             {
                 throw new InvalidOperationException($"Object {i} was allocated but never written.");
             }
+        }
+
+        if (_objectStreams)
+        {
+            WriteCrossReferenceStream(root, info);
+            return;
         }
 
         long xref = Position;
@@ -388,7 +432,7 @@ internal sealed class PdfObjectWriter : IDisposable
         }
     }
 
-    private void StartObject(PdfReference reference)
+    private void StartObject(PdfReference reference, bool stream)
     {
         EnsureNotFinished();
         if (_open.IsValid)
@@ -401,13 +445,23 @@ internal sealed class PdfObjectWriter : IDisposable
             throw new ArgumentOutOfRangeException(nameof(reference), reference.Number, "The object number wasn't allocated by this writer.");
         }
 
-        if (_offsets[reference.Number] >= 0)
+        if (_offsets[reference.Number] != -1)
         {
             throw new InvalidOperationException($"Object {reference.Number} has already been written.");
         }
 
-        _offsets[reference.Number] = Position;
         _open = reference;
+        if (_objectStreams && !stream)
+        {
+            // Into the object stream: no "obj" header; the stream's own header says where each object starts.
+            _offsets[reference.Number] = InObjectStream;
+            _pending.Add((reference.Number, _objects.WrittenCount));
+            (_buffer, _openInObjectStream) = (_objects, true);
+            _needsSpace = false;
+            return;
+        }
+
+        _offsets[reference.Number] = Position;
         PdfFormat.WriteInteger(_buffer, reference.Number);
         PdfFormat.WriteAscii(_buffer, " 0 obj\n"u8);
         _needsSpace = false;
@@ -460,32 +514,156 @@ internal sealed class PdfObjectWriter : IDisposable
     private async ValueTask FlushCoreAsync(CancellationToken cancellationToken)
     {
         HashPending();
-        await _output.WriteAsync(_buffer.WrittenMemory, cancellationToken).ConfigureAwait(false);
+        await _output.WriteAsync(_main.WrittenMemory, cancellationToken).ConfigureAwait(false);
         Flushed();
     }
 
     private void FlushSync()
     {
         HashPending();
-        _output.Write(_buffer.WrittenSpan);
+        _output.Write(_main.WrittenSpan);
         Flushed();
     }
 
     private void Flushed()
     {
-        _flushed += _buffer.WrittenCount;
-        _buffer.ResetWrittenCount();
+        _flushed += _main.WrittenCount;
+        _main.ResetWrittenCount();
         _hashedInBuffer = 0;
     }
 
     private void HashPending()
     {
-        if (_hash is not null && _buffer.WrittenCount > _hashedInBuffer)
+        if (_hash is not null && _main.WrittenCount > _hashedInBuffer)
         {
-            _hash.AppendData(_buffer.WrittenSpan[_hashedInBuffer..]);
+            _hash.AppendData(_main.WrittenSpan[_hashedInBuffer..]);
         }
 
-        _hashedInBuffer = _buffer.WrittenCount;
+        _hashedInBuffer = _main.WrittenCount;
+    }
+
+    /// <summary>Writes the pending objects as one compressed object stream (ISO 32000-1, 7.5.7).</summary>
+    private void WriteObjectStream()
+    {
+        if (_pending.Count == 0)
+        {
+            return;
+        }
+
+        var data = new ArrayBufferWriter<byte>(_objects.WrittenCount + (_pending.Count * 12));
+        foreach ((int number, int offset) in _pending)
+        {
+            PdfFormat.WriteInteger(data, number);
+            PdfFormat.WriteAscii(data, " "u8);
+            PdfFormat.WriteInteger(data, offset);
+            PdfFormat.WriteAscii(data, " "u8);
+        }
+
+        int first = data.WrittenCount;
+        data.Write(_objects.WrittenSpan);
+        PdfReference stream = Allocate();
+        for (int i = 0; i < _pending.Count; i++)
+        {
+            _inStreams[_pending[i].Number] = (stream.Number, i);
+        }
+
+        int count = _pending.Count;
+        _pending.Clear();
+        _objects.ResetWrittenCount();
+        BeginStreamObject(stream);
+        Name("Type"u8);
+        Name("ObjStm"u8);
+        Name("N"u8);
+        Integer(count);
+        Name("First"u8);
+        Integer(first);
+        EndStreamObject(data.WrittenSpan, compress: true);
+    }
+
+    /// <summary>
+    /// Ends the file with a cross-reference stream (ISO 32000-1, 7.5.8) that carries the trailer entries: rows of
+    /// type, offset or object stream, and index, PNG Up-predicted so the Flate data stays small.
+    /// </summary>
+    private void WriteCrossReferenceStream(PdfReference root, PdfReference info)
+    {
+        PdfReference self = Allocate();
+        long xref = Position; // Where the stream object starts: nothing is written between here and it.
+
+        HashPending();
+        byte[] id = _hash!.GetHashAndReset().AsSpan(0, 16).ToArray();
+        _hash.Dispose();
+        _hash = null;
+
+        int offsetBytes = 1;
+        while (offsetBytes < 8 && xref >= 1L << (8 * offsetBytes))
+        {
+            offsetBytes++;
+        }
+
+        int columns = 1 + offsetBytes + 2;
+        byte[] rows = new byte[_offsets.Count * (columns + 1)];
+        byte[] previous = new byte[columns];
+        byte[] row = new byte[columns];
+        for (int i = 0; i < _offsets.Count; i++)
+        {
+            (int type, long field2, int field3) = i == 0 ? (0, 0L, 65535)
+                : i == self.Number ? (1, xref, 0)
+                : _offsets[i] == InObjectStream ? (2, _inStreams[i].Stream, _inStreams[i].Index)
+                : (1, _offsets[i], 0);
+            row[0] = (byte)type;
+            for (int b = 0; b < offsetBytes; b++)
+            {
+                row[offsetBytes - b] = (byte)(field2 >> (8 * b));
+            }
+
+            row[columns - 2] = (byte)(field3 >> 8);
+            row[columns - 1] = (byte)field3;
+            int at = i * (columns + 1);
+            rows[at] = 2; // PNG Up.
+            for (int c = 0; c < columns; c++)
+            {
+                rows[at + 1 + c] = (byte)(row[c] - previous[c]);
+            }
+
+            (previous, row) = (row, previous);
+        }
+
+        BeginStreamObject(self);
+        Name("Type"u8);
+        Name("XRef"u8);
+        Name("Size"u8);
+        Integer(_offsets.Count);
+        Name("W"u8);
+        BeginArray();
+        Integer(1);
+        Integer(offsetBytes);
+        Integer(2);
+        EndArray();
+        Name("Root"u8);
+        Reference(root);
+        if (info.IsValid)
+        {
+            Name("Info"u8);
+            Reference(info);
+        }
+
+        Name("ID"u8);
+        BeginArray();
+        HexString(id);
+        HexString(id);
+        EndArray();
+        Name("DecodeParms"u8);
+        BeginDictionary();
+        Name("Predictor"u8);
+        Integer(12);
+        Name("Columns"u8);
+        Integer(columns);
+        EndDictionary();
+        EndStreamObject(rows, compress: true);
+        PdfFormat.WriteAscii(_buffer, "startxref\n"u8);
+        PdfFormat.WriteInteger(_buffer, xref);
+        PdfFormat.WriteAscii(_buffer, "\n%%EOF\n"u8);
+        _finished = true;
     }
 
     private static byte[] Deflate(ReadOnlySpan<byte> data, out int length)

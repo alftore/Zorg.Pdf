@@ -23,6 +23,14 @@ Rules:
 | xunit.v3 4.0.2 | Apache-2.0 | Test framework | Low. |
 | coverlet.MTP 10.1.0 | MIT | Coverage | Low. |
 
+## Fonts (not shipped)
+
+No font file is committed. Tests and the smoke run use a font installed on the machine (Arial on Windows, DejaVu Sans on Linux, Noto Sans Devanagari in the Linux gate) and record nothing of it.
+
+| Font | Licence | Why | Risk |
+|---|---|---|---|
+| Liberation Sans 2.1.5 (`liberation-fonts-ttf-2.1.5.tar.gz`) | SIL Open Font License 1.1 | The CI job that checks output is byte-identical on Windows and Linux needs the same font on both. Downloaded in CI from the upstream release and checked against SHA-256 `7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0`, published separately in Homebrew's `font-liberation` cask | Low. A changed file fails the job rather than changing what it checks. |
+
 ## Benchmarks (not shipped)
 
 | Package | Licence | Why | Risk |

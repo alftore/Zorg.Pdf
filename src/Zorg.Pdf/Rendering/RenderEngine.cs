@@ -68,7 +68,7 @@ internal sealed partial class RenderEngine : IDisposable
         _fonts = fonts;
         _defaultFamily = defaultFamily;
         _sink = sink;
-        _writer = new PdfObjectWriter(output, PdfVersion.Pdf17, synchronous);
+        _writer = new PdfObjectWriter(output, PdfVersion.Pdf17, synchronous, objectStreams: true);
         _pageGeometry = PageGeometry.From(document.Page);
         _geometry = _pageGeometry;
         _documentWriter = new DocumentWriter(_writer, _pageGeometry);

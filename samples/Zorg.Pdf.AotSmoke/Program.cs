@@ -110,7 +110,7 @@ byte[] font = File.ReadAllBytes(fontPath);
     RenderResult result = document.RenderAsync(asynchronous, options).AsTask().GetAwaiter().GetResult();
     using var synchronous = new MemoryStream();
     document.Render(synchronous, options);
-    string text = Encoding.Latin1.GetString(asynchronous.ToArray());
+    string text = Readable(asynchronous.ToArray());
     Check("render", result.PageCount == 2 && text.Contains("/S /H1", StringComparison.Ordinal) && text.Contains("<pdfuaid:part>1</pdfuaid:part>", StringComparison.Ordinal));
     // Warnings only: the font has one face, so bold and italic are synthesised and reported as Info (ZPDF-F003).
     PdfDiagnostic[] warnings = [.. result.Diagnostics.Where(d => d.Severity != DiagnosticSeverity.Info)];
@@ -171,7 +171,7 @@ byte[] font = File.ReadAllBytes(fontPath);
     };
     using var invoice = new MemoryStream();
     RenderResult flow = invoiceDocument.RenderAsync(invoice, invoiceOptions).AsTask().GetAwaiter().GetResult();
-    string invoiceText = Encoding.Latin1.GetString(invoice.ToArray());
+    string invoiceText = Readable(invoice.ToArray());
     Check("tagged invoice", flow.PageCount >= 2 && invoiceText.Contains("/StructTreeRoot", StringComparison.Ordinal) && invoiceText.Contains("/S /TH", StringComparison.Ordinal) && !flow.HasWarnings);
     Check("header and footer", invoiceText.Contains("/Contents [", StringComparison.Ordinal));
     if (saveTo is not null)
@@ -204,7 +204,7 @@ byte[] font = File.ReadAllBytes(fontPath);
     };
     using var images = new MemoryStream();
     RenderResult drawn = imageDocument.RenderAsync(images, imageOptions).AsTask().GetAwaiter().GetResult();
-    string imageText = Encoding.Latin1.GetString(images.ToArray());
+    string imageText = Readable(images.ToArray());
     Check("images", !drawn.HasWarnings && imageText.Contains("/S /Figure", StringComparison.Ordinal) && imageText.Contains("/SMask", StringComparison.Ordinal) && imageText.Contains("/Predictor 15", StringComparison.Ordinal));
     if (saveTo is not null)
     {
@@ -213,6 +213,31 @@ byte[] font = File.ReadAllBytes(fontPath);
 }
 
 return failures == 0 ? 0 : 1;
+
+// The file as text with every Flate stream inflated after it: objects sit in compressed object streams.
+static string Readable(byte[] pdf)
+{
+    string raw = Encoding.Latin1.GetString(pdf);
+    var text = new StringBuilder(raw);
+    for (int at = raw.IndexOf("/FlateDecode", StringComparison.Ordinal); at >= 0; at = raw.IndexOf("/FlateDecode", at + 1, StringComparison.Ordinal))
+    {
+        const string Stream = "\nstream\n";
+        int start = raw.IndexOf(Stream, at, StringComparison.Ordinal) + Stream.Length;
+        try
+        {
+            using var zlib = new System.IO.Compression.ZLibStream(new MemoryStream(pdf, start, pdf.Length - start), System.IO.Compression.CompressionMode.Decompress);
+            using var inflated = new MemoryStream();
+            zlib.CopyTo(inflated);
+            text.Append('\n').Append(Encoding.Latin1.GetString(inflated.ToArray()));
+        }
+        catch (InvalidDataException)
+        {
+            // Not Flate data after all.
+        }
+    }
+
+    return text.ToString();
+}
 
 // A PNG made in code, 8-bit RGB or RGBA, every row unfiltered.
 static byte[] Png(int width, int height, Func<int, int, byte[]> pixel, bool alpha)

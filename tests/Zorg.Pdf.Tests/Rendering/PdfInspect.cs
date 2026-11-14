@@ -1,11 +1,8 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Text;
 using System.Text.RegularExpressions;
 using Zorg.Pdf.Fonts;
 using Zorg.Pdf.Tests.Fonts;
+using Zorg.Pdf.Tests.Writing;
 
 namespace Zorg.Pdf.Tests.Rendering;
 
@@ -18,15 +15,17 @@ internal static partial class PdfInspect
         Conformance = conformance,
     };
 
-    public static string Text(byte[] file) => Encoding.Latin1.GetString(file);
+    /// <summary>Every object as text, streams decoded and object streams unpacked (see <see cref="PdfReader.Flatten"/>).</summary>
+    public static string Text(byte[] file) => PdfReader.Flatten(file);
 
     /// <summary>The inflated content stream of each page, in page order: the page's own, without its header and footer.</summary>
     public static string[] PageContents(byte[] file)
     {
+        var objects = PdfReader.Read(file);
         var contents = new List<string>();
         foreach (Match page in PageContentsRef().Matches(Text(file)))
         {
-            contents.Add(Inflate(file, page.Groups[1].Success ? page.Groups[1].Value : page.Groups[2].Value));
+            contents.Add(objects[Number(page.Groups[1].Success ? page.Groups[1] : page.Groups[2])].DecodedText);
         }
 
         return [.. contents];
@@ -35,26 +34,17 @@ internal static partial class PdfInspect
     /// <summary>Each page's second content stream (its header and footer) as object number and content, or null without one.</summary>
     public static List<(int Number, string Content)?> PageOverlays(byte[] file)
     {
+        var objects = PdfReader.Read(file);
         var overlays = new List<(int, string)?>();
         foreach (Match page in PageContentsRef().Matches(Text(file)))
         {
-            overlays.Add(page.Groups[3].Success ? (int.Parse(page.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture), Inflate(file, page.Groups[3].Value)) : null);
+            overlays.Add(page.Groups[3].Success ? (Number(page.Groups[3]), objects[Number(page.Groups[3])].DecodedText) : null);
         }
 
         return overlays;
     }
 
-    /// <summary>A Flate stream object, inflated.</summary>
-    private static string Inflate(byte[] file, string number)
-    {
-        string text = Text(file);
-        int obj = text.IndexOf($"\n{number} 0 obj\n", StringComparison.Ordinal) + 1;
-        int start = text.IndexOf("stream\n", obj, StringComparison.Ordinal) + "stream\n".Length;
-        using var zlib = new ZLibStream(new MemoryStream(file, start, file.Length - start), CompressionMode.Decompress);
-        using var inflated = new MemoryStream();
-        zlib.CopyTo(inflated);
-        return Encoding.Latin1.GetString(inflated.ToArray());
-    }
+    private static int Number(Group group) => int.Parse(group.Value, System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>For each page, the structure element object numbers its MCIDs belong to (the parent tree).</summary>
     public static List<int[]> ParentTree(byte[] file)

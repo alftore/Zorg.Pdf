@@ -122,3 +122,64 @@ jobs:
         env:
           ZORG_REQUIRE_FONTS: '1'
         run: '"$RUNNER_TEMP/aot/Zorg.Pdf.AotSmoke"'
+
+  # The same document, data and font give the same bytes on every OS. Liberation Sans 2.1.5 (OFL 1.1) is fetched and
+  # checked against a SHA-256 published independently of its upstream (Homebrew's font-liberation cask); the smoke
+  # documents (text, tables, bands, images) are rendered and hashed on each OS, and the compare job fails on any
+  # difference.
+  determinism:
+    name: Byte-identical output (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Fetch the pinned font
+        shell: bash
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/liberation.tar.gz" https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz
+          echo "7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0  $RUNNER_TEMP/liberation.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/liberation.tar.gz" -C "$RUNNER_TEMP"
+
+      - name: Render and hash
+        shell: bash
+        env:
+          ZORG_PDF_TEST_FONT: ${{ runner.temp }}/liberation-fonts-ttf-2.1.5/LiberationSans-Regular.ttf
+          ZORG_REQUIRE_FONTS: '1'
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release -- "$RUNNER_TEMP/out"
+          cd "$RUNNER_TEMP/out"
+          sha256sum --binary *.pdf | tee "$RUNNER_TEMP/hashes-${{ matrix.os }}.txt"
+
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hashes-${{ matrix.os }}
+          path: ${{ runner.temp }}/hashes-${{ matrix.os }}.txt
+
+  determinism-compare:
+    name: Byte-identical output (compare)
+    needs: determinism
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: hashes-*
+          merge-multiple: true
+          path: hashes
+
+      - name: Compare
+        run: |
+          cat hashes/*.txt
+          diff hashes/hashes-windows-latest.txt hashes/hashes-ubuntu-latest.txt
