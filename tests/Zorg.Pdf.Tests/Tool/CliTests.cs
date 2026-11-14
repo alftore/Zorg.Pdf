@@ -262,6 +262,26 @@ public sealed class CliTests : IDisposable
         Assert.Equal(FontSource.FromFile(Path.GetFullPath(files[3])), family.Italic);
     }
 
+    [Fact]
+    public async Task MarkdownRendersWithImagesFromBesideItButNotFromOutside()
+    {
+        Directory.CreateDirectory(Path.Combine(_folder, "img"));
+        await File.WriteAllBytesAsync(Path.Combine(_folder, "img", "red.png"), TestImages.Png(4, 4, 2, 8, (_, _) => [255, 0, 0]), TestContext.Current.CancellationToken);
+        string document = Write("notes.md", "# Notes\n\n![Red](img/red.png)\n\n![Outside](../zorg-pdf-outside.png)\n\nText <b>x</b>.\n");
+
+        (int code, string output, _) = await RunAsync("render", document, "--font", TestFonts.RequirePath());
+
+        Assert.Equal(Cli.Problems, code); // The image outside the folder isn't read, so its slot has no data.
+        Assert.Contains("ZPDF-M001", output, StringComparison.Ordinal);
+        Assert.Contains("../zorg-pdf-outside.png", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("img/red.png", output, StringComparison.Ordinal);
+
+        Write("notes.md", "# Notes\n\n![Red](img/red.png)\n\n- one\n- two\n");
+        (int good, _, _) = await RunAsync("render", document, "--font", TestFonts.RequirePath(), "--pdfua");
+        Assert.Equal(Cli.Ok, good);
+        PdfFile.CheckStructure(await File.ReadAllBytesAsync(Path.ChangeExtension(document, ".pdf"), TestContext.Current.CancellationToken));
+    }
+
     private async Task<(int Code, string Output, string Error)> RunAsync(params string[] args)
     {
         var output = new StringWriter();

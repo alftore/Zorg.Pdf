@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Zorg.Pdf.Fonts;
 using Zorg.Pdf.Imaging;
+using Zorg.Pdf.Markdown;
 
 namespace Zorg.Pdf.Tool;
 
@@ -45,7 +46,7 @@ internal static class Cli
     private static readonly string[] DefaultFamilies = ["Arial", "Liberation Sans", "DejaVu Sans", "Noto Sans", "Segoe UI"];
 
     internal const string Help = """
-        zorg-pdf: render Zorg.Pdf JSON documents to tagged PDF.
+        zorg-pdf: render Zorg.Pdf JSON documents, or Markdown, to tagged PDF.
 
         Usage:
           zorg-pdf render <document.json> [options]     Render to PDF
@@ -73,7 +74,8 @@ internal static class Cli
           -h, --help                 Show this help
               --version              Show the version
 
-        A document of "-" is read from standard input. Exit codes: 0 done, 1 problems in the document or its
+        A document ending in .md or .markdown is read as Markdown; its images are read from beside it, or
+        given with --image. A document of "-" is read from standard input. Exit codes: 0 done, 1 problems in the document or its
         data, 2 a wrong command line or a file that couldn't be read or written.
         """;
 
@@ -285,7 +287,16 @@ internal static class Cli
     {
         byte[]? json = await ReadAsync(args.Input, console, report, cancellationToken).ConfigureAwait(false);
         PdfDocument? document = null;
-        if (json is not null)
+        ImmutableArray<string> markdownImages = [];
+        if (json is not null && IsMarkdown(args.Input))
+        {
+            MarkdownResult markdown = MarkdownDocument.Parse(Encoding.UTF8.GetString(json));
+            report.Add(args.Input, markdown.Diagnostics);
+            document = markdown.Document;
+            markdownImages = markdown.Images;
+            report.Add(args.Input, document.Validate().Diagnostics);
+        }
+        else if (json is not null)
         {
             DocumentParseResult parsed = PdfDocument.TryParseJson(json);
             report.Add(args.Input, parsed.Diagnostics);
@@ -320,7 +331,33 @@ internal static class Cli
             data = data.WithImage(slot, async ct => await File.ReadAllBytesAsync(path, ct).ConfigureAwait(false));
         }
 
+        // Markdown images are read from beside the file, unless --image gives them; never from outside its folder.
+        foreach (string slot in markdownImages.Where(s => !args.Images.Any(i => i.Slot == s)))
+        {
+            if (MarkdownImage(args.Input, slot) is { } path)
+            {
+                data = data.WithImage(slot, async ct => await File.ReadAllBytesAsync(path, ct).ConfigureAwait(false));
+            }
+        }
+
         return (document, data);
+    }
+
+    private static bool IsMarkdown(string input) =>
+        input.EndsWith(".md", StringComparison.OrdinalIgnoreCase) || input.EndsWith(".markdown", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The file for a Markdown image path, if it's a relative path to a file in the Markdown file's folder or below.</summary>
+    private static string? MarkdownImage(string input, string slot)
+    {
+        if (input == "-" || slot.Contains(':', StringComparison.Ordinal) || Path.IsPathRooted(slot))
+        {
+            return null;
+        }
+
+        string folder = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(input)) ?? ".");
+        string path = Path.GetFullPath(Path.Combine(folder, Uri.UnescapeDataString(slot)));
+        string prefix = folder.EndsWith(Path.DirectorySeparatorChar) ? folder : folder + Path.DirectorySeparatorChar;
+        return path.StartsWith(prefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) && File.Exists(path) ? path : null;
     }
 
     private static async Task<byte[]?> ReadAsync(string path, CliConsole console, Report report, CancellationToken cancellationToken)

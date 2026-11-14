@@ -14,6 +14,8 @@
   <ItemGroup Label="Runtime (add-on packages only)">
     <!-- Zorg.Pdf.Extensions.AI only. 10.11.0 rather than 11.0.0, which was four days old when this was added. -->
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
+    <!-- Zorg.Pdf.Markdown only. BSD-2-Clause, no dependencies on net8.0+; 1.6.0 was 10 days old when added. -->
+    <PackageVersion Include="Markdig" Version="1.6.0" />
     <!-- Zorg.Pdf.Imaging only. First-party, so it doesn't wait out the age rule. -->
     <PackageVersion Include="Zorg.Imaging" Version="0.4.0" />
   </ItemGroup>

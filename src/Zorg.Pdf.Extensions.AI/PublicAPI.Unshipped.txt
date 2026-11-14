@@ -1,5 +1,7 @@
 #nullable enable
 Zorg.Pdf.Extensions.AI.PdfToolOptions
+Zorg.Pdf.Extensions.AI.PdfToolOptions.ParseMarkdown.get -> System.Func<string!, Zorg.Pdf.DocumentParseResult!>?
+Zorg.Pdf.Extensions.AI.PdfToolOptions.ParseMarkdown.init -> void
 Zorg.Pdf.Extensions.AI.PdfToolOptions.PdfToolOptions() -> void
 Zorg.Pdf.Extensions.AI.PdfToolOptions.PreviewAsync.get -> System.Func<System.ReadOnlyMemory<byte>, int, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<byte[]!>>?
 Zorg.Pdf.Extensions.AI.PdfToolOptions.PreviewAsync.init -> void

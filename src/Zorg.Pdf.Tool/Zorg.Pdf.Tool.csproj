@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <Description>The zorg-pdf command-line tool: render Zorg.Pdf JSON documents to tagged PDF, validate them, and render again on every save.</Description>
+    <Description>The zorg-pdf command-line tool: render Zorg.Pdf JSON documents and Markdown to tagged PDF, validate them, and render again on every save.</Description>
     <PackageTags>pdf;cli;tool;pdf-ua;report;json</PackageTags>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>zorg-pdf</ToolCommandName>
@@ -13,6 +13,7 @@
     <ProjectReference Include="..\Zorg.Pdf\Zorg.Pdf.csproj" />
     <ProjectReference Include="..\Zorg.Pdf.Imaging\Zorg.Pdf.Imaging.csproj" />
     <ProjectReference Include="..\Zorg.Pdf.Hyphenation\Zorg.Pdf.Hyphenation.csproj" />
+    <ProjectReference Include="..\Zorg.Pdf.Markdown\Zorg.Pdf.Markdown.csproj" />
   </ItemGroup>
 
   <ItemGroup>

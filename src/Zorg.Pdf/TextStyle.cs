@@ -145,6 +145,8 @@ public sealed record StyleSheet
                 new("footer", new TextStyle { Size = Length.Pt(8) }),
                 new("link", new TextStyle { Color = Color.Parse("#0B57D0") }),
                 new("toc1", new TextStyle { Weight = FontWeight.Bold }),
+                new("quote", new TextStyle { FontStyle = FontStyle.Italic, Color = Color.Parse("#444444") }),
+                new("code", new TextStyle { Size = Length.Pt(9), Color = Color.Parse("#333333"), Hyphens = Pdf.Hyphens.None }),
                 new("watermark", new TextStyle { Weight = FontWeight.Bold }),
             ]),
     };

@@ -13,7 +13,8 @@ namespace Zorg.Pdf.Extensions.AI;
 /// Tools that let an AI agent write PDF documents: <c>get_document_schema</c> to learn the format,
 /// <c>validate_document</c> to check a draft and fix it from diagnostics with JSON pointers, <c>render_document</c>
 /// to render it with data, <c>get_capabilities</c> to learn the fonts and limits, and, when the host supplies
-/// <see cref="PdfToolOptions.PreviewAsync"/>, <c>render_preview</c> to look at a page as a picture. They take and return JSON, use no reflection (Native AOT works), and
+/// <see cref="PdfToolOptions.PreviewAsync"/>, <c>render_preview</c> to look at a page as a picture, and with
+/// <see cref="PdfToolOptions.ParseMarkdown"/>, <c>render_markdown</c> for prose written as Markdown. They take and return JSON, use no reflection (Native AOT works), and
 /// never touch the file system: fonts and limits come from the host's <see cref="PdfToolOptions.Render"/>, and the PDF
 /// goes wherever <see cref="PdfToolOptions.SaveAsync"/> puts it.
 /// </summary>
@@ -33,15 +34,25 @@ public static class PdfTools
     /// <param name="options">Fonts, conformance and limits for rendering, where rendered files go, and how pages are drawn.</param>
     /// <returns>
     /// <c>get_document_schema</c>, <c>validate_document</c>, <c>render_document</c> and <c>get_capabilities</c>;
-    /// with <see cref="PdfToolOptions.PreviewAsync"/>, <c>render_preview</c> too.
+    /// with <see cref="PdfToolOptions.PreviewAsync"/>, <c>render_preview</c> too, and with
+    /// <see cref="PdfToolOptions.ParseMarkdown"/>, <c>render_markdown</c>.
     /// </returns>
     public static IReadOnlyList<AIFunction> Create(PdfToolOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(options.Render);
-        return options.PreviewAsync is null
-            ? [new SchemaTool(), new ValidateTool(), new RenderTool(options), new CapabilitiesTool(options)]
-            : [new SchemaTool(), new ValidateTool(), new RenderTool(options), new CapabilitiesTool(options), new PreviewTool(options)];
+        List<AIFunction> tools = [new SchemaTool(), new ValidateTool(), new RenderTool(options), new CapabilitiesTool(options)];
+        if (options.PreviewAsync is not null)
+        {
+            tools.Add(new PreviewTool(options));
+        }
+
+        if (options.ParseMarkdown is not null)
+        {
+            tools.Add(new MarkdownTool(options));
+        }
+
+        return tools;
     }
 }
 
@@ -65,6 +76,12 @@ public sealed class PdfToolOptions
     /// <c>render_preview</c>. <c>Zorg.Pdf.Imaging</c> has one: <c>(pdf, page, ct) =&gt; PdfPreview.RenderPagePngAsync(pdf, page, cancellationToken: ct)</c>.
     /// </summary>
     public Func<ReadOnlyMemory<byte>, int, CancellationToken, ValueTask<byte[]>>? PreviewAsync { get; init; }
+
+    /// <summary>
+    /// Turns Markdown into a document. With it, the tools include <c>render_markdown</c>. <c>Zorg.Pdf.Markdown</c>
+    /// has one: <c>markdown =&gt; MarkdownDocument.Parse(markdown).ToParseResult()</c>.
+    /// </summary>
+    public Func<string, DocumentParseResult>? ParseMarkdown { get; init; }
 }
 
 /// <summary>A PDF rendered by <c>render_document</c>.</summary>
@@ -134,12 +151,26 @@ internal abstract class PdfTool(string name, string description, string paramete
     }
 
     /// <summary>Parses the document and its data, collecting every problem instead of throwing.</summary>
-    protected static (PdfDocument? Document, PdfData Data, List<PdfDiagnostic> Problems) Parse(AIFunctionArguments arguments)
+    protected static (PdfDocument? Document, PdfData Data, List<PdfDiagnostic> Problems) Parse(AIFunctionArguments arguments, Func<string, DocumentParseResult>? markdown = null)
     {
         var problems = new List<PdfDiagnostic>();
-        string? json = Json(arguments, "document");
+        string? json = Json(arguments, markdown is null ? "document" : "markdown");
         PdfDocument? document = null;
-        if (json is null)
+        if (json is null && markdown is not null)
+        {
+            problems.Add(new PdfDiagnostic("ZPDF-J004", DiagnosticSeverity.Error, "The \"markdown\" argument is missing: pass the text as a string.", ""));
+        }
+        else if (json is not null && markdown is not null)
+        {
+            DocumentParseResult parsed = markdown(json);
+            document = parsed.Document;
+            problems.AddRange(parsed.Diagnostics);
+            if (document is not null)
+            {
+                problems.AddRange(document.Validate().Diagnostics);
+            }
+        }
+        else if (json is null)
         {
             problems.Add(new PdfDiagnostic("ZPDF-J004", DiagnosticSeverity.Error, "The \"document\" argument is missing: pass the document as a JSON object. Call get_document_schema for its format.", ""));
         }
@@ -266,9 +297,13 @@ internal sealed class RenderTool(PdfToolOptions options) : PdfTool(
     }
     """)
 {
-    protected override async ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+    protected override ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken) =>
+        RenderAndSaveAsync(options, arguments, markdown: false, cancellationToken);
+
+    /// <summary>Renders, saves with the host's <see cref="PdfToolOptions.SaveAsync"/>, and reports.</summary>
+    internal static async ValueTask<object?> RenderAndSaveAsync(PdfToolOptions options, AIFunctionArguments arguments, bool markdown, CancellationToken cancellationToken)
     {
-        (PdfDocument? document, byte[]? pdf, RenderResult? result, IReadOnlyList<PdfDiagnostic> problems) = await RenderPdfAsync(options, arguments, cancellationToken).ConfigureAwait(false);
+        (PdfDocument? document, byte[]? pdf, RenderResult? result, IReadOnlyList<PdfDiagnostic> problems) = await RenderPdfAsync(options, arguments, cancellationToken, markdown).ConfigureAwait(false);
         if (document is null || pdf is null || result is null)
         {
             return Failed(problems);
@@ -287,14 +322,15 @@ internal sealed class RenderTool(PdfToolOptions options) : PdfTool(
                 writer.WriteString("file", saved);
             }
 
-            Diagnostics(writer, result.Diagnostics);
+            // Markdown notes come from parsing, not rendering: report them too.
+            Diagnostics(writer, markdown ? [.. problems.Where(p => p.Code.StartsWith("ZPDF-M", StringComparison.Ordinal)), .. result.Diagnostics] : result.Diagnostics);
         });
     }
 
     /// <summary>Parses, checks and renders the document in the arguments with the host's options: the PDF, or the problems.</summary>
-    internal static async ValueTask<(PdfDocument? Document, byte[]? Pdf, RenderResult? Result, IReadOnlyList<PdfDiagnostic> Problems)> RenderPdfAsync(PdfToolOptions options, AIFunctionArguments arguments, CancellationToken cancellationToken)
+    internal static async ValueTask<(PdfDocument? Document, byte[]? Pdf, RenderResult? Result, IReadOnlyList<PdfDiagnostic> Problems)> RenderPdfAsync(PdfToolOptions options, AIFunctionArguments arguments, CancellationToken cancellationToken, bool markdown = false)
     {
-        (PdfDocument? document, PdfData data, List<PdfDiagnostic> problems) = Parse(arguments);
+        (PdfDocument? document, PdfData data, List<PdfDiagnostic> problems) = Parse(arguments, markdown ? options.ParseMarkdown : null);
         if (document is null || problems.Exists(d => d.Severity == DiagnosticSeverity.Error))
         {
             return (null, null, null, problems);
@@ -336,6 +372,25 @@ internal sealed class RenderTool(PdfToolOptions options) : PdfTool(
         writer.WriteBoolean("rendered", false);
         Diagnostics(writer, problems);
     });
+}
+
+/// <summary><c>render_markdown</c>: renders Markdown with the default styles, for prose that needs no layout of its own.</summary>
+internal sealed class MarkdownTool(PdfToolOptions options) : PdfTool(
+    "render_markdown",
+    "Renders Markdown (CommonMark with GitHub tables and task lists) as a tagged PDF: headings, bold and italic, lists, tables, code, quotes, links and images. For notes, minutes and reports that need no layout of their own; use render_document for letters, invoices and anything with a header, footer or address. YAML front matter can set title and lang. An image on its own line, ![alt text](logo.png), takes its bytes from data: { \"logo.png\": { \"base64\": \"...\" } }. Returns the page count, the file, and notes on anything simplified, such as raw HTML, which is left out.",
+    """
+    {
+      "type": "object",
+      "properties": {
+        "markdown": { "type": "string", "description": "The Markdown text." },
+        "data": { "type": "object", "description": "Images, by the path written in the Markdown." }
+      },
+      "required": ["markdown"]
+    }
+    """)
+{
+    protected override ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken) =>
+        RenderTool.RenderAndSaveAsync(options, arguments, markdown: true, cancellationToken);
 }
 
 /// <summary><c>render_preview</c>: renders the document and returns one page as a PNG picture, to check the layout by looking.</summary>
@@ -425,6 +480,7 @@ internal sealed class CapabilitiesTool(PdfToolOptions options) : PdfTool(
             writer.WriteNumber("maxImagePixels", render.Limits.MaxImagePixels);
             writer.WriteEndObject();
             writer.WriteBoolean("previews", options.PreviewAsync is not null);
+            writer.WriteBoolean("markdown", options.ParseMarkdown is not null);
             writer.WriteString("schema", PdfJsonSchema.Id);
         }));
     }

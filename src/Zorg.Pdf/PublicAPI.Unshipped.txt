@@ -149,6 +149,7 @@ Zorg.Pdf.DiagnosticSeverity.Warning = 1 -> Zorg.Pdf.DiagnosticSeverity
 Zorg.Pdf.DocumentParseResult
 Zorg.Pdf.DocumentParseResult.Diagnostics.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.PdfDiagnostic!>
 Zorg.Pdf.DocumentParseResult.Document.get -> Zorg.Pdf.PdfDocument?
+Zorg.Pdf.DocumentParseResult.DocumentParseResult(Zorg.Pdf.PdfDocument? document, System.Collections.Immutable.ImmutableArray<Zorg.Pdf.PdfDiagnostic!> diagnostics) -> void
 Zorg.Pdf.DocumentParseResult.IsSuccess.get -> bool
 Zorg.Pdf.Field
 override Zorg.Pdf.Field.<Clone>$() -> Zorg.Pdf.Field!

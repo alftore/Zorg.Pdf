@@ -5,7 +5,7 @@ The core library has no runtime dependencies, and that is a design rule. Every p
 Rules:
 
 - No runtime package in `src/Zorg.Pdf`. If one ever seems needed, it's a design decision first.
-- Add-on packages take only what their name says (for example `Zorg.Pdf.Extensions.AI` takes `Microsoft.Extensions.AI.Abstractions`), each with a row here. The `zorg-pdf` tool (`Zorg.Pdf.Tool`) takes only Zorg.Pdf and Zorg.Pdf.Imaging, and parses its own command line.
+- Add-on packages take only what their name says (for example `Zorg.Pdf.Extensions.AI` takes `Microsoft.Extensions.AI.Abstractions`), each with a row here. The `zorg-pdf` tool (`Zorg.Pdf.Tool`) takes only Zorg.Pdf and its add-on packages, and parses its own command line.
 - No package with a fee, a commercial tier gating needed features, or a licence declaration step, even in tests or benchmarks.
 - Check the licence in the `.nuspec` of the exact version. Don't rely on memory.
 - Fonts and hyphenation patterns used in tests or shipped with the library need their licence recorded here too.
@@ -18,6 +18,7 @@ Rules:
 | ICC sRGB profile `sRGB2014.icc` (embedded in `Zorg.Pdf` as a resource, not a package) | The ICC's terms as Qt's and Debian's attributions quote them: the profile may be "copied, distributed, embedded, made, used, and sold without restriction"; altered versions must drop the original identification. Copyright tag: "Copyright International Color Consortium, 2015". From registry.color.org/rgb-registry/profiles/sRGB2014.icc, 3,024 bytes, SHA-256 `384b832d…6c0a`, checked by a test so it stays unchanged | The output intent of PDF/A files (`RenderOptions.Archive`) | Low. 3 KB of data, no code. The ICC's general-terms page itself wasn't found; the registry page refers to it |
 | hyph-utf8 hyphenation patterns (in `Zorg.Pdf.Hyphenation`, as files, not packages): hyph-en-us, hyph-en-gb, hyph-de-1996, hyph-fr, hyph-no, hyph-nb, hyph-nn, hyph-da `.tex` | Read in each file's header, 2026-11-14: en-gb, de-1996 and fr MIT; da MIT or LPPL 1.3+; en-us, no, nb and nn "copying and distribution … with or without modification, are permitted … provided the copyright notice and this notice are preserved". Shipped unchanged (`-text` in `.gitattributes`), notices intact. From github.com/hyphenation/tex-hyphen master, 2026-11-14; SHA-256 recorded in `.tmp`-free form in `src/Zorg.Pdf.Hyphenation/Patterns/SHA256SUMS` | Hyphenating words in text with `hyphens: auto` | Low. Data, no code; the licences ask only that the notices stay. Swedish (LPPL 1.2) is left out until decided |
 | Microsoft.Extensions.AI.Abstractions 10.11.0 | MIT (checked in the `.nuspec`, 2026-11-14); no dependencies on `net10.0` | `Zorg.Pdf.Extensions.AI` only: the `AIFunction` type its tools are | Low. Microsoft's abstraction for AI tools, used by every .NET AI client. 11.0.0 was four days old when this was added, so it waits. |
+| Markdig 1.6.0 | BSD-2-Clause (checked in the `.nuspec`, 2026-11-14; published 2026-11-04); no dependencies on `net8.0` and later | `Zorg.Pdf.Markdown` only, and the `zorg-pdf` tool through it: parsing CommonMark and GitHub-flavoured Markdown | Low. The standard .NET Markdown parser, permissive licence, managed only, no dependencies. Only its syntax tree is used, never its HTML output. |
 
 ## Build only (not shipped)
 

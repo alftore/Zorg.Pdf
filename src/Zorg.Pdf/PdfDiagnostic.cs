@@ -54,7 +54,10 @@ public sealed class ValidationResult
 /// <summary>The result of <see cref="PdfDocument.TryParseJson(string)"/>: a document, or why there isn't one.</summary>
 public sealed class DocumentParseResult
 {
-    internal DocumentParseResult(PdfDocument? document, ImmutableArray<PdfDiagnostic> diagnostics) =>
+    /// <summary>A result, for a parser of another format, such as Markdown, to report in the same shape.</summary>
+    /// <param name="document">The document, or null when there is none.</param>
+    /// <param name="diagnostics">What was found, each with a path.</param>
+    public DocumentParseResult(PdfDocument? document, ImmutableArray<PdfDiagnostic> diagnostics) =>
         (Document, Diagnostics) = (document, diagnostics);
 
     /// <summary>True when the JSON was a document. It may still fail <see cref="PdfDocument.Validate"/>.</summary>
