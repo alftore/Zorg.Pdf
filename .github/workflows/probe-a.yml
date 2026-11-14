@@ -1,0 +1,22 @@
+# Throwaway: finds why artifact uploads fail at startup in this repo. Removed in the next commit.
+name: Probe a (upload-artifact v7.0.2)
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/probe-a.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: echo probe > probe.txt
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: probe-a
+          path: probe.txt
+          retention-days: 1
