@@ -18,6 +18,16 @@ internal sealed class CosImporter(CosFile file, PdfObjectWriter writer, int maxO
 
     private readonly Dictionary<int, PdfReference> _map = [];
     private readonly Queue<int> _pending = new();
+    private readonly HashSet<int> _excluded = [];
+
+    /// <summary>An object written by the caller (a page), so references to it point at its new number without copying it.</summary>
+    public void Map(int number, PdfReference reference) => _map[number] = reference;
+
+    /// <summary>An object never copied (a page left out): references to it are written as null.</summary>
+    public void Exclude(int number) => _excluded.Add(number);
+
+    /// <summary>Whether an object is left out.</summary>
+    public bool IsExcluded(int number) => _excluded.Contains(number);
 
     /// <summary>The new reference for an old object, copied when <see cref="Flush"/> runs.</summary>
     public PdfReference Import(int number)
@@ -77,6 +87,9 @@ internal sealed class CosImporter(CosFile file, PdfObjectWriter writer, int maxO
                 Entries(d, skipLength: false);
                 writer.EndDictionary();
                 break;
+            case CosReference reference when _excluded.Contains(reference.Number):
+                writer.Null();
+                break;
             case CosReference reference:
                 writer.Reference(Import(reference.Number));
                 break;
@@ -105,6 +118,21 @@ internal sealed class CosImporter(CosFile file, PdfObjectWriter writer, int maxO
                     Write(value);
                     writer.EndObject();
                     break;
+            }
+        }
+    }
+
+    /// <summary>Writes a dictionary's entries (without the brackets), leaving out the keys named and the usual ones.</summary>
+    public void Entries(CosDictionary dictionary, IReadOnlySet<string> skip)
+    {
+        var keys = new List<string>(dictionary.Entries.Keys);
+        keys.Sort(StringComparer.Ordinal);
+        foreach (string key in keys)
+        {
+            if (!Dropped.Contains(key) && !skip.Contains(key))
+            {
+                writer.Name(Encoding.Latin1.GetBytes(key));
+                Write(dictionary.Entries[key]);
             }
         }
     }

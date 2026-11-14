@@ -54,6 +54,9 @@ internal static class Cli
           zorg-pdf watch <document.json> [options]      Render, then render again on every change
           zorg-pdf preview <document.json|file.pdf>     Draw a page as PNG, to check the layout
           zorg-pdf info <file.pdf>                      Show any PDF's pages, sizes and metadata
+          zorg-pdf merge <a.pdf> <b.pdf:2-4>... -o out  Put pages of several PDFs into one
+          zorg-pdf extract <in.pdf> --pages 1-3 -o out  Take some pages out, or rewrite with new metadata
+          zorg-pdf split <in.pdf> [-o folder]           Write each page as its own PDF
           zorg-pdf schema                               Print the document JSON Schema
 
         Options:
@@ -70,6 +73,9 @@ internal static class Cli
               --json                 Print results as JSON, one object per line
               --preview              With render and watch: also draw pages as PNG beside the PDF
               --page <n|all>             The page to draw, from 1 (default 1), or all
+              --pages <1-3,5>        extract: the pages to take; merge takes file.pdf:1-3
+              --title, --author, --subject, --keywords, --lang <text>
+                                     merge and extract: new metadata (default: the first file's)
               --dpi <n>                  The PNG's resolution, 18 to 600 (default 96)
           -v, --verbose              Also print information, such as images that were shrunk
           -h, --help                 Show this help
@@ -110,6 +116,8 @@ internal static class Cli
                 return await PreviewAsync(parsed, console, cancellationToken).ConfigureAwait(false);
             case "info":
                 return await InfoAsync(parsed, console, cancellationToken).ConfigureAwait(false);
+            case "merge" or "extract" or "split":
+                return await PagesAsync(parsed, console, cancellationToken).ConfigureAwait(false);
             default:
                 return await WatchAsync(parsed, console, cancellationToken).ConfigureAwait(false);
         }
@@ -203,6 +211,81 @@ internal static class Cli
 
         await console.Out.WriteAsync(text.ToString()).ConfigureAwait(false);
         return Ok;
+    }
+
+    /// <summary>merge, extract and split: pages of existing PDFs into new files.</summary>
+    private static async Task<int> PagesAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken)
+    {
+        var options = new PdfFileOptions { Title = args.Title, Author = args.Author, Subject = args.Subject, Keywords = args.Keywords, Language = args.Language };
+        var written = new List<(string File, PdfFileResult Result)>();
+        try
+        {
+            if (args.Command == "split")
+            {
+                byte[] file = await File.ReadAllBytesAsync(args.Input, cancellationToken).ConfigureAwait(false);
+                int pages = PdfFileInfo.Read(file).PageCount;
+                string folder = args.Output ?? Path.GetDirectoryName(Path.GetFullPath(args.Input)) ?? ".";
+                Directory.CreateDirectory(folder);
+                string stem = Path.GetFileNameWithoutExtension(args.Input);
+                for (int page = 1; page <= pages; page++)
+                {
+                    string target = Path.Combine(folder, string.Create(CultureInfo.InvariantCulture, $"{stem}-{page}.pdf"));
+                    written.Add((target, await WriteAsync(target, [new PdfPageSource(file) { Pages = page.ToString(CultureInfo.InvariantCulture) }], options, cancellationToken).ConfigureAwait(false)));
+                }
+            }
+            else
+            {
+                List<(string File, string? Pages)> inputs = args.Command == "merge" ? args.Inputs : [(args.Input, args.Pages)];
+                var sources = new List<PdfPageSource>();
+                foreach ((string path, string? pages) in inputs)
+                {
+                    sources.Add(new PdfPageSource(await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false)) { Pages = pages });
+                }
+
+                string target = args.Output ?? Path.ChangeExtension(args.Input, null) + "-pages.pdf";
+                written.Add((target, await WriteAsync(target, sources, options, cancellationToken).ConfigureAwait(false)));
+            }
+        }
+        catch (Exception ex) when (ex is PdfReadException or ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            await console.Error.WriteLineAsync($"zorg-pdf {args.Command}: {ex.Message}").ConfigureAwait(false);
+            return ex is PdfReadException or ArgumentException ? Problems : Usage;
+        }
+
+        var text = new StringBuilder();
+        foreach ((string file, PdfFileResult result) in written)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"{file}: {result.PageCount} page{(result.PageCount == 1 ? "" : "s")}, {result.BytesWritten / 1024.0:0.0} KB").AppendLine();
+            foreach (PdfDiagnostic d in result.Diagnostics.DistinctBy(d => d.Code))
+            {
+                text.Append(CultureInfo.InvariantCulture, $"  {(d.Severity == DiagnosticSeverity.Warning ? "warning" : "info")} {d.Code}: {d.Message}").AppendLine();
+            }
+        }
+
+        await console.Out.WriteAsync(text.ToString()).ConfigureAwait(false);
+        return Ok;
+
+        static async Task<PdfFileResult> WriteAsync(string target, List<PdfPageSource> sources, PdfFileOptions options, CancellationToken cancellationToken)
+        {
+            // Written beside the target first and moved, so a failure leaves no half file.
+            string temporary = target + ".tmp";
+            try
+            {
+                PdfFileResult result;
+                FileStream stream = File.Create(temporary);
+                await using (stream.ConfigureAwait(false))
+                {
+                    result = await PdfFiles.MergeAsync(sources, stream, options, cancellationToken).ConfigureAwait(false);
+                }
+
+                File.Move(temporary, target, overwrite: true);
+                return result;
+            }
+            finally
+            {
+                TryDelete(temporary);
+            }
+        }
     }
 
     private static string InfoJson(PdfFileInfo? info, string? error)

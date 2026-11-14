@@ -82,6 +82,10 @@ internal static class DiagnosticCodes
     public const string BackgroundScaled = "ZPDF-G003";
     public const string BackgroundFontNotEmbedded = "ZPDF-G004";
     public const string BackgroundColour = "ZPDF-G005";
+    public const string FilesTagsDropped = "ZPDF-E001";        // Merging and splitting existing PDFs.
+    public const string FilesBookmarksDropped = "ZPDF-E002";
+    public const string FilesFormFields = "ZPDF-E003";
+    public const string FilesLinksDropped = "ZPDF-E004";
     public const string TextShrunk = "ZPDF-L005";
     public const string TextOverflow = "ZPDF-L006";
     public const string TextBoxOffPage = "ZPDF-L007";

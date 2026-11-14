@@ -63,6 +63,10 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-G003 | Info | The background's page is a different size from the document's: it's scaled to fit and centred. | Make the letterhead the same paper size, or accept the scaling. |
 | ZPDF-G004 | Error under PDF/UA or PDF/A, else Warning | The background uses a font that isn't embedded, so it looks different on other computers, and PDF/UA and PDF/A forbid it. | Export the letterhead with fonts embedded, or convert its text to outlines. |
 | ZPDF-G005 | Error under PDF/A | The background uses CMYK colour, which PDF/A with Zorg.Pdf's sRGB output intent doesn't allow. | Export the letterhead in RGB. |
+| ZPDF-E001 | Info | Merging or extracting pages: a source file is tagged, but tags aren't kept, so the new file isn't tagged. The path names the file (`file 2`). | Make the accessible version from the source document instead, if it must be accessible. |
+| ZPDF-E002 | Info | Merging or extracting pages: a source file's bookmarks aren't kept. | Nothing, or add bookmarks in the source document. |
+| ZPDF-E003 | Info | Merging or extracting pages: form fields are copied as they look, and can't be filled in or submitted in the new file. | Fill the form first, or keep the original. |
+| ZPDF-E004 | Info | Merging or extracting pages: links to pages that weren't copied, or that run scripts, open other files or launch programs, aren't kept. | Nothing; the link's text and look are still there. |
 | ZPDF-L001 | Warning | Rows joined by a `rowSpan` are taller together than a page, so they run past the bottom margin. A single row that tall splits across pages instead; rows joined by a span don't. | Shorten the spanned rows' text, or drop the span. |
 | ZPDF-L002 | Warning | A row from a data slot doesn't fill the columns it has (counting spans); it's padded with empty cells or cut. | Give every row one cell per free column. |
 | ZPDF-L003 | Warning | The fixed-width columns are wider than the page, so all columns are scaled to fit. | Make the fixed columns narrower, or use shares (`"2*"`). |

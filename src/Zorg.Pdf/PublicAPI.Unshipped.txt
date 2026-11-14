@@ -636,6 +636,37 @@ Zorg.Pdf.PdfFileInfo.Title.get -> string?
 Zorg.Pdf.PdfFileInfo.Title.init -> void
 Zorg.Pdf.PdfFileInfo.Version.get -> string!
 Zorg.Pdf.PdfFileInfo.Version.init -> void
+Zorg.Pdf.PdfFileOptions
+Zorg.Pdf.PdfFileOptions.<Clone>$() -> Zorg.Pdf.PdfFileOptions!
+Zorg.Pdf.PdfFileOptions.Author.get -> string?
+Zorg.Pdf.PdfFileOptions.Author.init -> void
+static Zorg.Pdf.PdfFileOptions.Default.get -> Zorg.Pdf.PdfFileOptions!
+Zorg.Pdf.PdfFileOptions.Equals(Zorg.Pdf.PdfFileOptions? other) -> bool
+override Zorg.Pdf.PdfFileOptions.Equals(object? obj) -> bool
+override Zorg.Pdf.PdfFileOptions.GetHashCode() -> int
+Zorg.Pdf.PdfFileOptions.Keywords.get -> string?
+Zorg.Pdf.PdfFileOptions.Keywords.init -> void
+Zorg.Pdf.PdfFileOptions.Language.get -> string?
+Zorg.Pdf.PdfFileOptions.Language.init -> void
+Zorg.Pdf.PdfFileOptions.ModificationDate.get -> System.DateTimeOffset?
+Zorg.Pdf.PdfFileOptions.ModificationDate.init -> void
+Zorg.Pdf.PdfFileOptions.PdfFileOptions() -> void
+Zorg.Pdf.PdfFileOptions.ReadLimits.get -> Zorg.Pdf.PdfReadLimits!
+Zorg.Pdf.PdfFileOptions.ReadLimits.init -> void
+Zorg.Pdf.PdfFileOptions.Subject.get -> string?
+Zorg.Pdf.PdfFileOptions.Subject.init -> void
+Zorg.Pdf.PdfFileOptions.Title.get -> string?
+Zorg.Pdf.PdfFileOptions.Title.init -> void
+override Zorg.Pdf.PdfFileOptions.ToString() -> string!
+static Zorg.Pdf.PdfFileOptions.operator !=(Zorg.Pdf.PdfFileOptions? left, Zorg.Pdf.PdfFileOptions? right) -> bool
+static Zorg.Pdf.PdfFileOptions.operator ==(Zorg.Pdf.PdfFileOptions? left, Zorg.Pdf.PdfFileOptions? right) -> bool
+Zorg.Pdf.PdfFileResult
+Zorg.Pdf.PdfFileResult.BytesWritten.get -> long
+Zorg.Pdf.PdfFileResult.Diagnostics.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.PdfDiagnostic!>
+Zorg.Pdf.PdfFileResult.PageCount.get -> int
+Zorg.Pdf.PdfFiles
+static Zorg.Pdf.PdfFiles.ExtractAsync(System.ReadOnlyMemory<byte> file, string? pages, System.IO.Stream! output, Zorg.Pdf.PdfFileOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Zorg.Pdf.PdfFileResult!>!
+static Zorg.Pdf.PdfFiles.MergeAsync(System.Collections.Generic.IEnumerable<Zorg.Pdf.PdfPageSource!>! sources, System.IO.Stream! output, Zorg.Pdf.PdfFileOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Zorg.Pdf.PdfFileResult!>!
 Zorg.Pdf.PdfImage
 Zorg.Pdf.PdfImage.<Clone>$() -> Zorg.Pdf.PdfImage!
 Zorg.Pdf.PdfImage.Equals(Zorg.Pdf.PdfImage? other) -> bool
@@ -693,6 +724,20 @@ Zorg.Pdf.PdfPageInfo.Width.get -> double
 Zorg.Pdf.PdfPageInfo.Width.init -> void
 static Zorg.Pdf.PdfPageInfo.operator !=(Zorg.Pdf.PdfPageInfo? left, Zorg.Pdf.PdfPageInfo? right) -> bool
 static Zorg.Pdf.PdfPageInfo.operator ==(Zorg.Pdf.PdfPageInfo? left, Zorg.Pdf.PdfPageInfo? right) -> bool
+Zorg.Pdf.PdfPageSource
+Zorg.Pdf.PdfPageSource.<Clone>$() -> Zorg.Pdf.PdfPageSource!
+Zorg.Pdf.PdfPageSource.Deconstruct(out System.ReadOnlyMemory<byte> File) -> void
+Zorg.Pdf.PdfPageSource.Equals(Zorg.Pdf.PdfPageSource? other) -> bool
+override Zorg.Pdf.PdfPageSource.Equals(object? obj) -> bool
+Zorg.Pdf.PdfPageSource.File.get -> System.ReadOnlyMemory<byte>
+Zorg.Pdf.PdfPageSource.File.init -> void
+override Zorg.Pdf.PdfPageSource.GetHashCode() -> int
+Zorg.Pdf.PdfPageSource.Pages.get -> string?
+Zorg.Pdf.PdfPageSource.Pages.init -> void
+Zorg.Pdf.PdfPageSource.PdfPageSource(System.ReadOnlyMemory<byte> File) -> void
+override Zorg.Pdf.PdfPageSource.ToString() -> string!
+static Zorg.Pdf.PdfPageSource.operator !=(Zorg.Pdf.PdfPageSource? left, Zorg.Pdf.PdfPageSource? right) -> bool
+static Zorg.Pdf.PdfPageSource.operator ==(Zorg.Pdf.PdfPageSource? left, Zorg.Pdf.PdfPageSource? right) -> bool
 Zorg.Pdf.PdfPixelFormat
 Zorg.Pdf.PdfPixelFormat.Cmyk32 = 2 -> Zorg.Pdf.PdfPixelFormat
 Zorg.Pdf.PdfPixelFormat.Gray8 = 0 -> Zorg.Pdf.PdfPixelFormat

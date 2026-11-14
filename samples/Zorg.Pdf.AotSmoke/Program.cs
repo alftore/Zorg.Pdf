@@ -360,6 +360,21 @@ else
     }
 }
 
+// 0.4 slice 3: every example, merged into one file, then its even pages taken out again. Not tagged (tags aren't
+// kept), so the gate checks these with qpdf, MuPDF and pdffonts but not veraPDF.
+if (saveTo is not null)
+{
+    string[] examplePdfs = [.. Directory.GetFiles(saveTo, "example-*.pdf").Order(StringComparer.Ordinal)];
+    using var merged = new MemoryStream();
+    PdfFileResult merge = PdfFiles.MergeAsync(examplePdfs.Select(f => new PdfPageSource(File.ReadAllBytes(f))), merged, new PdfFileOptions { Title = "Every example" }).GetAwaiter().GetResult();
+    using var even = new MemoryStream();
+    string evenPages = string.Join(",", Enumerable.Range(1, merge.PageCount / 2).Select(i => (i * 2).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+    PdfFileResult extract = PdfFiles.ExtractAsync(merged.ToArray(), evenPages, even).GetAwaiter().GetResult();
+    Check("merge and extract", merge.PageCount == examplePdfs.Sum(f => PdfFileInfo.Read(File.ReadAllBytes(f)).PageCount) && extract.PageCount == merge.PageCount / 2);
+    File.WriteAllBytes(Path.Combine(saveTo, "untagged-merged.pdf"), merged.ToArray());
+    File.WriteAllBytes(Path.Combine(saveTo, "untagged-even.pdf"), even.ToArray());
+}
+
 return failures == 0 ? 0 : 1;
 
 // The file as text with every Flate stream inflated after it: objects sit in compressed object streams.

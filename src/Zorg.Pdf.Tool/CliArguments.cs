@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 namespace Zorg.Pdf.Tool;
 
 /// <summary>A parsed command line. Options take <c>--name value</c> or <c>--name=value</c>.</summary>
 internal sealed class CliArguments
 {
-    private static readonly string[] Commands = ["render", "validate", "watch", "preview", "info", "schema"];
+    private static readonly string[] Commands = ["render", "validate", "watch", "preview", "info", "merge", "extract", "split", "schema"];
 
     /// <summary>render, validate, watch, schema, help or version.</summary>
     public string Command { get; private set; } = "help";
@@ -46,6 +47,23 @@ internal sealed class CliArguments
 
     public double Dpi { get; private set; } = 96;
 
+    /// <summary>merge: the files, each with the pages to take ("a.pdf:1-3"), null for all.</summary>
+    public List<(string File, string? Pages)> Inputs { get; } = [];
+
+    /// <summary>extract: the pages to take.</summary>
+    public string? Pages { get; private set; }
+
+    /// <summary>merge and extract: new metadata, null to keep the first file's.</summary>
+    public string? Title { get; private set; }
+
+    public string? Author { get; private set; }
+
+    public string? Subject { get; private set; }
+
+    public string? Keywords { get; private set; }
+
+    public string? Language { get; private set; }
+
     public static bool TryParse(string[] args, [NotNullWhen(true)] out CliArguments? parsed, [NotNullWhen(false)] out string? error)
     {
         var result = new CliArguments();
@@ -71,7 +89,7 @@ internal sealed class CliArguments
                 inline = arg[(equals + 1)..];
             }
 
-            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi" or "--pdfa";
+            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi" or "--pdfa" or "--pages" or "--title" or "--author" or "--subject" or "--keywords" or "--lang";
             string? value = inline;
             if (takesValue && value is null)
             {
@@ -153,6 +171,24 @@ internal sealed class CliArguments
                 case "--preview":
                     result.Preview = true;
                     break;
+                case "--pages":
+                    result.Pages = value;
+                    break;
+                case "--title":
+                    result.Title = value;
+                    break;
+                case "--author":
+                    result.Author = value;
+                    break;
+                case "--subject":
+                    result.Subject = value;
+                    break;
+                case "--keywords":
+                    result.Keywords = value;
+                    break;
+                case "--lang":
+                    result.Language = value;
+                    break;
                 case "--page":
                     if (value == "all")
                     {
@@ -196,8 +232,27 @@ internal sealed class CliArguments
         result.Command = positional[0];
         if (Array.IndexOf(Commands, result.Command) < 0)
         {
-            error = $"Unknown command \"{result.Command}\". The commands are render, validate, watch, preview, info and schema.";
+            error = $"Unknown command \"{result.Command}\". The commands are render, validate, watch, preview, info, merge, extract, split and schema.";
             return false;
+        }
+
+        if (result.Command == "merge")
+        {
+            if (positional.Count < 2 || result.Output is null)
+            {
+                error = "merge needs files and --output: zorg-pdf merge a.pdf b.pdf:2-4 -o out.pdf.";
+                return false;
+            }
+
+            foreach (string input in positional.Skip(1))
+            {
+                // "file.pdf:1-3" takes some pages; a colon in a Windows drive letter isn't a range.
+                int colon = input.LastIndexOf(':');
+                bool range = colon > 1 && input[(colon + 1)..].Length > 0 && input[(colon + 1)..].All(c => char.IsAsciiDigit(c) || c is ',' or '-' or ' ');
+                result.Inputs.Add(range ? (input[..colon], input[(colon + 1)..]) : (input, null));
+            }
+
+            positional.RemoveRange(2, positional.Count - 2);
         }
 
         int expected = result.Command == "schema" ? 1 : 2;
@@ -224,6 +279,8 @@ internal sealed class CliArguments
         {
             "schema" => [],
             "info" => ["--json"],
+            "merge" or "extract" => ["-o", "--output", "--pages", "--title", "--author", "--subject", "--keywords", "--lang", "--json"],
+            "split" => ["-o", "--output", "--json"],
             "validate" => ["-d", "--data", "--image", "--warnaserror", "--json", "-v", "--verbose"],
             _ => [],
         };

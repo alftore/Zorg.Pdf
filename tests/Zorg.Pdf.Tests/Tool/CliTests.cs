@@ -285,6 +285,29 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public async Task MergeExtractAndSplitWriteNewFiles()
+    {
+        string document = Copy("invoice.json");
+        (int rendered, _, _) = await RunAsync("render", document, "--data", RepoFiles.Path("docs", "examples", "data", "invoice.json"), "--font", TestFonts.RequirePath());
+        string pdf = Path.ChangeExtension(document, ".pdf");
+        string merged = Path.Combine(_folder, "merged.pdf"), one = Path.Combine(_folder, "one.pdf");
+
+        (int mergeCode, string mergeOutput, _) = await RunAsync("merge", pdf, pdf + ":2", "-o", merged, "--title", "Pack");
+        (int extractCode, _, _) = await RunAsync("extract", pdf, "--pages", "2", "-o", one);
+        (int splitCode, string splitOutput, _) = await RunAsync("split", pdf, "-o", Path.Combine(_folder, "pages"));
+        (int badCode, _, string badError) = await RunAsync("extract", pdf, "--pages", "9", "-o", one);
+
+        Assert.Equal((Cli.Ok, Cli.Ok, Cli.Ok, Cli.Ok), (rendered, mergeCode, extractCode, splitCode));
+        Assert.Contains("merged.pdf: 3 pages", mergeOutput, StringComparison.Ordinal);
+        Assert.Contains("ZPDF-E001", mergeOutput, StringComparison.Ordinal);
+        Assert.Equal(("Pack", 3), (PdfFileInfo.Read(await File.ReadAllBytesAsync(merged, TestContext.Current.CancellationToken)).Title, PdfFileInfo.Read(await File.ReadAllBytesAsync(merged, TestContext.Current.CancellationToken)).PageCount));
+        Assert.Equal(1, PdfFileInfo.Read(await File.ReadAllBytesAsync(one, TestContext.Current.CancellationToken)).PageCount);
+        Assert.Equal(["invoice-1.pdf", "invoice-2.pdf"], Directory.GetFiles(Path.Combine(_folder, "pages")).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+        Assert.Equal(Cli.Problems, badCode);
+        Assert.Contains("The pages \"9\"", badError, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task MarkdownRendersWithImagesFromBesideItButNotFromOutside()
     {
         Directory.CreateDirectory(Path.Combine(_folder, "img"));
