@@ -38,6 +38,26 @@ public sealed class PdfData
 
     internal ImmutableDictionary<string, ImageSlot> Images { get; }
 
+    /// <summary>
+    /// Reads data from JSON: an object whose properties are slots. An array is a table's rows, each an array of cells
+    /// written as in a document; an object with <c>"base64"</c> is an image.
+    /// </summary>
+    /// <param name="json">The JSON text.</param>
+    /// <returns>The data.</returns>
+    /// <exception cref="PdfDocumentException">The JSON isn't data; the diagnostics say where, with JSON pointers.</exception>
+    /// <example>
+    /// <code>
+    /// PdfData data = PdfData.ParseJson("""
+    ///     { "lines": [["1", "Consulting", "7.5", "9 375,00"]], "logo": { "base64": "iVBORw0KGgo..." } }
+    ///     """);
+    /// </code>
+    /// </example>
+    public static PdfData ParseJson(string json)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        return Json.DataJson.Parse(System.Text.Encoding.UTF8.GetBytes(json));
+    }
+
     /// <summary>The bytes of a JPEG or PNG for a slot.</summary>
     /// <param name="slot">The slot name an image's source names.</param>
     /// <param name="bytes">The file's bytes.</param>

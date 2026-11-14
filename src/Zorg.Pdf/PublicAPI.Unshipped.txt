@@ -383,6 +383,7 @@ Zorg.Pdf.PdfConformance.None = 0 -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfConformance.PdfUA1 = 1 -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfData
 static Zorg.Pdf.PdfData.Empty.get -> Zorg.Pdf.PdfData!
+static Zorg.Pdf.PdfData.ParseJson(string! json) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithImage(string! slot, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.ReadOnlyMemory<byte>>>! load) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithImage(string! slot, System.ReadOnlyMemory<byte> bytes) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithRows(string! slot, System.Collections.Generic.IAsyncEnumerable<System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! rows) -> Zorg.Pdf.PdfData!

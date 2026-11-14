@@ -35,6 +35,7 @@ internal static class DiagnosticCodes
     public const string NoTitle = "ZPDF-A001";
     public const string BadLanguage = "ZPDF-A002";
     public const string NoAltText = "ZPDF-A003";
+    public const string HeadingSkipsLevel = "ZPDF-A004";
 
     // F: fonts.
     public const string NoFonts = "ZPDF-F001";

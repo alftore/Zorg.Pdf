@@ -147,7 +147,7 @@ jobs:
         run: |
           curl -fsSL -o "$RUNNER_TEMP/liberation.tar.gz" https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz
           echo "7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0  $RUNNER_TEMP/liberation.tar.gz" | sha256sum -c -
-          tar -xzf "$RUNNER_TEMP/liberation.tar.gz" -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP" && tar -xzf liberation.tar.gz # Relative: Git for Windows tar reads "D:" as a host.
 
       - name: Render and hash
         id: hash
@@ -182,7 +182,7 @@ jobs:
         run: |
           curl -fsSL -o "$RUNNER_TEMP/liberation.tar.gz" https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz
           echo "7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0  $RUNNER_TEMP/liberation.tar.gz" | sha256sum -c -
-          tar -xzf "$RUNNER_TEMP/liberation.tar.gz" -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP" && tar -xzf liberation.tar.gz # Relative: Git for Windows tar reads "D:" as a host.
 
       - name: Render and hash
         id: hash

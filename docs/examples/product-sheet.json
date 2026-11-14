@@ -1,0 +1,104 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Fjordlys desk lamp: product sheet",
+  "language": "en",
+  "content": [
+    {
+      "type": "heading",
+      "inlines": [
+        "Fjordlys desk lamp"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "spaceAfter": "8pt",
+      "inlines": [
+        "Model FL-200 · Oak and brushed steel"
+      ]
+    },
+    {
+      "type": "image",
+      "source": {
+        "$data": "photo"
+      },
+      "alt": "The Fjordlys lamp on an oak desk, lit, against a blue wall",
+      "width": "12cm",
+      "align": "center"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "inlines": [
+        "Description"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "justify",
+      "inlines": [
+        "A desk lamp with a warm, glare-free light and a solid oak base. The arm turns 300° and the head tilts 90°, so it lights a keyboard, a book or a wall. The LED module lasts about 50 000 hours and can be replaced without tools."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "keepWithNext": true,
+      "inlines": [
+        "Specifications"
+      ]
+    },
+    {
+      "type": "table",
+      "columns": [
+        {
+          "header": "Property",
+          "width": "2*"
+        },
+        {
+          "header": "Value",
+          "width": "3*"
+        }
+      ],
+      "rows": [
+        [
+          "Light",
+          "800 lm, 2 700 K, CRI 95"
+        ],
+        [
+          "Power",
+          "9 W, USB-C PD or 230 V adapter"
+        ],
+        [
+          "Size",
+          "Base 18 cm, arm 45 cm"
+        ],
+        [
+          "Weight",
+          "2.1 kg"
+        ],
+        [
+          "Materials",
+          "Oiled oak, brushed steel, recycled aluminium"
+        ],
+        [
+          "Warranty",
+          "5 years"
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "right",
+      "inlines": [
+        "Price: ",
+        {
+          "text": "2 490 NOK",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        " including VAT."
+      ]
+    }
+  ]
+}

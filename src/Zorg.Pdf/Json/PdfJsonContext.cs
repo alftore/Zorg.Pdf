@@ -21,6 +21,7 @@ namespace Zorg.Pdf.Json;
 [JsonSerializable(typeof(PdfDocument))]
 [JsonSerializable(typeof(ImmutableArray<Inline>))]
 [JsonSerializable(typeof(ImmutableArray<ImmutableArray<Cell>>))]
+[JsonSerializable(typeof(ImageSource))]
 [JsonSerializable(typeof(TextStyle))]
 [JsonSerializable(typeof(FieldKind))]
 [JsonSerializable(typeof(TextAlign))]

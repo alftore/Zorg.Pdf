@@ -1,0 +1,139 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Receipt 000417",
+  "language": "nb-NO",
+  "page": {
+    "size": {
+      "width": "80mm",
+      "height": "160mm"
+    },
+    "margin": "4mm"
+  },
+  "styles": {
+    "styles": {
+      "body": {
+        "size": "8pt"
+      },
+      "tableCell": {
+        "size": "8pt"
+      },
+      "tableHeader": {
+        "size": "8pt",
+        "weight": "bold"
+      },
+      "heading1": {
+        "size": "12pt",
+        "weight": "bold"
+      },
+      "thanks": {
+        "fontStyle": "italic"
+      }
+    }
+  },
+  "content": [
+    {
+      "type": "heading",
+      "align": "center",
+      "inlines": [
+        "Kvikk Kafé"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "center",
+      "spaceAfter": "6pt",
+      "inlines": [
+        "Thorvald Meyers gate 10, Oslo",
+        {
+          "lineBreak": true
+        },
+        "Org. nr. 912 345 678 MVA"
+      ]
+    },
+    {
+      "type": "table",
+      "columns": [
+        {
+          "header": "Item",
+          "width": "3*"
+        },
+        {
+          "header": "Qty",
+          "width": "*",
+          "align": "right"
+        },
+        {
+          "header": "Sum",
+          "width": "1.4*",
+          "align": "right"
+        }
+      ],
+      "rows": [
+        [
+          "Cappuccino",
+          "2",
+          "98,00"
+        ],
+        [
+          "Kanelbolle",
+          "2",
+          "76,00"
+        ],
+        [
+          "Eplejuice",
+          "1",
+          "39,00"
+        ],
+        [
+          {
+            "inlines": [
+              {
+                "text": "Total",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          "",
+          {
+            "inlines": [
+              {
+                "text": "213,00",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "right",
+      "inlines": [
+        "Of which VAT 15 %: 27,78"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "center",
+      "inlines": [
+        "Paid by card ···· 4242",
+        {
+          "lineBreak": true
+        },
+        "2026-11-14 08:31 · Till 2 · Receipt 000417"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "center",
+      "style": "thanks",
+      "inlines": [
+        "Takk for besøket!"
+      ]
+    }
+  ]
+}

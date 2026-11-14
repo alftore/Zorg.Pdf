@@ -44,6 +44,23 @@ public sealed class RenderDiagnosticsTests
     private static string InflateAll(byte[] file) => PdfInspect.Text(file);
 
     [Fact]
+    public async Task SkippedHeadingLevelsAreWarningsAndErrorsUnderPdfUA()
+    {
+        var document = new PdfDocument("x")
+        {
+            Content = [new Heading("Two") { Level = 2 }, new Heading("Three") { Level = 3 }, new Heading("One"), new Heading("Four") { Level = 4 }],
+        };
+
+        Assert.Equal(["Warning ZPDF-A004 /content/0/level", "Warning ZPDF-A004 /content/3/level"], document.Validate().Diagnostics.Select(d => $"{d.Severity} {d.Code} {d.Path}"));
+        (_, RenderResult result) = await RenderTests.RenderAsync(document);
+        Assert.Equal(2, result.Diagnostics.Count(d => d.Code == "ZPDF-A004"));
+
+        PdfDocumentException error = await Assert.ThrowsAsync<PdfDocumentException>(
+            () => document.RenderAsync(new MemoryStream(), PdfInspect.Options(PdfConformance.PdfUA1), TestContext.Current.CancellationToken).AsTask());
+        Assert.All(error.Diagnostics, d => Assert.Equal((DiagnosticSeverity.Error, "ZPDF-A004"), (d.Severity, d.Code)));
+    }
+
+    [Fact]
     public async Task ControlCharactersAreErrors()
     {
         PdfDocumentException error = await Assert.ThrowsAsync<PdfDocumentException>(

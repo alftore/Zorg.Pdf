@@ -212,6 +212,41 @@ byte[] font = File.ReadAllBytes(fontPath);
     }
 }
 
+// 0.1 slice 8: every example in docs/examples, with its data, under PDF/UA-1. Found by walking up from the current
+// folder, so it runs from the repository (CI, the Linux gate) and is skipped elsewhere.
+string? examples = null;
+for (DirectoryInfo? dir = new(Environment.CurrentDirectory); dir is not null && examples is null; dir = dir.Parent)
+{
+    string candidate = Path.Combine(dir.FullName, "docs", "examples");
+    examples = Directory.Exists(candidate) ? candidate : null;
+}
+
+if (examples is null)
+{
+    Console.WriteLine("skip examples: no docs/examples above the current folder");
+}
+else
+{
+    foreach (string path in Directory.GetFiles(examples, "*.json").Order(StringComparer.Ordinal))
+    {
+        string name = Path.GetFileNameWithoutExtension(path);
+        string dataPath = Path.Combine(examples, "data", name + ".json");
+        var exampleOptions = new RenderOptions
+        {
+            Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }),
+            Conformance = PdfConformance.PdfUA1,
+            Data = File.Exists(dataPath) ? PdfData.ParseJson(File.ReadAllText(dataPath)) : PdfData.Empty,
+        };
+        using var rendered = new MemoryStream();
+        RenderResult example = PdfDocument.ParseJson(File.ReadAllText(path)).RenderAsync(rendered, exampleOptions).AsTask().GetAwaiter().GetResult();
+        Check($"example {name}", !example.HasWarnings);
+        if (saveTo is not null)
+        {
+            File.WriteAllBytes(Path.Combine(saveTo, $"example-{name}.pdf"), rendered.ToArray());
+        }
+    }
+}
+
 return failures == 0 ? 0 : 1;
 
 // The file as text with every Flate stream inflated after it: objects sit in compressed object streams.

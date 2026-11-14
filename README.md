@@ -2,15 +2,30 @@
 
 Async-first PDF generation for .NET 10, written in C# only. Documents and reports from code, from a JSON document model, or from templates and data, in the spirit of jsreport, with tagged (accessible) output, no native binaries and no NuGet dependencies.
 
-**Status: early 0.1 development, not released.** The document model exists: build a document in C# or JSON, validate it, and round-trip it through JSON (schema in [schema/](schema/document-0.1.schema.json), examples in [docs/examples/](docs/examples), diagnostic codes in [docs/diagnostics.md](docs/diagnostics.md)). `RenderAsync` and `Render` turn headings, paragraphs (with bold, italic and fallback fonts) tables (with rows from `IAsyncEnumerable`), JPEG and PNG images, and headers and footers with "Page X of Y" into compact tagged PDF that passes veraPDF PDF/UA-1, byte for byte the same on Windows and Linux. What isn't supported is in [docs/limits.md](docs/limits.md).
+**Status: 0.1 in development, not released.** Build a document in C# or JSON (schema in [schema/](schema/document-0.1.schema.json), ten examples with data in [docs/examples/](docs/examples)), validate it (codes in [docs/diagnostics.md](docs/diagnostics.md)), and render headings, paragraphs with bold, italic and fallback fonts, tables with rows from `IAsyncEnumerable`, JPEG and PNG images, and headers and footers with "Page X of Y" as compact tagged PDF. Every example passes veraPDF PDF/UA-1 and comes out byte for byte the same on Windows and Linux. A tagged 1,000-row invoice renders in 30 ms (MigraDoc 6.2.4: 260 ms). What isn't supported is in [docs/limits.md](docs/limits.md).
+
+```csharp
+var document = new PdfDocument("Invoice 2026-0042")
+{
+    Footer = new PageBand([new Paragraph(["Page ", Field.PageNumber, " of ", Field.PageCount]) { Align = TextAlign.Right }]),
+    Content = [new Heading("Invoice 2026-0042"), new Table([new Column("Item"), new Column("Amount")]) { Rows = TableRows.Bound("lines") }],
+};
+var options = new RenderOptions
+{
+    Fonts = FontCollection.Empty.Add(new FontFamily("Inter") { Regular = FontSource.FromFile("Inter-Regular.ttf") }),
+    Data = PdfData.Empty.WithRows("lines", linesAsync, line => [line.Item, line.Amount.ToString("N2")]),
+    Conformance = PdfConformance.PdfUA1,
+};
+await document.RenderAsync(output, options, cancellationToken);
+```
 
 ## Roadmap
 
-0.1 is built in nine slices; seven are done.
+0.1 is built in nine slices; eight are done.
 
 | Version | Scope | State |
 |---|---|---|
-| 0.1 | The document model and its JSON Schema; rendering headings, paragraphs, tables, images, headers and footers with page numbers; bold and italic; tagged output with PDF/UA-1; object streams for small files; agent tools as a stretch goal | In progress: everything drawn, compact and deterministic; conformance, examples and docs next |
+| 0.1 | The document model and its JSON Schema; rendering headings, paragraphs, tables, images, headers and footers with page numbers; bold and italic; tagged output with PDF/UA-1; object streams for small files; agent tools as a stretch goal | In progress: the library is complete for 0.1; the agent tools are next |
 | 0.2 | Templates and data binding, lists, cell spans, PNG page previews, a `zorg-pdf` command-line tool | Planned |
 | 0.3 | Markdown, tables of contents and links, hyphenation, right-to-left and Arabic text, PDF/A | Planned |
 | 0.4 | Reading and merging PDFs, page groups, attachments, ZUGFeRD/Factur-X invoices | Planned |

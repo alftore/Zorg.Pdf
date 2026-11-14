@@ -86,7 +86,11 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         var sink = new DiagnosticSink();
-        sink.AddRange(document.Validate().Diagnostics);
+        foreach (PdfDiagnostic diagnostic in document.Validate().Diagnostics)
+        {
+            // Under PDF/UA a skipped heading level fails conformance, so it stops the render.
+            sink.AddRange([diagnostic.Code == DiagnosticCodes.HeadingSkipsLevel && options.Conformance == PdfConformance.PdfUA1 ? diagnostic with { Severity = DiagnosticSeverity.Error } : diagnostic]);
+        }
         var styles = new StyleResolver(document.Styles);
         string? defaultFamily = styles.DefaultFontFamily ?? options.Fonts.DefaultFamily;
         if (options.Fonts.Families.IsEmpty && options.FontResolver is null)

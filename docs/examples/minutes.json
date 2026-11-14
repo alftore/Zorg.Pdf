@@ -1,0 +1,160 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Minutes: architecture review, 12 November 2026",
+  "language": "en-GB",
+  "footer": {
+    "content": [
+      {
+        "type": "paragraph",
+        "style": "footer",
+        "align": "center",
+        "inlines": [
+          "Page ",
+          {
+            "field": "pageNumber"
+          },
+          " of ",
+          {
+            "field": "pageCount"
+          }
+        ]
+      }
+    ]
+  },
+  "content": [
+    {
+      "type": "heading",
+      "inlines": [
+        "Architecture review"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "12 November 2026, 10:00–11:30, room Fjord and online."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "inlines": [
+        "Attendees"
+      ]
+    },
+    {
+      "type": "table",
+      "columns": [
+        {
+          "header": "Name",
+          "width": "2*"
+        },
+        {
+          "header": "Role",
+          "width": "3*"
+        }
+      ],
+      "rows": [
+        [
+          "Kari Nordmann",
+          "Chair, product owner"
+        ],
+        [
+          "Ola Nordmann",
+          "Architect"
+        ],
+        [
+          "Sven Svensson",
+          "Developer"
+        ],
+        [
+          "Aino Virtanen",
+          "Accessibility specialist"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "keepWithNext": true,
+      "inlines": [
+        "1. Report pipeline"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "justify",
+      "inlines": [
+        "The pipeline renders 40 000 invoices a night. Moving from HTML-to-PDF to Zorg.Pdf removes the headless browser, cuts render time from 900 ms to 12 ms per invoice, and gives tagged output."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "inlines": [
+        "Decisions"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "Invoices and statements move first. Contracts stay on the old pipeline until 0.2 brings templates."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "keepWithNext": true,
+      "inlines": [
+        "2. Accessibility"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "justify",
+      "inlines": [
+        "Every report must pass veraPDF PDF/UA-1 in CI. Images get alt text from the catalogue; logos in headers are artifacts."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "inlines": [
+        "Action items"
+      ]
+    },
+    {
+      "type": "table",
+      "columns": [
+        {
+          "header": "Action",
+          "width": "4*"
+        },
+        {
+          "header": "Owner",
+          "width": "2*"
+        },
+        {
+          "header": "Due",
+          "width": "2.4cm"
+        }
+      ],
+      "rows": [
+        [
+          "Port the invoice template",
+          "Sven",
+          "2026-11-26"
+        ],
+        [
+          "Add alt text to the catalogue export",
+          "Aino",
+          "2026-12-03"
+        ],
+        [
+          "Load test 40 000 invoices",
+          "Ola",
+          "2026-12-10"
+        ]
+      ]
+    }
+  ]
+}

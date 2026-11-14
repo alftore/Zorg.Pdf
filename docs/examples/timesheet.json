@@ -1,0 +1,88 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Timesheet November 2026, Kari Nordmann",
+  "language": "en",
+  "header": {
+    "content": [
+      {
+        "type": "image",
+        "source": {
+          "$data": "logo"
+        },
+        "alt": "Zorg Consulting",
+        "height": "0.8cm"
+      }
+    ]
+  },
+  "footer": {
+    "content": [
+      {
+        "type": "paragraph",
+        "style": "footer",
+        "align": "right",
+        "inlines": [
+          "Timesheet · page ",
+          {
+            "field": "pageNumber"
+          },
+          " of ",
+          {
+            "field": "pageCount"
+          }
+        ]
+      }
+    ]
+  },
+  "content": [
+    {
+      "type": "heading",
+      "inlines": [
+        "Timesheet, November 2026"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "spaceAfter": "12pt",
+      "inlines": [
+        "Kari Nordmann · Employee 1042 · Department Engineering"
+      ]
+    },
+    {
+      "type": "table",
+      "columns": [
+        {
+          "header": "Date",
+          "width": "2.4cm"
+        },
+        {
+          "header": "Project",
+          "width": "2*"
+        },
+        {
+          "header": "Task",
+          "width": "3*"
+        },
+        {
+          "header": "Hours",
+          "width": "*",
+          "align": "right"
+        }
+      ],
+      "rows": {
+        "$data": "entries"
+      }
+    },
+    {
+      "type": "paragraph",
+      "align": "right",
+      "inlines": [
+        {
+          "text": "Total: 90.0 hours",
+          "style": {
+            "weight": "bold"
+          }
+        }
+      ]
+    }
+  ]
+}

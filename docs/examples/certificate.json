@@ -1,0 +1,86 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Certificate of completion",
+  "language": "en",
+  "page": {
+    "size": "A4",
+    "orientation": "landscape",
+    "margin": "2.5cm"
+  },
+  "styles": {
+    "styles": {
+      "heading1": {
+        "size": "34pt",
+        "weight": "bold",
+        "color": "#1F3A5F"
+      },
+      "name": {
+        "size": "26pt",
+        "fontStyle": "italic"
+      },
+      "body": {
+        "size": "13pt",
+        "lineHeight": 1.4
+      }
+    }
+  },
+  "content": [
+    {
+      "type": "image",
+      "source": {
+        "$data": "seal"
+      },
+      "alt": "The Zorg Academy seal",
+      "height": "3cm",
+      "align": "center"
+    },
+    {
+      "type": "heading",
+      "align": "center",
+      "inlines": [
+        "Certificate of completion"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "center",
+      "inlines": [
+        "This certifies that"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "center",
+      "style": "name",
+      "inlines": [
+        "Kari Nordmann"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "center",
+      "spaceAfter": "24pt",
+      "inlines": [
+        "has completed the course ",
+        {
+          "text": "Accessible PDF reports with Zorg.Pdf",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        ", 16 hours, with distinction."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "center",
+      "inlines": [
+        "Oslo, 14 November 2026",
+        {
+          "lineBreak": true
+        },
+        "Ola Nordmann, course lead"
+      ]
+    }
+  ]
+}

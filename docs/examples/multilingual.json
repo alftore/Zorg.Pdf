@@ -1,0 +1,130 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "One text in eight languages",
+  "language": "en",
+  "content": [
+    {
+      "type": "heading",
+      "inlines": [
+        "One text in eight languages"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "The same sentence, in scripts a Latin-only renderer gets wrong. Each line needs a font with its characters; a missing one is reported, never dropped."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "inlines": [
+        "Latin"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "Norwegian: ",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        "Blåbærsyltetøy er godt på vafler med rømme."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "Czech: ",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        "Příliš žluťoučký kůň úpěl ďábelské ódy."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "Polish: ",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        "Zażółć gęślą jaźń, pchnąć w tę łódź jeża."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "Turkish: ",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        "Pijamalı hasta yağız şoföre çabucak güvendi."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "inlines": [
+        "Greek and Cyrillic"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "Greek: ",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        "Ξεσκεπάζω την ψυχοφθόρα βδελυγμία."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "Russian: ",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        "Съешь же ещё этих мягких французских булок, да выпей чаю."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "Ukrainian: ",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        "Чуєш їх, доцю, га? Кумедна ж ти, прощайся без ґольфів!"
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "inlines": [
+        "Symbols"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "12 × 4,50 € = 54,00 € · 25 °C ± 2 · “quotes” and ‘single’ · en–dash and em—dash · ½ ¼ ¾"
+      ]
+    }
+  ]
+}

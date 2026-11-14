@@ -1,0 +1,119 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Account statement, October 2026",
+  "language": "en-GB",
+  "page": {
+    "size": "A4",
+    "margin": "2cm"
+  },
+  "header": {
+    "content": [
+      {
+        "type": "paragraph",
+        "style": "header",
+        "align": "right",
+        "inlines": [
+          "Zorg Bank ASA · Account 1234.56.78903 · Statement 10/2026"
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "content": [
+      {
+        "type": "paragraph",
+        "style": "footer",
+        "align": "right",
+        "inlines": [
+          "Page ",
+          {
+            "field": "pageNumber"
+          },
+          " of ",
+          {
+            "field": "pageCount"
+          }
+        ]
+      }
+    ]
+  },
+  "content": [
+    {
+      "type": "heading",
+      "inlines": [
+        "Account statement"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "Kari Nordmann",
+        {
+          "lineBreak": true
+        },
+        "Thorvald Meyers gate 42",
+        {
+          "lineBreak": true
+        },
+        "0555 Oslo"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "spaceAfter": "12pt",
+      "inlines": [
+        "Period 1–31 October 2026. Opening balance ",
+        {
+          "text": "25 000,00 NOK",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        "."
+      ]
+    },
+    {
+      "type": "table",
+      "columns": [
+        {
+          "header": "Date",
+          "width": "2.4cm"
+        },
+        {
+          "header": "Text",
+          "width": "3*"
+        },
+        {
+          "header": "Out",
+          "width": "*",
+          "align": "right"
+        },
+        {
+          "header": "In",
+          "width": "*",
+          "align": "right"
+        },
+        {
+          "header": "Balance",
+          "width": "*",
+          "align": "right"
+        }
+      ],
+      "rows": {
+        "$data": "transactions"
+      }
+    },
+    {
+      "type": "paragraph",
+      "align": "right",
+      "inlines": [
+        {
+          "text": "Closing balance: 249 503,44 NOK",
+          "style": {
+            "weight": "bold"
+          }
+        }
+      ]
+    }
+  ]
+}

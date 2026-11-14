@@ -30,6 +30,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - Headers and footers: `PdfDocument.Header` and `Footer` are drawn on every page as pagination artifacts, with room kept for them 12 pt from the content. `Field.PageNumber` and `Field.PageCount` show the real numbers, while pages still stream out as they finish. Built-in `header` and `footer` styles (8 pt). Bands that leave less than 36 pt for the content are an error (ZPDF-L004).
 
 - Images: JPEG embedded as it is, PNG checked row by row and embedded with its own compression when opaque, or decoded with its transparency as a soft mask. Sized from `Width`/`Height` or the pixels at 96 dpi, scaled down to fit, tagged as `Figure` with alt text and a bounding box, or an artifact when `Decorative`. The same image used twice is stored once. Images work in headers and footers too.
+- `PdfData.ParseJson` reads render data from JSON: table rows as arrays of cells, images as `{ "base64": ... }`.
+- A heading that skips a level is a warning (ZPDF-A004), and an error under `PdfUA1`.
+- Ten example documents in `docs/examples`, with data in `docs/examples/data`. Every one renders under `PdfUA1`, passes veraPDF in the Linux gate, and is hashed on Windows and Linux in CI.
 - Smaller files: objects other than streams go into compressed object streams, and the file ends with a compressed cross-reference stream (PDF 1.5). A tagged 1,000-row invoice went from 820 KB to 218 KB.
 - `PdfData.WithImage` supplies an image slot's bytes, or loads them asynchronously before the first page. `PdfLimits.MaxImageBytes` (50 MB) and `MaxImagePixels` (50 million) bound what a render accepts. A damaged or unsupported image (ZPDF-I001) or one over the limits (I002) stops the render before anything is written.
 

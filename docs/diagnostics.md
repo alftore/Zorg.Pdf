@@ -28,6 +28,7 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-A001 | Error | The document has no title. Viewers show it in place of the file name; PDF/UA requires one. | Set `title`. |
 | ZPDF-A002 | Error | The language isn't a BCP 47 tag. Screen readers pick their voice from it. | Use a tag such as `en`, `nb-NO` or `de-CH`. |
 | ZPDF-A003 | Error | An image has no alt text and isn't marked decorative. | Add `alt` saying what the image shows, or set `decorative: true`. |
+| ZPDF-A004 | Warning (Error under `PdfUA1`) | A heading skips a level: the first heading isn't level 1, or a heading is more than one level below the one before it. Screen readers navigate by level, so a skipped level reads as a missing section. | Use the next level down, or restructure the headings. |
 | ZPDF-F001 | Error | The render has no fonts. There are no system fonts by default. | Add one: `new RenderOptions { Fonts = FontCollection.Empty.Add(new FontFamily("Inter") { Regular = FontSource.FromFile("Inter-Regular.ttf") }) }`. |
 | ZPDF-F002 | Warning (Error under PdfUA1) | No font in the run's chain (its face and the family's fallbacks) has a glyph for a character, so it's drawn as an empty box (.notdef). | Add a fallback family that covers the text, or change the text. |
 | ZPDF-F003 | Info | The family has no bold or italic face that the text asks for, so it's drawn thickened or slanted from a face it has. | Add the real face to the `FontFamily` for better type. |
@@ -38,8 +39,8 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-L001 | Warning | A table row is taller than a whole page, so it runs past the bottom margin. Rows don't split across pages yet. | Shorten the cell text, or make the columns wider. |
 | ZPDF-L002 | Warning | A row from a data slot has a different number of cells from the table's columns; it's padded with empty cells or cut. | Give every row one cell per column. |
 | ZPDF-L003 | Warning | The fixed-width columns are wider than the page, so all columns are scaled to fit. | Make the fixed columns narrower, or use shares (`"2*"`). |
+| ZPDF-L004 | Error | The header and footer leave less than 36 pt of the page for the content. | Shorten the header or footer, use smaller text, or narrow the top and bottom margins. |
 | ZPDF-I001 | Error | An image can't be embedded: it isn't a JPEG or PNG, it's damaged, or it's a kind PDF can't hold (12-bit, lossless or arithmetic-coded JPEG). The message says which. | Save it again as an 8-bit baseline or progressive JPEG, or as a PNG. |
 | ZPDF-I002 | Error | An image is over `RenderOptions.Limits.MaxImageBytes` or `MaxImagePixels`. | Make the image smaller, or raise the limit if the input is trusted. |
-| ZPDF-L004 | Error | The header and footer leave less than 36 pt of the page for the content. | Shorten the header or footer, use smaller text, or narrow the top and bottom margins. |
 | ZPDF-R001 | Warning | This version doesn't draw that part yet (page number fields outside headers and footers), so it's left out. | Wait for the release that draws it, or leave it out. |
 | ZPDF-R002 | Error | A synchronous `Render` was given rows from an `IAsyncEnumerable`, or an image that loads asynchronously, which it can't wait for. | Use `RenderAsync`, or give the rows as an `IEnumerable` and the image as bytes. |

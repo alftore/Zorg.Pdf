@@ -58,9 +58,21 @@ internal sealed partial class DocumentValidator
             return;
         }
 
+        int previousLevel = 0;
         for (int i = 0; i < document.Content.Length; i++)
         {
             Block(document.Content[i], $"/content/{i}");
+            if (document.Content[i] is Heading { Level: >= 1 and <= 6 } heading)
+            {
+                // Screen readers navigate by heading level; a skipped level reads as a missing section.
+                if (heading.Level > previousLevel + 1)
+                {
+                    string expected = previousLevel == 0 ? "The first heading should be level 1" : Invariant($"After a level {previousLevel} heading, the next level down is {previousLevel + 1}");
+                    Warning(DiagnosticCodes.HeadingSkipsLevel, Invariant($"{expected}; this one is level {heading.Level}, so a level is skipped. PDF/UA documents must not skip heading levels."), $"/content/{i}/level");
+                }
+
+                previousLevel = heading.Level;
+            }
         }
     }
 
