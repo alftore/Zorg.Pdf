@@ -9,7 +9,7 @@ dotnet tool install --global Zorg.Pdf.Tool
 ```
 
 ```
-zorg-pdf render invoice.json --data invoice-data.json --pdfua
+zorg-pdf render invoice.json --data invoice-data.json --pdfua --pdfa 2a
 zorg-pdf validate invoice.json
 zorg-pdf watch letter.json --fonts ./fonts
 zorg-pdf preview letter.json --page 1 --dpi 96

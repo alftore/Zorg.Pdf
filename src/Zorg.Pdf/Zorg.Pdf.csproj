@@ -17,6 +17,8 @@
   <ItemGroup>
     <!-- The JSON Schema of the document format, served by PdfJsonSchema.Current. -->
     <EmbeddedResource Include="..\..\schema\document-0.1.schema.json" LogicalName="document.schema.json" />
+    <!-- The ICC's sRGB profile, unchanged (see docs/dependencies.md): the output intent of PDF/A files. -->
+    <EmbeddedResource Include="Resources\sRGB2014.icc" LogicalName="sRGB2014.icc" />
   </ItemGroup>
 
   <ItemGroup>

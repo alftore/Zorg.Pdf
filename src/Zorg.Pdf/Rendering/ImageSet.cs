@@ -68,6 +68,12 @@ internal sealed class ImageSet
                     : JpegReader.IsJpeg(data.Span) ? JpegReader.Read(data, options.Limits)
                     : PngReader.IsPng(data.Span) ? PngReader.Read(data, options.Limits)
                     : throw new PdfException("The image isn't a JPEG or a PNG. Other formats need an image processor (RenderOptions.ImageProcessor), such as the one in Zorg.Pdf.Imaging.");
+                if (prepared.ColorSpace == ImageColorSpace.Cmyk && options.Archive != PdfArchive.None)
+                {
+                    sink.Error(DiagnosticCodes.ImageUnreadable, "The image is CMYK, which PDF/A allows only with a CMYK output intent; Zorg.Pdf's is sRGB. Convert it to RGB, or set RenderOptions.ImageProcessor = new ImagingProcessor() from Zorg.Pdf.Imaging, which does.", $"{path}/source");
+                    continue;
+                }
+
                 set._entries[image.Source] = new Entry(prepared, processed?.NaturalWidth, processed?.NaturalHeight);
             }
             catch (PdfException ex) when (ex is not PdfLimitException)

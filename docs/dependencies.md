@@ -15,6 +15,7 @@ Rules:
 | Package | Licence | Why | Risk |
 |---|---|---|---|
 | Zorg.Imaging 0.4.0 | MIT (checked in the `.nuspec`, 2026-11-14); no dependencies on `net10.0` | `Zorg.Pdf.Imaging` only: decoding, orientation, colour conversion and resizing of images, and its experimental canvas (`ZORGDRAW`) for page previews | Low. The maintainer's own library, under the same rules (managed only, AOT-safe, no dependencies). First-party packages don't wait out the 7-day age rule. |
+| ICC sRGB profile `sRGB2014.icc` (embedded in `Zorg.Pdf` as a resource, not a package) | The ICC's terms as Qt's and Debian's attributions quote them: the profile may be "copied, distributed, embedded, made, used, and sold without restriction"; altered versions must drop the original identification. Copyright tag: "Copyright International Color Consortium, 2015". From registry.color.org/rgb-registry/profiles/sRGB2014.icc, 3,024 bytes, SHA-256 `384b832d…6c0a`, checked by a test so it stays unchanged | The output intent of PDF/A files (`RenderOptions.Archive`) | Low. 3 KB of data, no code. The ICC's general-terms page itself wasn't found; the registry page refers to it |
 | Microsoft.Extensions.AI.Abstractions 10.11.0 | MIT (checked in the `.nuspec`, 2026-11-14); no dependencies on `net10.0` | `Zorg.Pdf.Extensions.AI` only: the `AIFunction` type its tools are | Low. Microsoft's abstraction for AI tools, used by every .NET AI client. 11.0.0 was four days old when this was added, so it waits. |
 
 ## Build only (not shipped)

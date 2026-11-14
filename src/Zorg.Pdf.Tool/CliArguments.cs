@@ -31,6 +31,8 @@ internal sealed class CliArguments
 
     public bool PdfUA { get; private set; }
 
+    public PdfArchive Archive { get; private set; }
+
     public bool WarningsAsErrors { get; private set; }
 
     public bool Json { get; private set; }
@@ -69,7 +71,7 @@ internal sealed class CliArguments
                 inline = arg[(equals + 1)..];
             }
 
-            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi";
+            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi" or "--pdfa";
             string? value = inline;
             if (takesValue && value is null)
             {
@@ -128,6 +130,16 @@ internal sealed class CliArguments
                     break;
                 case "--pdfua":
                     result.PdfUA = true;
+                    break;
+                case "--pdfa":
+                    PdfArchive? archive = value switch { "2a" => PdfArchive.PdfA2a, "2u" => PdfArchive.PdfA2u, "2b" => PdfArchive.PdfA2b, _ => null };
+                    if (archive is null)
+                    {
+                        error = $"--pdfa takes 2a, 2u or 2b, not \"{value}\".";
+                        return false;
+                    }
+
+                    result.Archive = archive.Value;
                     break;
                 case "--warnaserror":
                     result.WarningsAsErrors = true;

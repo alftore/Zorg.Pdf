@@ -38,6 +38,18 @@ public sealed class RenderOptions
     /// </summary>
     public PdfConformance Conformance { get; init; }
 
+    /// <summary>
+    /// A PDF/A level to claim, for archiving: the file then carries an sRGB output intent and the PDF/A identifier,
+    /// and what PDF/A forbids (CMYK images without a CMYK output intent, characters no font has) stops the render.
+    /// Independent of <see cref="Conformance"/>: a file can be PDF/A-2a and PDF/UA-1 at once.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// var options = new RenderOptions { Fonts = fonts, Conformance = PdfConformance.PdfUA1, Archive = PdfArchive.PdfA2a };
+    /// </code>
+    /// </example>
+    public PdfArchive Archive { get; init; }
+
     /// <summary>Rows for tables bound to data slots, read as the tables are laid out.</summary>
     public PdfData Data { get; init; } = PdfData.Empty;
 
@@ -66,6 +78,26 @@ public enum PdfConformance
 
     /// <summary>PDF/UA-1 (ISO 14289-1), universal accessibility. Checked by veraPDF in the project's tests.</summary>
     PdfUA1,
+}
+
+/// <summary>A PDF/A level (ISO 19005-2) a document claims, for long-term archiving.</summary>
+[JsonConverter(typeof(CamelCaseEnumConverter<PdfArchive>))]
+public enum PdfArchive
+{
+    /// <summary>No claim.</summary>
+    None,
+
+    /// <summary>PDF/A-2b: looks the same in years to come (fonts embedded, colour defined, no external content).</summary>
+    PdfA2b,
+
+    /// <summary>PDF/A-2u: as 2b, and every character maps to Unicode, so text can be searched and copied.</summary>
+    PdfA2u,
+
+    /// <summary>
+    /// PDF/A-2a: as 2u, and tagged with a logical structure, as Zorg.Pdf's output always is. Accessibility problems
+    /// (images without alt text, skipped heading levels) stop the render, as under PDF/UA.
+    /// </summary>
+    PdfA2a,
 }
 
 /// <summary>Limits that stop a render before it uses unbounded time or memory. Exceeding one throws <see cref="PdfLimitException"/>.</summary>

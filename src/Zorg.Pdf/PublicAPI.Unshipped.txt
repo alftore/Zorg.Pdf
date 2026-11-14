@@ -469,6 +469,11 @@ Zorg.Pdf.Paragraph.SpaceAfter.init -> void
 override Zorg.Pdf.Paragraph.ToString() -> string!
 static Zorg.Pdf.Paragraph.operator !=(Zorg.Pdf.Paragraph? left, Zorg.Pdf.Paragraph? right) -> bool
 static Zorg.Pdf.Paragraph.operator ==(Zorg.Pdf.Paragraph? left, Zorg.Pdf.Paragraph? right) -> bool
+Zorg.Pdf.PdfArchive
+Zorg.Pdf.PdfArchive.None = 0 -> Zorg.Pdf.PdfArchive
+Zorg.Pdf.PdfArchive.PdfA2a = 3 -> Zorg.Pdf.PdfArchive
+Zorg.Pdf.PdfArchive.PdfA2b = 1 -> Zorg.Pdf.PdfArchive
+Zorg.Pdf.PdfArchive.PdfA2u = 2 -> Zorg.Pdf.PdfArchive
 Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfConformance.None = 0 -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfConformance.PdfUA1 = 1 -> Zorg.Pdf.PdfConformance
@@ -591,6 +596,8 @@ Zorg.Pdf.PdfPixelFormat.Cmyk32 = 2 -> Zorg.Pdf.PdfPixelFormat
 Zorg.Pdf.PdfPixelFormat.Gray8 = 0 -> Zorg.Pdf.PdfPixelFormat
 Zorg.Pdf.PdfPixelFormat.Rgb24 = 1 -> Zorg.Pdf.PdfPixelFormat
 Zorg.Pdf.RenderOptions
+Zorg.Pdf.RenderOptions.Archive.get -> Zorg.Pdf.PdfArchive
+Zorg.Pdf.RenderOptions.Archive.init -> void
 Zorg.Pdf.RenderOptions.Conformance.get -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.RenderOptions.Conformance.init -> void
 Zorg.Pdf.RenderOptions.CreationDate.get -> System.DateTimeOffset?

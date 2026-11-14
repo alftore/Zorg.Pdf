@@ -257,9 +257,9 @@ internal static class Preflight
                 {
                     // Drawn as .notdef: visible and searchable as U+FFFD, but meaningless to a screen reader.
                     string message = MissingGlyphMessage(rune, index, chain);
-                    if (options.Conformance == PdfConformance.PdfUA1)
+                    if (options.Conformance == PdfConformance.PdfUA1 || options.Archive != PdfArchive.None)
                     {
-                        sink.Error(DiagnosticCodes.MissingGlyph, message + " PDF/UA requires every character to be drawn.", path);
+                        sink.Error(DiagnosticCodes.MissingGlyph, message + (options.Conformance == PdfConformance.PdfUA1 ? " PDF/UA" : " PDF/A") + " requires every character to be drawn.", path);
                     }
                     else
                     {

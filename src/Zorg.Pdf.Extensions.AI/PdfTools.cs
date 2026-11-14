@@ -305,6 +305,7 @@ internal sealed class RenderTool(PdfToolOptions options) : PdfTool(
                 Fonts = host.Fonts,
                 FontResolver = host.FontResolver,
                 Conformance = host.Conformance,
+                Archive = host.Archive,
                 Limits = host.Limits,
                 ImageProcessor = host.ImageProcessor,
                 CreationDate = host.CreationDate,
@@ -410,6 +411,7 @@ internal sealed class CapabilitiesTool(PdfToolOptions options) : PdfTool(
 
             writer.WriteBoolean("installedFontsByName", render.FontResolver is not null);
             writer.WriteString("conformance", render.Conformance == PdfConformance.PdfUA1 ? "pdfUA1" : "none");
+            writer.WriteString("archive", render.Archive switch { PdfArchive.PdfA2a => "pdfA2a", PdfArchive.PdfA2u => "pdfA2u", PdfArchive.PdfA2b => "pdfA2b", _ => "none" });
             writer.WriteBoolean("imageFormatsBeyondJpegAndPng", render.ImageProcessor is not null);
             writer.WriteStartObject("limits");
             writer.WriteNumber("maxPages", render.Limits.MaxPages);

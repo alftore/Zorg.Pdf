@@ -63,6 +63,7 @@ internal static class Cli
               --default-font <name>  The family for text whose style names none
               --system-fonts         Also use installed fonts. On when no --fonts or --font is given
               --pdfua                Claim PDF/UA-1 and treat accessibility warnings as errors
+              --pdfa <2a|2u|2b>      Claim PDF/A-2 for archiving (sRGB output intent, no CMYK images)
               --warnaserror          Exit with 1 when there are warnings
               --json                 Print results as JSON, one object per line
               --preview              With render and watch: also draw pages as PNG beside the PDF
@@ -211,6 +212,7 @@ internal static class Cli
             FontResolver = resolver,
             Data = data,
             Conformance = args.PdfUA ? PdfConformance.PdfUA1 : PdfConformance.None,
+            Archive = args.Archive,
             ImageProcessor = new ImagingProcessor(),
         };
 

@@ -89,8 +89,8 @@ internal sealed partial class RenderEngine : IDisposable
         var sink = new DiagnosticSink();
         foreach (PdfDiagnostic diagnostic in document.Validate().Diagnostics)
         {
-            // Under PDF/UA a skipped heading level fails conformance, so it stops the render.
-            sink.AddRange([diagnostic.Code == DiagnosticCodes.HeadingSkipsLevel && options.Conformance == PdfConformance.PdfUA1 ? diagnostic with { Severity = DiagnosticSeverity.Error } : diagnostic]);
+            // Under PDF/UA and PDF/A-2a a skipped heading level fails conformance, so it stops the render.
+            sink.AddRange([diagnostic.Code == DiagnosticCodes.HeadingSkipsLevel && (options.Conformance == PdfConformance.PdfUA1 || options.Archive == PdfArchive.PdfA2a) ? diagnostic with { Severity = DiagnosticSeverity.Error } : diagnostic]);
         }
         if (!sink.HasErrors && TemplateBinder.IsTemplate(document))
         {

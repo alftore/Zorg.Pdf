@@ -85,6 +85,18 @@ for pdf in $(cd "$out" && ls *.pdf); do # Smoke documents and every example.
   fi
 done
 
+# The examples also claim PDF/A-2a (the smoke sample sets RenderOptions.Archive for them).
+for pdf in $(cd "$out" && ls example-*.pdf); do
+  report="$(run_cli 300 run -i --rm --entrypoint sh "$verapdf" -c     'cat > /tmp/f.pdf && /opt/verapdf/verapdf --flavour 2a --format xml /tmp/f.pdf 2>/dev/null' < "$out/$pdf")"
+  if grep -q 'isCompliant="true"' <<<"$report"; then
+    echo "ok   $pdf is PDF/A-2a compliant"
+  else
+    echo "FAIL $pdf is not PDF/A-2a compliant:"
+    grep -E '<rule |<description>' <<<"$report" | head -40 || true
+    failed=1
+  fi
+done
+
 if [ -n "$keep" ]; then
   mkdir -p "$keep"
   cp "$out"/*.pdf "$keep"/

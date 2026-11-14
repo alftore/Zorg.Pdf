@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Security;
 using System.Text;
 using Zorg.Pdf.Writing;
@@ -224,12 +225,56 @@ internal sealed class DocumentWriter
         _writer.EndDictionary();
         _writer.Name("Metadata"u8);
         _writer.Reference(metadata);
+        if (options.Archive != PdfArchive.None)
+        {
+            // PDF/A: colour is defined by an sRGB output intent (ISO 19005-2, 6.2.3), the ICC's own profile.
+            PdfReference profile = _writer.Allocate();
+            _writer.Name("OutputIntents"u8);
+            _writer.BeginArray();
+            _writer.BeginDictionary();
+            _writer.Name("Type"u8);
+            _writer.Name("OutputIntent"u8);
+            _writer.Name("S"u8);
+            _writer.Name("GTS_PDFA1"u8);
+            _writer.Name("OutputConditionIdentifier"u8);
+            _writer.TextString("sRGB IEC61966-2.1");
+            _writer.Name("RegistryName"u8);
+            _writer.TextString("http://www.color.org");
+            _writer.Name("Info"u8);
+            _writer.TextString("sRGB IEC61966-2.1");
+            _writer.Name("DestOutputProfile"u8);
+            _writer.Reference(profile);
+            _writer.EndDictionary();
+            _writer.EndArray();
+            _writer.EndDictionary();
+            _writer.EndObject();
+
+            _writer.BeginStreamObject(profile);
+            _writer.Name("N"u8);
+            _writer.Integer(3);
+            _writer.EndStreamObject(SrgbProfile.Value, compress: true);
+            return info;
+        }
+
         _writer.EndDictionary();
         _writer.EndObject();
         return info;
     }
 
-    /// <summary>XMP with the same title, producer and dates as the Info dictionary, and the PDF/UA identifier when claimed.</summary>
+    /// <summary>The ICC's sRGB profile (sRGB2014.icc), embedded unchanged as PDF/A's output intent.</summary>
+    private static readonly Lazy<byte[]> SrgbProfile = new(() =>
+    {
+        using Stream stream = typeof(DocumentWriter).Assembly.GetManifestResourceStream("sRGB2014.icc")
+            ?? throw new InvalidOperationException("The sRGB profile resource is missing from the assembly.");
+        using var copy = new MemoryStream();
+        stream.CopyTo(copy);
+        return copy.ToArray();
+    });
+
+    /// <summary>
+    /// XMP with the same title, producer and dates as the Info dictionary, the PDF/UA identifier when claimed, and the
+    /// PDF/A identifier when claimed. With both, PDF/A requires the pdfuaid schema to be declared as an extension.
+    /// </summary>
     private static byte[] Xmp(PdfDocument document, RenderOptions options)
     {
         var xmp = new StringBuilder();
@@ -239,6 +284,11 @@ internal sealed class DocumentWriter
         if (options.Conformance == PdfConformance.PdfUA1)
         {
             xmp.Append(" xmlns:pdfuaid=\"http://www.aiim.org/pdfua/ns/id/\"");
+        }
+
+        if (options.Archive != PdfArchive.None)
+        {
+            xmp.Append(" xmlns:pdfaid=\"http://www.aiim.org/pdfa/ns/id/\"");
         }
 
         xmp.Append(">\n")
@@ -256,7 +306,29 @@ internal sealed class DocumentWriter
             xmp.Append("<pdfuaid:part>1</pdfuaid:part>\n");
         }
 
-        xmp.Append("</rdf:Description>\n</rdf:RDF>\n</x:xmpmeta>\n<?xpacket end=\"w\"?>");
+        if (options.Archive != PdfArchive.None)
+        {
+            string level = options.Archive switch { PdfArchive.PdfA2a => "A", PdfArchive.PdfA2u => "U", _ => "B" };
+            xmp.Append(CultureInfo.InvariantCulture, $"<pdfaid:part>2</pdfaid:part>\n<pdfaid:conformance>{level}</pdfaid:conformance>\n");
+        }
+
+        xmp.Append("</rdf:Description>\n");
+        if (options.Archive != PdfArchive.None && options.Conformance == PdfConformance.PdfUA1)
+        {
+            // PDF/A accepts only predefined XMP schemas unless an extension schema describes the others (ISO 19005-2, 6.6.2.3).
+            xmp.Append("<rdf:Description rdf:about=\"\" xmlns:pdfaExtension=\"http://www.aiim.org/pdfa/ns/extension/\" xmlns:pdfaSchema=\"http://www.aiim.org/pdfa/ns/schema#\" xmlns:pdfaProperty=\"http://www.aiim.org/pdfa/ns/property#\">\n")
+                .Append("<pdfaExtension:schemas><rdf:Bag><rdf:li rdf:parseType=\"Resource\">\n")
+                .Append("<pdfaSchema:schema>PDF/UA Universal Accessibility Schema</pdfaSchema:schema>\n")
+                .Append("<pdfaSchema:namespaceURI>http://www.aiim.org/pdfua/ns/id/</pdfaSchema:namespaceURI>\n")
+                .Append("<pdfaSchema:prefix>pdfuaid</pdfaSchema:prefix>\n")
+                .Append("<pdfaSchema:property><rdf:Seq><rdf:li rdf:parseType=\"Resource\">\n")
+                .Append("<pdfaProperty:name>part</pdfaProperty:name><pdfaProperty:valueType>Integer</pdfaProperty:valueType><pdfaProperty:category>internal</pdfaProperty:category>\n")
+                .Append("<pdfaProperty:description>Indicates, which part of ISO 14289 standard is followed</pdfaProperty:description>\n")
+                .Append("</rdf:li></rdf:Seq></pdfaSchema:property>\n")
+                .Append("</rdf:li></rdf:Bag></pdfaExtension:schemas>\n</rdf:Description>\n");
+        }
+
+        xmp.Append("</rdf:RDF>\n</x:xmpmeta>\n<?xpacket end=\"w\"?>");
         return Encoding.UTF8.GetBytes(xmp.ToString());
     }
 
