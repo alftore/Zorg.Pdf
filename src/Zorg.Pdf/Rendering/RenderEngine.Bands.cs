@@ -1,0 +1,234 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using Zorg.Pdf.Fonts;
+using Zorg.Pdf.Layout;
+using Zorg.Pdf.Validation;
+using Zorg.Pdf.Writing;
+
+namespace Zorg.Pdf.Rendering;
+
+/// <summary>
+/// Headers and footers. Each is measured once, before the first page, so the content area can leave room for it.
+/// They're drawn last, into a second content stream per page, when the page count is known: the pages before them
+/// have already streamed out, and only those small streams wait. A band without fields is one stream that every page
+/// shares. Bands are pagination artifacts, outside the structure tree.
+/// </summary>
+internal sealed partial class RenderEngine
+{
+    /// <summary>Space between a band and the content, in points.</summary>
+    internal const double BandGap = 12;
+
+    /// <summary>The least height the content area may keep once the bands are placed.</summary>
+    internal const double MinContentHeight = 36;
+
+    private readonly List<EmbeddedFont> _bandFonts = [];
+    private readonly List<PdfReference> _bandStreams = [];
+    private Band? _header;
+    private Band? _footer;
+    private PdfReference? _sharedBandStream;
+
+    /// <summary>Measures the header and footer and returns the content area that's left.</summary>
+    private PageGeometry MeasureBands()
+    {
+        _header = Band.From(_document.Header, "/header", "header", "Header"u8);
+        _footer = Band.From(_document.Footer, "/footer", "footer", "Footer"u8);
+        PageGeometry content = _pageGeometry;
+        var fonts = new HashSet<EmbeddedFont>();
+        foreach (Band? band in (ReadOnlySpan<Band?>)[_header, _footer])
+        {
+            if (band is null)
+            {
+                continue;
+            }
+
+            // Three digits for the height; every digit once to find the fonts that may draw them.
+            band.Height = Height(LayoutBand(band, _ => "000", report: true));
+            foreach ((PreparedText? text, _) in LayoutBand(band, _ => "0123456789", report: false))
+            {
+                foreach (LayoutLine line in text?.Lines ?? [])
+                {
+                    foreach (LineRun run in line.Runs)
+                    {
+                        fonts.Add(run.Font);
+                    }
+                }
+            }
+
+            double room = band.Height > 0 ? band.Height + BandGap : 0;
+            content = band == _header ? content with { Top = content.Top - room } : content with { Bottom = content.Bottom + room };
+        }
+
+        if ((_header ?? _footer) is not null && content.ContentHeight < MinContentHeight)
+        {
+            _sink.Error(
+                DiagnosticCodes.BandsTooTall,
+                string.Create(CultureInfo.InvariantCulture, $"The header and footer take {_pageGeometry.ContentHeight - content.ContentHeight:0.#} pt of the page's {_pageGeometry.ContentHeight:0.#} pt, leaving less than {MinContentHeight} pt for the content."),
+                _footer is not null ? "/footer" : "/header");
+        }
+
+        _bandFonts.AddRange(fonts);
+        _bandFonts.Sort((a, b) => string.CompareOrdinal(a.Font.PostScriptName, b.Font.PostScriptName)); // Deterministic.
+        return content;
+    }
+
+    /// <summary>The band stream for the page being finished, or null without bands.</summary>
+    private PdfReference? BandStream()
+    {
+        if (_header is null && _footer is null)
+        {
+            return null;
+        }
+
+        if (!(_header?.HasFields ?? false) && !(_footer?.HasFields ?? false))
+        {
+            _sharedBandStream ??= _writer.Allocate();
+            return _sharedBandStream;
+        }
+
+        PdfReference stream = _writer.Allocate();
+        _bandStreams.Add(stream);
+        return stream;
+    }
+
+    /// <summary>Draws and writes the band streams, now that the page count is known.</summary>
+    private void WriteBands()
+    {
+        if (_sharedBandStream is { } shared)
+        {
+            WriteBandStream(shared, 1, _documentWriter.Pages.Count);
+            return;
+        }
+
+        for (int i = 0; i < _bandStreams.Count; i++)
+        {
+            WriteBandStream(_bandStreams[i], i + 1, _documentWriter.Pages.Count);
+        }
+    }
+
+    private void WriteBandStream(PdfReference reference, int page, int pages)
+    {
+        // This stream follows the page's own, so it starts from whatever state that one left: set the fill colour,
+        // and let the first run set its font, stroke and rendering mode.
+        _content = new ContentStreamBuilder();
+        _content.SetFillGray(0);
+        _fill = Color.Black;
+        (_stroke, _strokeWidth, _renderingMode) = (null, 1, 0);
+        string Field(FieldKind kind) => (kind == FieldKind.PageCount ? pages : page).ToString(CultureInfo.InvariantCulture);
+        if (_header is not null)
+        {
+            DrawBand(_header, LayoutBand(_header, Field, report: false), _pageGeometry.Top);
+        }
+
+        if (_footer is not null)
+        {
+            DrawBand(_footer, LayoutBand(_footer, Field, report: false), _pageGeometry.Bottom + _footer.Height);
+        }
+
+        _writer.BeginStreamObject(reference);
+        _writer.EndStreamObject(_content.WrittenSpan, compress: true);
+    }
+
+    private void DrawBand(Band band, List<(PreparedText? Text, double Space)> items, double y)
+    {
+        for (int i = 0; i < items.Count; i++)
+        {
+            (PreparedText? text, double space) = items[i];
+            if (text is null)
+            {
+                y -= space;
+                continue;
+            }
+
+            y -= text.SpaceBefore;
+            _content.BeginArtifact("Pagination"u8, band.Subtype.Span);
+            BeginText();
+            foreach (LayoutLine line in text.Lines)
+            {
+                if (line.Runs.Count > 0)
+                {
+                    DrawRuns(line, _pageGeometry.Left + line.Offset, y - line.Ascent);
+                }
+
+                y -= line.Height;
+            }
+
+            EndText();
+            y -= text.SpaceAfter;
+        }
+    }
+
+    /// <summary>The band's paragraphs laid out with the given field text, and its spacers as space.</summary>
+    private List<(PreparedText? Text, double Space)> LayoutBand(Band band, Func<FieldKind, string> fields, bool report)
+    {
+        var items = new List<(PreparedText?, double)>();
+        for (int i = 0; i < band.Model.Content.Length; i++)
+        {
+            switch (band.Model.Content[i])
+            {
+                case Paragraph paragraph:
+                    items.Add((LayoutText(paragraph, _styles.ForBand(paragraph, band.StyleName), $"{band.Path}/content/{i}", fields, report), 0));
+                    break;
+                case Spacer spacer:
+                    items.Add((null, spacer.Height.Points));
+                    break;
+            }
+        }
+
+        return items;
+    }
+
+    /// <summary>A band's height: its blocks and the space between them, but not the space after the last.</summary>
+    private static double Height(List<(PreparedText? Text, double Space)> items)
+    {
+        double height = 0;
+        for (int i = 0; i < items.Count; i++)
+        {
+            (PreparedText? text, double space) = items[i];
+            height += text is null ? space : text.Height + (i < items.Count - 1 ? text.SpaceAfter : 0);
+        }
+
+        return height;
+    }
+
+    /// <summary>A header or footer and what's known about it before the first page.</summary>
+    private sealed class Band(PageBand model, string path, string styleName, ReadOnlyMemory<byte> subtype)
+    {
+        public PageBand Model { get; } = model;
+
+        public string Path { get; } = path;
+
+        /// <summary>The built-in style its paragraphs start from: <c>header</c> or <c>footer</c>.</summary>
+        public string StyleName { get; } = styleName;
+
+        /// <summary>The artifact subtype: <c>Header</c> or <c>Footer</c>.</summary>
+        public ReadOnlyMemory<byte> Subtype { get; } = subtype;
+
+        /// <summary>Whether it shows a page number or count, so it differs from page to page.</summary>
+        public bool HasFields { get; } = HasField(model);
+
+        public double Height { get; set; }
+
+        public static Band? From(PageBand? band, string path, string styleName, ReadOnlySpan<byte> subtype) =>
+            band is null ? null : new Band(band, path, styleName, subtype.ToArray());
+
+        private static bool HasField(PageBand band)
+        {
+            foreach (Block block in band.Content)
+            {
+                if (block is Paragraph paragraph && !paragraph.Inlines.IsDefault)
+                {
+                    foreach (Inline inline in paragraph.Inlines)
+                    {
+                        if (inline is Field)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+}

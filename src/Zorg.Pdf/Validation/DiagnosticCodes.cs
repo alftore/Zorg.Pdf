@@ -51,6 +51,7 @@ internal static class DiagnosticCodes
     public const string RowTooTall = "ZPDF-L001";
     public const string RowCellCount = "ZPDF-L002";
     public const string ColumnsTooWide = "ZPDF-L003";
+    public const string BandsTooTall = "ZPDF-L004";
 
     // R: rendering and limits.
     public const string NotDrawnYet = "ZPDF-R001";

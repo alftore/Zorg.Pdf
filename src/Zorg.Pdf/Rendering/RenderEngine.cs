@@ -40,7 +40,8 @@ internal sealed partial class RenderEngine : IDisposable
     private readonly PdfObjectWriter _writer;
     private readonly DocumentWriter _documentWriter;
     private readonly Tagger _tagger;
-    private readonly PageGeometry _geometry;
+    private readonly PageGeometry _geometry; // The content area: the page inside its margins, less the header and footer.
+    private readonly PageGeometry _pageGeometry; // The page inside its margins.
     private readonly Dictionary<int, PreparedText> _prepared = [];
     private readonly HashSet<EmbeddedFont> _pageFonts = [];
     private readonly HashSet<int> _missingInData = []; // Characters already reported for rows from data slots.
@@ -65,9 +66,11 @@ internal sealed partial class RenderEngine : IDisposable
         _defaultFamily = defaultFamily;
         _sink = sink;
         _writer = new PdfObjectWriter(output, PdfVersion.Pdf17, synchronous);
-        _geometry = PageGeometry.From(document.Page);
-        _documentWriter = new DocumentWriter(_writer, _geometry);
+        _pageGeometry = PageGeometry.From(document.Page);
+        _geometry = _pageGeometry;
+        _documentWriter = new DocumentWriter(_writer, _pageGeometry);
         _tagger = new Tagger(_writer);
+        _geometry = MeasureBands();
     }
 
     public static async ValueTask<RenderResult> RenderAsync(PdfDocument document, Stream output, RenderOptions? options, bool synchronous, CancellationToken cancellationToken)
@@ -97,6 +100,11 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         using var engine = new RenderEngine(document, options, styles, fonts, defaultFamily, sink, output, synchronous);
+        if (sink.HasErrors)
+        {
+            throw new PdfDocumentException(sink.ToImmutable()); // The bands leave no room; nothing has been written yet.
+        }
+
         await engine.RunAsync(cancellationToken).ConfigureAwait(false);
         return new RenderResult(engine._documentWriter.Pages.Count, engine._writer.Position, sink.ToImmutable());
     }
@@ -134,6 +142,7 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         await FinishPageAsync(cancellationToken).ConfigureAwait(false);
+        WriteBands();
         foreach ((EmbeddedFont font, _, PdfReference reference) in _fonts.Used)
         {
             font.Write(_writer, reference);
@@ -307,8 +316,18 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         Block block = _document.Content[index];
-        string path = $"/content/{index}";
-        TextStyle style = _styles.For(block);
+        PreparedText prepared = LayoutText(block, _styles.For(block), $"/content/{index}", fields: null, report: true);
+        _prepared[index] = prepared;
+        return prepared;
+    }
+
+    /// <summary>
+    /// Lays out a heading or paragraph at the text width. <paramref name="fields"/> gives the text of page number
+    /// fields (in headers and footers); without it they're left out. Layout warnings are reported when
+    /// <paramref name="report"/> is set, so a band laid out on every page reports them once.
+    /// </summary>
+    private PreparedText LayoutText(Block block, TextStyle style, string path, Func<FieldKind, string>? fields, bool report)
+    {
         double size = style.Size?.Points ?? 10;
         ImmutableArray<Inline> inlines = Preflight.Inlines(block)!.Value;
         (TextAlign align, StructureRole role, double before, double after) = block switch
@@ -318,9 +337,9 @@ internal sealed partial class RenderEngine : IDisposable
             _ => throw new InvalidOperationException($"Block {block.GetType().Name} isn't text."),
         };
 
-        List<TextSegment> segments = Segments(inlines, style, out List<(int Offset, int Inline)> starts);
+        List<TextSegment> segments = Segments(inlines, style, out List<(int Offset, int Inline)> starts, fields);
         ParagraphLayout layout = ParagraphLayout.Create(segments, _geometry.ContentWidth, align, style.LineHeight ?? 1.2);
-        foreach (TextDiagnostic diagnostic in layout.Diagnostics)
+        foreach (TextDiagnostic diagnostic in report ? layout.Diagnostics : [])
         {
             (int start, int inline) = starts.FindLast(s => s.Offset <= diagnostic.Index);
             _sink.Warning(
@@ -329,17 +348,16 @@ internal sealed partial class RenderEngine : IDisposable
                 $"{path}/inlines/{inline}");
         }
 
-        var prepared = new PreparedText(role, layout.Lines, before, after, block is Heading || block.KeepWithNext);
-        _prepared[index] = prepared;
-        return prepared;
+        return new PreparedText(role, layout.Lines, before, after, block is Heading || block.KeepWithNext);
     }
 
     /// <summary>
     /// One segment per run, in its own face, size and colour; line breaks become line feeds. <paramref name="starts"/>
     /// maps text offsets back to inlines for diagnostics. A run whose face wasn't loaded (styled text in bound rows
-    /// isn't known before the render) uses the block's face.
+    /// isn't known before the render) uses the block's face. A field takes its text from <paramref name="fields"/>
+    /// in the block's style, or is left out without it.
     /// </summary>
-    private List<TextSegment> Segments(ImmutableArray<Inline> inlines, TextStyle style, out List<(int Offset, int Inline)> starts)
+    private List<TextSegment> Segments(ImmutableArray<Inline> inlines, TextStyle style, out List<(int Offset, int Inline)> starts, Func<FieldKind, string>? fields = null)
     {
         double size = style.Size?.Points ?? 10;
         var segments = new List<TextSegment>();
@@ -352,6 +370,7 @@ internal sealed partial class RenderEngine : IDisposable
             {
                 TextRun run => (run.Text, Preflight.RunStyle(style, run)),
                 LineBreak => ("\n", style),
+                Field field when fields is not null => (fields(field.Kind), style),
                 _ => (null, style),
             };
             if (text is not null)
@@ -412,8 +431,16 @@ internal sealed partial class RenderEngine : IDisposable
             fonts.Add((_fonts.Use(font, _writer), _fonts.Reference(font)));
         }
 
+        foreach (EmbeddedFont font in _bandFonts)
+        {
+            if (!_pageFonts.Contains(font))
+            {
+                fonts.Add((_fonts.Use(font, _writer), _fonts.Reference(font)));
+            }
+        }
+
         fonts.Sort((a, b) => a.Font.Number.CompareTo(b.Font.Number)); // Deterministic order.
-        _documentWriter.WritePage(_page, _content.WrittenSpan, fonts);
+        _documentWriter.WritePage(_page, _content.WrittenSpan, fonts, BandStream());
         await _writer.FlushIfNeededAsync(cancellationToken).ConfigureAwait(false);
         _options.Progress?.Report(new RenderProgress(_page + 1, _writer.Position));
     }

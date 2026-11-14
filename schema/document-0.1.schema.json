@@ -79,7 +79,7 @@
       }
     },
     "styleSheet": {
-      "description": "Named styles, added to and overriding the built-in ones: body, heading1 to heading6, tableHeader, tableCell, footer.",
+      "description": "Named styles, added to and overriding the built-in ones: body, heading1 to heading6, tableHeader, tableCell, header, footer.",
       "type": "object",
       "additionalProperties": false,
       "properties": {

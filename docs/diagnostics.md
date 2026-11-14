@@ -38,5 +38,6 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-L001 | Warning | A table row is taller than a whole page, so it runs past the bottom margin. Rows don't split across pages yet. | Shorten the cell text, or make the columns wider. |
 | ZPDF-L002 | Warning | A row from a data slot has a different number of cells from the table's columns; it's padded with empty cells or cut. | Give every row one cell per column. |
 | ZPDF-L003 | Warning | The fixed-width columns are wider than the page, so all columns are scaled to fit. | Make the fixed columns narrower, or use shares (`"2*"`). |
-| ZPDF-R001 | Warning | This version doesn't draw that part yet (images, headers, footers, page number fields), so it's left out. |
+| ZPDF-L004 | Error | The header and footer leave less than 36 pt of the page for the content. | Shorten the header or footer, use smaller text, or narrow the top and bottom margins. |
+| ZPDF-R001 | Warning | This version doesn't draw that part yet (images, and page number fields outside headers and footers), so it's left out. |
 | ZPDF-R002 | Error | A synchronous `Render` was given rows from an `IAsyncEnumerable`, which it can't wait for. | Use `RenderAsync`, or give the rows as an `IEnumerable`. | Wait for the release that draws it, or leave it out. |

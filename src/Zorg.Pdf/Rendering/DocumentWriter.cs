@@ -59,8 +59,12 @@ internal sealed class DocumentWriter
         return page;
     }
 
-    /// <summary>Writes a finished page: its content stream, then the page object with its font resources.</summary>
-    public void WritePage(int index, ReadOnlySpan<byte> content, IEnumerable<(byte[] Name, PdfReference Font)> fonts)
+    /// <summary>
+    /// Writes a finished page: its content stream, then the page object with its font resources. A second content
+    /// stream, <paramref name="overlay"/>, is drawn after the first and may be written later (the header and footer,
+    /// which need the page count).
+    /// </summary>
+    public void WritePage(int index, ReadOnlySpan<byte> content, IEnumerable<(byte[] Name, PdfReference Font)> fonts, PdfReference? overlay = null)
     {
         PdfReference stream = _writer.Allocate();
         _writer.BeginStreamObject(stream);
@@ -92,7 +96,18 @@ internal sealed class DocumentWriter
         _writer.EndDictionary();
         _writer.EndDictionary();
         _writer.Name("Contents"u8);
-        _writer.Reference(stream);
+        if (overlay is { } second)
+        {
+            _writer.BeginArray();
+            _writer.Reference(stream);
+            _writer.Reference(second);
+            _writer.EndArray();
+        }
+        else
+        {
+            _writer.Reference(stream);
+        }
+
         _writer.Name("StructParents"u8);
         _writer.Integer(index);
         _writer.Name("Tabs"u8);

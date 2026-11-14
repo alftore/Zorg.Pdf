@@ -115,6 +115,7 @@ public sealed record StyleSheet
                 new("heading6", new TextStyle { Size = Length.Pt(10), Weight = FontWeight.Bold, FontStyle = FontStyle.Italic }),
                 new("tableHeader", new TextStyle { Size = Length.Pt(9), Weight = FontWeight.Bold }),
                 new("tableCell", new TextStyle { Size = Length.Pt(9) }),
+                new("header", new TextStyle { Size = Length.Pt(8) }),
                 new("footer", new TextStyle { Size = Length.Pt(8) }),
             ]),
     };

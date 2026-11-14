@@ -34,7 +34,8 @@ internal static class Preflight
 
     /// <summary>
     /// Every face the text needs, each with the path of the first place that needs it: each text block's own face
-    /// (an empty paragraph still has a line height), each run's, and each table's header and body faces.
+    /// (an empty paragraph still has a line height), each run's, each table's header and body faces, and the
+    /// header's and footer's paragraphs.
     /// </summary>
     public static Dictionary<FaceKey, string> NeededFaces(PdfDocument document, StyleResolver styles, string? defaultFamily, DiagnosticSink sink)
     {
@@ -68,7 +69,22 @@ internal static class Preflight
             }
         }
 
+        Band(document.Header, "/header", "header");
+        Band(document.Footer, "/footer", "footer");
         return needed;
+
+        void Band(PageBand? band, string path, string name)
+        {
+            for (int i = 0; i < (band?.Content.Length ?? 0); i++)
+            {
+                if (band!.Content[i] is Paragraph paragraph)
+                {
+                    TextStyle style = styles.ForBand(paragraph, name);
+                    Need(style, paragraph.Style is not null ? $"{path}/content/{i}/style" : $"{path}/content/{i}");
+                    Runs(paragraph.Inlines, style, $"{path}/content/{i}/inlines");
+                }
+            }
+        }
 
         void Runs(ImmutableArray<Inline> inlines, TextStyle block, string path)
         {
@@ -97,16 +113,8 @@ internal static class Preflight
 
     public static void Check(PdfDocument document, StyleResolver styles, FontSet fonts, string? defaultFamily, RenderOptions options, bool synchronous, DiagnosticSink sink)
     {
-        if (document.Header is not null)
-        {
-            sink.Warning(DiagnosticCodes.NotDrawnYet, "Headers aren't drawn yet in this version; the header is left out.", "/header");
-        }
-
-        if (document.Footer is not null)
-        {
-            sink.Warning(DiagnosticCodes.NotDrawnYet, "Footers aren't drawn yet in this version; the footer is left out.", "/footer");
-        }
-
+        Band(document.Header, "/header", "header");
+        Band(document.Footer, "/footer", "footer");
         for (int i = 0; i < document.Content.Length; i++)
         {
             string path = $"/content/{i}";
@@ -121,6 +129,22 @@ internal static class Preflight
                 case Image:
                     sink.Warning(DiagnosticCodes.NotDrawnYet, "Images aren't drawn yet in this version; the image is left out.", path);
                     break;
+            }
+        }
+
+        void Band(PageBand? band, string path, string name)
+        {
+            for (int i = 0; i < (band?.Content.Length ?? 0); i++)
+            {
+                switch (band!.Content[i])
+                {
+                    case Paragraph paragraph:
+                        Inlines(paragraph.Inlines, styles.ForBand(paragraph, name), $"{path}/content/{i}/inlines", inBand: true);
+                        break;
+                    case Image:
+                        sink.Warning(DiagnosticCodes.NotDrawnYet, "Images aren't drawn yet in this version; the image is left out.", $"{path}/content/{i}");
+                        break;
+                }
             }
         }
 
@@ -154,7 +178,7 @@ internal static class Preflight
             }
         }
 
-        void Inlines(ImmutableArray<Inline> inlines, TextStyle block, string path)
+        void Inlines(ImmutableArray<Inline> inlines, TextStyle block, string path, bool inBand = false)
         {
             for (int j = 0; j < inlines.Length; j++)
             {
@@ -163,8 +187,11 @@ internal static class Preflight
                     case TextRun run:
                         Characters(run.Text, Chain(RunStyle(block, run)), $"{path}/{j}");
                         break;
+                    case Field when inBand:
+                        Characters("0123456789", Chain(block), $"{path}/{j}"); // Any digit may be drawn.
+                        break;
                     case Field:
-                        sink.Warning(DiagnosticCodes.NotDrawnYet, "Page number fields aren't drawn yet in this version; the field is left out.", $"{path}/{j}");
+                        sink.Warning(DiagnosticCodes.NotDrawnYet, "Page number fields are drawn only in headers and footers in this version; the field is left out.", $"{path}/{j}");
                         break;
                 }
             }

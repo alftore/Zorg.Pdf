@@ -27,6 +27,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Table rows from data: `RenderOptions.Data = PdfData.Empty.WithRows("lines", rows)`, from `IEnumerable` or `IAsyncEnumerable`, read as the table is laid out. `PdfLimits.MaxTableRows` bounds them.
 - Table warnings: a row taller than a page (ZPDF-L001), a data row with the wrong number of cells (L002), fixed columns wider than the page (L003).
 
+- Headers and footers: `PdfDocument.Header` and `Footer` are drawn on every page as pagination artifacts, with room kept for them 12 pt from the content. `Field.PageNumber` and `Field.PageCount` show the real numbers, while pages still stream out as they finish. Built-in `header` and `footer` styles (8 pt). Bands that leave less than 36 pt for the content are an error (ZPDF-L004).
+
 ### Removed
 
 - The spike (`Spike/`), replaced by the public render API.

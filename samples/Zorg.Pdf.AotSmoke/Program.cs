@@ -133,10 +133,13 @@ byte[] font = File.ReadAllBytes(fontPath);
     }
 }
 
-// 0.1 slice 4: a tagged invoice with a table whose rows arrive asynchronously, over several pages.
+// 0.1 slices 4 and 5: a tagged invoice with a table whose rows arrive asynchronously, over several pages, with a
+// header and a "Page X of Y" footer.
 {
     var invoiceDocument = new PdfDocument("Invoice 2026-0042")
     {
+        Header = new PageBand([new Paragraph("Blåbær & Syltetøy AB · Invoice 2026-0042")]),
+        Footer = new PageBand([new Paragraph(["Page ", Field.PageNumber, " of ", Field.PageCount]) { Align = TextAlign.Right }]),
         Content =
         [
             new Heading("Invoice 2026-0042"),
@@ -170,6 +173,7 @@ byte[] font = File.ReadAllBytes(fontPath);
     RenderResult flow = invoiceDocument.RenderAsync(invoice, invoiceOptions).AsTask().GetAwaiter().GetResult();
     string invoiceText = Encoding.Latin1.GetString(invoice.ToArray());
     Check("tagged invoice", flow.PageCount >= 2 && invoiceText.Contains("/StructTreeRoot", StringComparison.Ordinal) && invoiceText.Contains("/S /TH", StringComparison.Ordinal) && !flow.HasWarnings);
+    Check("header and footer", invoiceText.Contains("/Contents [", StringComparison.Ordinal));
     if (saveTo is not null)
     {
         File.WriteAllBytes(Path.Combine(saveTo, "invoice.pdf"), invoice.ToArray());

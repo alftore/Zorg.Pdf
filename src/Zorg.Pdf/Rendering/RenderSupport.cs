@@ -67,6 +67,10 @@ internal sealed class StyleResolver
         return block.Style is { } name && _styles.TryGetValue(name, out TextStyle? named) ? style.Merge(named) : style;
     }
 
+    /// <summary>A paragraph in a header or footer: <c>body</c>, then <c>header</c> or <c>footer</c>, then its own style.</summary>
+    public TextStyle ForBand(Block block, string band) =>
+        block.Style is { } name && _styles.TryGetValue(name, out TextStyle? own) ? Named(band).Merge(own) : Named(band);
+
     public TextStyle Named(string name) => _styles.TryGetValue(name, out TextStyle? style) ? _styles["body"].Merge(style) : _styles["body"];
 
     /// <summary>A table's header cells: <c>body</c>, then <c>tableHeader</c>.</summary>

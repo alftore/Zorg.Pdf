@@ -20,23 +20,40 @@ internal static partial class PdfInspect
 
     public static string Text(byte[] file) => Encoding.Latin1.GetString(file);
 
-    /// <summary>The inflated content stream of each page, in page order.</summary>
+    /// <summary>The inflated content stream of each page, in page order: the page's own, without its header and footer.</summary>
     public static string[] PageContents(byte[] file)
     {
-        string text = Text(file);
         var contents = new List<string>();
-        foreach (Match page in PageContentsRef().Matches(text))
+        foreach (Match page in PageContentsRef().Matches(Text(file)))
         {
-            string number = page.Groups[1].Value;
-            int obj = text.IndexOf($"\n{number} 0 obj\n", StringComparison.Ordinal) + 1;
-            int start = text.IndexOf("stream\n", obj, StringComparison.Ordinal) + "stream\n".Length;
-            using var zlib = new ZLibStream(new MemoryStream(file, start, file.Length - start), CompressionMode.Decompress);
-            using var inflated = new MemoryStream();
-            zlib.CopyTo(inflated);
-            contents.Add(Encoding.Latin1.GetString(inflated.ToArray()));
+            contents.Add(Inflate(file, page.Groups[1].Success ? page.Groups[1].Value : page.Groups[2].Value));
         }
 
         return [.. contents];
+    }
+
+    /// <summary>Each page's second content stream (its header and footer) as object number and content, or null without one.</summary>
+    public static List<(int Number, string Content)?> PageOverlays(byte[] file)
+    {
+        var overlays = new List<(int, string)?>();
+        foreach (Match page in PageContentsRef().Matches(Text(file)))
+        {
+            overlays.Add(page.Groups[3].Success ? (int.Parse(page.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture), Inflate(file, page.Groups[3].Value)) : null);
+        }
+
+        return overlays;
+    }
+
+    /// <summary>A Flate stream object, inflated.</summary>
+    private static string Inflate(byte[] file, string number)
+    {
+        string text = Text(file);
+        int obj = text.IndexOf($"\n{number} 0 obj\n", StringComparison.Ordinal) + 1;
+        int start = text.IndexOf("stream\n", obj, StringComparison.Ordinal) + "stream\n".Length;
+        using var zlib = new ZLibStream(new MemoryStream(file, start, file.Length - start), CompressionMode.Decompress);
+        using var inflated = new MemoryStream();
+        zlib.CopyTo(inflated);
+        return Encoding.Latin1.GetString(inflated.ToArray());
     }
 
     /// <summary>For each page, the structure element object numbers its MCIDs belong to (the parent tree).</summary>
@@ -70,7 +87,7 @@ internal static partial class PdfInspect
         return found;
     }
 
-    [GeneratedRegex(@"/Type /Page /Parent .*?/Contents (\d+) 0 R")]
+    [GeneratedRegex(@"/Type /Page /Parent .*?/Contents (?:(\d+) 0 R|\[(\d+) 0 R (\d+) 0 R\])")]
     private static partial Regex PageContentsRef();
 
     [GeneratedRegex(@"/Nums \[(.*?)\]>>", RegexOptions.Singleline)]

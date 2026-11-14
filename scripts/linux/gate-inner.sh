@@ -79,6 +79,14 @@ pdftotext -enc UTF-8 /out/invoice.pdf /tmp/invoice.txt
 if ! grep -q "Blåbærsyltetøy-integrasjon" /tmp/invoice.txt; then
   echo "FAIL pdftotext invoice.pdf: the Norwegian text doesn't extract"; failed=1
 fi
+# The footer's fields: the first and last page say "Page n of N" with the real count.
+pages="$(pdfinfo /out/invoice.pdf | awk '/^Pages:/ { print $2 }')"
+for page in 1 "$pages"; do
+  pdftotext -enc UTF-8 -f "$page" -l "$page" /out/invoice.pdf /tmp/page.txt
+  if ! grep -q "Page $page of $pages" /tmp/page.txt; then
+    echo "FAIL pdftotext invoice.pdf: page $page doesn't say \"Page $page of $pages\""; failed=1
+  fi
+done
 pdftotext -enc UTF-8 /out/document.pdf /tmp/document.txt
 if ! grep -q "Ελληνικά · Кириллица · Čeština" /tmp/document.txt; then
   echo "FAIL pdftotext document.pdf: the Greek, Cyrillic and Czech text doesn't extract"; failed=1
