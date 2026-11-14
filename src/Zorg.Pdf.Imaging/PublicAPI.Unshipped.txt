@@ -1,0 +1,10 @@
+#nullable enable
+Zorg.Pdf.Imaging.ImagingProcessor
+Zorg.Pdf.Imaging.ImagingProcessor.ImagingProcessor() -> void
+Zorg.Pdf.Imaging.ImagingProcessor.JpegQuality.get -> int
+Zorg.Pdf.Imaging.ImagingProcessor.JpegQuality.init -> void
+Zorg.Pdf.Imaging.ImagingProcessor.Limits.get -> Zorg.Imaging.ImageLimits!
+Zorg.Pdf.Imaging.ImagingProcessor.Limits.init -> void
+Zorg.Pdf.Imaging.ImagingProcessor.ProcessAsync(Zorg.Pdf.ImageRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Zorg.Pdf.PdfImage?>
+Zorg.Pdf.Imaging.ImagingProcessor.Resolution.get -> int
+Zorg.Pdf.Imaging.ImagingProcessor.Resolution.init -> void

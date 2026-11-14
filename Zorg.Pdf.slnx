@@ -11,6 +11,7 @@
   <Folder Name="/src/">
     <Project Path="src/Zorg.Pdf/Zorg.Pdf.csproj" />
     <Project Path="src/Zorg.Pdf.Extensions.AI/Zorg.Pdf.Extensions.AI.csproj" />
+    <Project Path="src/Zorg.Pdf.Imaging/Zorg.Pdf.Imaging.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Zorg.Pdf.Tests/Zorg.Pdf.Tests.csproj" />

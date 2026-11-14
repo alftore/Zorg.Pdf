@@ -212,6 +212,39 @@ byte[] font = File.ReadAllBytes(fontPath);
     }
 }
 
+// 0.2 slice 2: Zorg.Pdf.Imaging. A lossless WebP with transparency, made with Zorg.Imaging, which core can't read.
+{
+    using var picture = new Zorg.Imaging.Image(120, 60, Zorg.Imaging.PixelFormat.Rgba32);
+    for (int y = 0; y < 60; y++)
+    {
+        Span<byte> row = picture.GetRowBytes(y);
+        for (int x = 0; x < 120; x++)
+        {
+            (row[x * 4], row[(x * 4) + 1], row[(x * 4) + 2], row[(x * 4) + 3]) = ((byte)(x * 2), (byte)(y * 4), 150, (byte)(x < 60 ? 255 : 90));
+        }
+    }
+
+    using var webp = new MemoryStream();
+    picture.SaveAsWebp(webp, new Zorg.Imaging.WebpEncoderOptions { Lossless = true });
+    var imagingDocument = new PdfDocument("Zorg.Pdf.Imaging")
+    {
+        Content = [new Heading("A WebP image"), new Image(ImageSource.FromBytes(webp.ToArray())) { Alt = "A colour gradient, half transparent", Width = Length.Cm(8) }],
+    };
+    var imagingOptions = new RenderOptions
+    {
+        Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }),
+        Conformance = PdfConformance.PdfUA1,
+        ImageProcessor = new Zorg.Pdf.Imaging.ImagingProcessor(),
+    };
+    using var imaging = new MemoryStream();
+    RenderResult imaged = imagingDocument.RenderAsync(imaging, imagingOptions).AsTask().GetAwaiter().GetResult();
+    Check("imaging: webp", !imaged.HasWarnings && Readable(imaging.ToArray()).Contains("/SMask", StringComparison.Ordinal));
+    if (saveTo is not null)
+    {
+        File.WriteAllBytes(Path.Combine(saveTo, "imaging.pdf"), imaging.ToArray());
+    }
+}
+
 // 0.1 slice 9: the agent tools, called as a chat client calls them, with JSON arguments.
 {
     var tools = Zorg.Pdf.Extensions.AI.PdfTools.Create(new Zorg.Pdf.Extensions.AI.PdfToolOptions

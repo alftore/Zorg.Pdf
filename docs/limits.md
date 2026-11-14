@@ -18,7 +18,7 @@ Fonts come from the caller, never from a document; a damaged font is ZPDF-F005.
 
 ## Not supported yet
 
-- **Images: JPEG and PNG only**, unless `RenderOptions.ImageProcessor` decodes others. JPEG must be 8-bit baseline or progressive (no 12-bit, lossless or arithmetic-coded). EXIF orientation, colour profiles and PNG gamma are ignored, so a photo the camera stored sideways comes out sideways. Without a width or height an image is drawn at 96 dpi; its own resolution isn't read. A PNG with transparency is decoded to 8 bits per channel.
+- **Images: JPEG and PNG only** in the core package. `ImagingProcessor` from `Zorg.Pdf.Imaging` adds WebP, GIF (first frame), BMP and TIFF, EXIF orientation and sRGB conversion; without it the rest of this point applies. JPEG must be 8-bit baseline or progressive (no 12-bit, lossless or arithmetic-coded). EXIF orientation, colour profiles and PNG gamma are ignored, so a photo the camera stored sideways comes out sideways. Without a width or height an image is drawn at 96 dpi; its own resolution isn't read. A PNG with transparency is decoded to 8 bits per channel.
 - **Page number fields are drawn in headers and footers only.** In the content they're left out with ZPDF-R001. A header or footer is the same on every page (no first-page or odd/even variants), and sits 12 pt from the content.
 - **Table rows don't split across pages**, and cells don't span columns or rows (0.2). A row taller than a page runs past the bottom margin (ZPDF-L001). One header row, from the column headers.
 - **Bold and italic need their faces for good type.** A family without them gets a synthetic face (thickened or slanted), reported as ZPDF-F003 (Info).
