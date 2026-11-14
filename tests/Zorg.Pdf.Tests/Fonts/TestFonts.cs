@@ -66,14 +66,18 @@ internal static class TestFonts
         return [];
     }
 
-    private static byte[]? Load()
+    /// <summary>The font's path, or a skip (a failure when fonts are required).</summary>
+    public static string RequirePath()
+    {
+        _ = Require();
+        return FindPath()!;
+    }
+
+    private static string? FindPath()
     {
         string? chosen = Environment.GetEnvironmentVariable("ZORG_PDF_TEST_FONT");
-        if (string.IsNullOrEmpty(chosen))
-        {
-            chosen = Array.Find(Candidates, File.Exists);
-        }
-
-        return chosen is null ? null : File.ReadAllBytes(chosen);
+        return string.IsNullOrEmpty(chosen) ? Array.Find(Candidates, File.Exists) : chosen;
     }
+
+    private static byte[]? Load() => FindPath() is { } path ? File.ReadAllBytes(path) : null;
 }

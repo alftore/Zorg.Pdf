@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Description>The zorg-pdf command-line tool: render Zorg.Pdf JSON documents to tagged PDF, validate them, and render again on every save.</Description>
+    <PackageTags>pdf;cli;tool;pdf-ua;report;json</PackageTags>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>zorg-pdf</ToolCommandName>
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zorg.Pdf\Zorg.Pdf.csproj" />
+    <ProjectReference Include="..\Zorg.Pdf.Imaging\Zorg.Pdf.Imaging.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zorg.Pdf.Tests" />
+  </ItemGroup>
+
+</Project>

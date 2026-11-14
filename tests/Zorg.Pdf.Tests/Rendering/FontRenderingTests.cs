@@ -198,7 +198,7 @@ public sealed class FontRenderingTests
             Assert.Skip("The bold test font isn't installed.");
         }
 
-        (string? family, bool bold, bool italic) = SystemFontResolver.Describe(path);
+        (string? family, bool bold, bool italic, _) = SystemFontResolver.Describe(path);
         Assert.Equal(OperatingSystem.IsWindows() ? "Arial" : "DejaVu Sans", family);
         Assert.True(bold);
         Assert.False(italic);

@@ -19,6 +19,13 @@ var options = new RenderOptions
 await document.RenderAsync(output, options, cancellationToken);
 ```
 
+Or from the command line, with the `zorg-pdf` tool (`dotnet tool install --global Zorg.Pdf.Tool`):
+
+```
+zorg-pdf render docs/examples/invoice.json --data docs/examples/data/invoice.json --pdfua
+zorg-pdf watch docs/examples/letter.json --fonts ./fonts
+```
+
 ## Roadmap
 
 0.1 is built in nine slices; all nine are done, and it is being reviewed before its first preview release.
@@ -26,7 +33,7 @@ await document.RenderAsync(output, options, cancellationToken);
 | Version | Scope | State |
 |---|---|---|
 | 0.1 | The document model and its JSON Schema; rendering headings, paragraphs, tables, images, headers and footers with page numbers; bold and italic; tagged output with PDF/UA-1; object streams for small files; agent tools as a stretch goal | Complete, in review: the library and `Zorg.Pdf.Extensions.AI` |
-| 0.2 | Templates and data binding, lists, cell spans, PNG page previews, a `zorg-pdf` command-line tool | Planned |
+| 0.2 | Templates and data binding, lists, cell spans, watermarks, PNG page previews, a `zorg-pdf` command-line tool | In progress: all but page previews done |
 | 0.3 | Markdown, tables of contents and links, hyphenation, right-to-left and Arabic text, PDF/A | Planned |
 | 0.4 | Reading and merging PDFs, page groups, attachments, ZUGFeRD/Factur-X invoices | Planned |
 | 0.5 | Charts, barcodes, ASP.NET Core report jobs, signing | Planned |

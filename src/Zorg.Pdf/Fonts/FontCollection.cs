@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -45,6 +47,91 @@ public sealed class FontCollection
     {
         ArgumentNullException.ThrowIfNull(family);
         return new FontCollection(Families.SetItem(family.Name, family), DefaultFamily ?? family.Name);
+    }
+
+    /// <summary>
+    /// A collection of the TrueType files given, grouped into families by the names inside them. Where a family has
+    /// several files for one face (Light, Regular and Medium are all "regular"), the weight nearest 400, or 700 for
+    /// bold, wins. Files that aren't TrueType fonts this library can embed (CFF outlines, collections) are skipped.
+    /// </summary>
+    /// <param name="paths">Font files, read now for their names and again when a render uses them.</param>
+    /// <returns>The collection. Its default family is the first by name, in ordinal order; change it with <see cref="WithDefault"/>.</returns>
+    /// <example>
+    /// <code>
+    /// FontCollection fonts = FontCollection.FromFiles(["fonts/Inter-Regular.ttf", "fonts/Inter-Bold.ttf"]);
+    /// </code>
+    /// </example>
+    public static FontCollection FromFiles(IEnumerable<string> paths)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        var faces = new List<(string Family, bool Bold, bool Italic, int Weight, string Path)>();
+        foreach (string path in paths)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(paths));
+            if (SystemFontResolver.Describe(path) is ({ } family, bool bold, bool italic, int weight))
+            {
+                faces.Add((family, bold, italic, weight, Path.GetFullPath(path)));
+            }
+        }
+
+        FontCollection collection = Empty;
+        foreach (IGrouping<string, (string Family, bool Bold, bool Italic, int Weight, string Path)> family in faces
+            .GroupBy(f => f.Family, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            FontSource? Pick(bool bold, bool italic) => family
+                .Where(f => f.Bold == bold && f.Italic == italic)
+                .OrderBy(f => Math.Abs(f.Weight - (bold ? 700 : 400)))
+                .ThenBy(f => f.Path, StringComparer.Ordinal)
+                .Select(f => FontSource.FromFile(f.Path))
+                .FirstOrDefault();
+
+            FontSource? regular = Pick(false, false);
+            if (regular is null)
+            {
+                continue; // A family is only usable with a regular face.
+            }
+
+            collection = collection.Add(new FontFamily(family.Key)
+            {
+                Regular = regular,
+                Bold = Pick(true, false),
+                Italic = Pick(false, true),
+                BoldItalic = Pick(true, true),
+            });
+        }
+
+        return collection;
+    }
+
+    /// <summary>A collection of the TrueType files in a folder and its subfolders; see <see cref="FromFiles"/>.</summary>
+    /// <param name="folder">The folder.</param>
+    /// <returns>The collection, empty when the folder has no usable fonts.</returns>
+    /// <example>
+    /// <code>
+    /// var options = new RenderOptions { Fonts = FontCollection.FromFolder("fonts").WithDefault("Inter") };
+    /// </code>
+    /// </example>
+    public static FontCollection FromFolder(string folder)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folder);
+        return FromFiles(Directory.EnumerateFiles(folder, "*.*", SearchOption.AllDirectories)
+            .Where(f => f.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>A collection with every family of <paramref name="other"/> added, replacing ones of the same name.</summary>
+    /// <param name="other">The families to add.</param>
+    /// <returns>The new collection; its default family is this one's, else the other's.</returns>
+    /// <example>
+    /// <code>
+    /// FontCollection fonts = FontCollection.FromFolder("fonts").AddRange(FontCollection.FromFolder("brand-fonts"));
+    /// </code>
+    /// </example>
+    public FontCollection AddRange(FontCollection other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        return new FontCollection(Families.SetItems(other.Families), DefaultFamily ?? other.DefaultFamily);
     }
 
     /// <summary>A collection whose default family is <paramref name="familyName"/>.</summary>

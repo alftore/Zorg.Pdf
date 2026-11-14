@@ -85,7 +85,7 @@ internal sealed class SystemFontResolver : IFontResolver
 
             foreach (string file in files)
             {
-                if (Describe(file) is ({ } family, bool bold, bool italic))
+                if (Describe(file) is ({ } family, bool bold, bool italic, _))
                 {
                     if (!index.TryGetValue(family, out List<(string, bool, bool)>? faces))
                     {
@@ -100,8 +100,8 @@ internal sealed class SystemFontResolver : IFontResolver
         return index;
     }
 
-    /// <summary>The family and face of a font file, or null when it isn't a TrueType font this library can embed.</summary>
-    internal static (string? Family, bool Bold, bool Italic) Describe(string path)
+    /// <summary>The family, face and weight class of a font file; a null family when it isn't a TrueType font this library can embed.</summary>
+    internal static (string? Family, bool Bold, bool Italic, int Weight) Describe(string path)
     {
         try
         {
@@ -158,7 +158,7 @@ internal sealed class SystemFontResolver : IFontResolver
             ushort macStyle = head is { Length: >= 46 } ? BinaryPrimitives.ReadUInt16BigEndian(head.AsSpan(44)) : (ushort)0;
             int weight = os2 is { Length: >= 6 } ? BinaryPrimitives.ReadUInt16BigEndian(os2.AsSpan(4)) : 400;
             ushort selection = os2 is { Length: >= 64 } ? BinaryPrimitives.ReadUInt16BigEndian(os2.AsSpan(62)) : (ushort)0;
-            return (family, weight >= 600 || (macStyle & 1) != 0, (selection & 1) != 0 || (macStyle & 2) != 0);
+            return (family, weight >= 600 || (macStyle & 1) != 0, (selection & 1) != 0 || (macStyle & 2) != 0, weight);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {

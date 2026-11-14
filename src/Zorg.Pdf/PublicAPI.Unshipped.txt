@@ -828,3 +828,6 @@ Zorg.Pdf.WatermarkLayer.Over = 0 -> Zorg.Pdf.WatermarkLayer
 ~override Zorg.Pdf.RenderProgress.ToString() -> string
 ~override Zorg.Pdf.Thickness.Equals(object obj) -> bool
 ~override Zorg.Pdf.Thickness.ToString() -> string
+static Zorg.Pdf.Fonts.FontCollection.FromFiles(System.Collections.Generic.IEnumerable<string!>! paths) -> Zorg.Pdf.Fonts.FontCollection!
+static Zorg.Pdf.Fonts.FontCollection.FromFolder(string! folder) -> Zorg.Pdf.Fonts.FontCollection!
+Zorg.Pdf.Fonts.FontCollection.AddRange(Zorg.Pdf.Fonts.FontCollection! other) -> Zorg.Pdf.Fonts.FontCollection!

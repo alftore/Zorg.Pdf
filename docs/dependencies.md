@@ -5,7 +5,7 @@ The core library has no runtime dependencies, and that is a design rule. Every p
 Rules:
 
 - No runtime package in `src/Zorg.Pdf`. If one ever seems needed, it's a design decision first.
-- Add-on packages take only what their name says (for example `Zorg.Pdf.Extensions.AI` takes `Microsoft.Extensions.AI.Abstractions`), each with a row here.
+- Add-on packages take only what their name says (for example `Zorg.Pdf.Extensions.AI` takes `Microsoft.Extensions.AI.Abstractions`), each with a row here. The `zorg-pdf` tool (`Zorg.Pdf.Tool`) takes only Zorg.Pdf and Zorg.Pdf.Imaging, and parses its own command line.
 - No package with a fee, a commercial tier gating needed features, or a licence declaration step, even in tests or benchmarks.
 - Check the licence in the `.nuspec` of the exact version. Don't rely on memory.
 - Fonts and hyphenation patterns used in tests or shipped with the library need their licence recorded here too.
