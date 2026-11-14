@@ -4,6 +4,18 @@ Async-first PDF generation for .NET 10, written in C# only. Documents and report
 
 **Status: early 0.1 development, not released.** The document model exists: build a document in C# or JSON, validate it, and round-trip it through JSON (schema in [schema/](schema/document-0.1.schema.json), examples in [docs/examples/](docs/examples), diagnostic codes in [docs/diagnostics.md](docs/diagnostics.md)). `RenderAsync` and `Render` turn headings, paragraphs, spacers and page breaks into tagged PDF that passes veraPDF PDF/UA-1; tables, images, headers and footers come in the next slices. What isn't supported is in [docs/limits.md](docs/limits.md).
 
+## Roadmap
+
+0.1 is built in nine slices; two are done.
+
+| Version | Scope | State |
+|---|---|---|
+| 0.1 | The document model and its JSON Schema; rendering headings, paragraphs, tables, images, headers and footers with page numbers; bold and italic; tagged output with PDF/UA-1; object streams for small files; agent tools as a stretch goal | In progress: model and JSON done, rendering of text blocks done, fonts next |
+| 0.2 | Templates and data binding, lists, cell spans, PNG page previews, a `zorg-pdf` command-line tool | Planned |
+| 0.3 | Markdown, tables of contents and links, hyphenation, right-to-left and Arabic text, PDF/A | Planned |
+| 0.4 | Reading and merging PDFs, page groups, attachments, ZUGFeRD/Factur-X invoices | Planned |
+| 0.5 | Charts, barcodes, ASP.NET Core report jobs, signing | Planned |
+
 ## Goals
 
 - **Async first:** fonts, images and data load asynchronously, table rows can come from `IAsyncEnumerable<T>`, pages stream to the output while layout continues, and every operation can be cancelled.
