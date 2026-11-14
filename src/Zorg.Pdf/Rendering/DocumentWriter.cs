@@ -63,10 +63,11 @@ internal sealed class DocumentWriter
     /// Writes a finished page: its content stream, then the page object with its resources. Streams in
     /// <paramref name="under"/> are drawn before it and those in <paramref name="over"/> after it; they may be written
     /// later (the header and footer need the page count). <paramref name="state"/> is a graphics state the page uses
-    /// (a watermark's opacity).
+    /// (a watermark's opacity). <paramref name="structParents"/> is the page's parent-tree key.
     /// </summary>
     public void WritePage(
         int index,
+        int structParents,
         ReadOnlySpan<byte> content,
         IEnumerable<(byte[] Name, PdfReference Font)> fonts,
         IReadOnlyCollection<(byte[] Name, PdfReference Image)> images,
@@ -148,7 +149,7 @@ internal sealed class DocumentWriter
         }
 
         _writer.Name("StructParents"u8);
-        _writer.Integer(index);
+        _writer.Integer(structParents);
         _writer.Name("Tabs"u8);
         _writer.Name("S"u8);
         _writer.EndDictionary();

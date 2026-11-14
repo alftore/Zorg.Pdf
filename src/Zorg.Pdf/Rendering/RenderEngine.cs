@@ -236,7 +236,7 @@ internal sealed partial class RenderEngine : IDisposable
             {
                 if (!open)
                 {
-                    element ??= _tagger.Begin(text.Role, parent);
+                    element ??= _tagger.Begin(text.Role, parent, text.Language);
                     _content.BeginMarkedContent(Tagger.Name(text.Role), _tagger.Mark(element, _page));
                     BeginText();
                     open = true;
@@ -275,6 +275,11 @@ internal sealed partial class RenderEngine : IDisposable
     {
         foreach (LineRun run in line.Runs)
         {
+            if (run.Language is { } language)
+            {
+                _content.BeginSpan(language); // A passage in another language, inside the element's marked content.
+            }
+
             if (!ReferenceEquals(run.Font, _textFont) || run.Size != _textSize)
             {
                 _content.SetFont(_fonts.Use(run.Font, _writer), run.Size);
@@ -313,6 +318,10 @@ internal sealed partial class RenderEngine : IDisposable
             }
 
             _content.ShowGlyphs(run.Glyphs, run.ExtraAfter);
+            if (run.Language is not null)
+            {
+                _content.EndMarkedContent();
+            }
         }
     }
 
@@ -396,14 +405,18 @@ internal sealed partial class RenderEngine : IDisposable
                 $"{path}/inlines/{inline}");
         }
 
-        return new PreparedText(role, layout.Lines, before, after, block is Heading || block.KeepWithNext);
+        return new PreparedText(role, layout.Lines, before, after, block is Heading || block.KeepWithNext) { Language = BlockLanguage(style) };
     }
+
+    /// <summary>The style's language when it differs from the document's, for /Lang on the block's element.</summary>
+    private string? BlockLanguage(TextStyle style) =>
+        style.Language is { } language && !string.Equals(language, _document.Language, StringComparison.OrdinalIgnoreCase) ? language : null;
 
     /// <summary>
     /// One segment per run, in its own face, size and colour; line breaks become line feeds. <paramref name="starts"/>
     /// maps text offsets back to inlines for diagnostics. A run whose face wasn't loaded (styled text in bound rows
     /// isn't known before the render) uses the block's face. A field takes its text from <paramref name="fields"/>
-    /// in the block's style, or is left out without it.
+    /// in the block's style, or is left out without it. A run in another language than its block carries it.
     /// </summary>
     private List<TextSegment> Segments(ImmutableArray<Inline> inlines, TextStyle style, out List<(int Offset, int Inline)> starts, Func<FieldKind, string>? fields = null)
     {
@@ -442,7 +455,8 @@ internal sealed partial class RenderEngine : IDisposable
                 _fonts.TryGet(Preflight.Face(style, _styles, _defaultFamily)!.Value, out chain);
             }
 
-            return new TextSegment(text, chain, (runStyle.Size?.Points ?? size) * _textScale, runStyle.Color);
+            string? language = runStyle.Language is { } own && !string.Equals(own, style.Language ?? _document.Language, StringComparison.OrdinalIgnoreCase) ? own : null;
+            return new TextSegment(text, chain, (runStyle.Size?.Points ?? size) * _textScale, runStyle.Color) { Language = language };
         }
     }
 
@@ -505,7 +519,7 @@ internal sealed partial class RenderEngine : IDisposable
 
         images.Sort((a, b) => a.Image.Number.CompareTo(b.Image.Number));
         PdfReference? band = BandStream();
-        _documentWriter.WritePage(_page, _content.WrittenSpan, fonts, images, WatermarkUnder(), [.. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState());
+        _documentWriter.WritePage(_page, _tagger.PageKey(_page), _content.WrittenSpan, fonts, images, WatermarkUnder(), [.. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState());
         await _writer.FlushIfNeededAsync(cancellationToken).ConfigureAwait(false);
         _options.Progress?.Report(new RenderProgress(_page + 1, _writer.Position));
     }
@@ -513,6 +527,9 @@ internal sealed partial class RenderEngine : IDisposable
     /// <summary>A heading or paragraph laid out at the page's text width, ready to place.</summary>
     private sealed record PreparedText(StructureRole Role, IReadOnlyList<LayoutLine> Lines, double SpaceBefore, double SpaceAfter, bool Keep)
     {
+        /// <summary>The block's language when its style sets one other than the document's: /Lang on its element.</summary>
+        public string? Language { get; init; }
+
         public double Height => SpaceBefore + Lines.Sum(l => l.Height);
 
         public double FirstLineHeight => SpaceBefore + (Lines.Count > 0 ? Lines[0].Height : 0);

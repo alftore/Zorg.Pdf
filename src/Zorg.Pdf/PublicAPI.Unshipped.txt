@@ -818,6 +818,8 @@ Zorg.Pdf.TextStyle.FontStyle.get -> Zorg.Pdf.FontStyle?
 Zorg.Pdf.TextStyle.FontStyle.init -> void
 override Zorg.Pdf.TextStyle.GetHashCode() -> int
 static Zorg.Pdf.TextStyle.Italic.get -> Zorg.Pdf.TextStyle!
+Zorg.Pdf.TextStyle.Language.get -> string?
+Zorg.Pdf.TextStyle.Language.init -> void
 Zorg.Pdf.TextStyle.LineHeight.get -> double?
 Zorg.Pdf.TextStyle.LineHeight.init -> void
 Zorg.Pdf.TextStyle.Merge(Zorg.Pdf.TextStyle? over) -> Zorg.Pdf.TextStyle!

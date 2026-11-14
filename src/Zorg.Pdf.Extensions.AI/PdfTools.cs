@@ -188,6 +188,7 @@ internal sealed class SchemaTool() : PdfTool(
         Tables have "columns" ([{ "header": "Amount", "width": "2*", "align": "right" }]) and "rows": an array of rows of cells (strings, or { "inlines": [...], "columnSpan": 2, "rowSpan": 2 }), or { "$data": "slot" } to take them from data.
         Images need "alt" text unless "decorative": true. Their "source" is { "$data": "slot" } (or { "base64": "..." } for small ones).
         Templates: bind model values with { "bind": "customer.name", "format": "N2" } inlines, repeat blocks with { "type": "repeat", "items": "notes", "content": [...] } (inside, bind the item's fields, or "this" and "@number"), and show blocks with { "type": "when", "test": "overdue", "content": [...] }, and make table rows from an array of objects with "rows": { "repeat": "lines", "cells": [{ "bind": "item" }, { "bind": "amount", "format": "N2" }] }. The model is the data object.
+        Text in another language than the document's gets a style with "language": { "text": "Fernweh", "style": { "language": "de" } }; screen readers need it.
         Lengths are numbers in points or strings with a unit: "2cm", "12pt", "5mm".
         Data is a separate JSON object whose properties are slots: { "lines": [["1", "Consulting", "9 375,00"]], "logo": { "base64": "..." } }.
         Unknown properties are errors. validate_document returns every problem with a code and a JSON pointer: fix those and validate again.

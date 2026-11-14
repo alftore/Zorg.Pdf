@@ -131,6 +131,18 @@ internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, 
 
                 _path = new Shape();
                 break;
+            case "B" or "B*":
+                if (!_path.IsEmpty)
+                {
+                    canvas.Fill(_path, WithAlpha(_state.Fill, _state.FillAlpha), _state.Ctm, op == "B*" ? FillRule.EvenOdd : FillRule.NonZero);
+                }
+
+                Stroke();
+                _path = new Shape();
+                _segment = null;
+                break;
+            case "J" or "j" or "M" or "d":
+                break; // Caps, joins and dashes: the canvas strokes solid, square-ended rules and round-cornered paths.
             case "S":
                 Stroke();
                 _path = new Shape();

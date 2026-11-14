@@ -533,6 +533,11 @@ internal sealed partial class DocumentValidator
 
     private void Style(TextStyle style, string path)
     {
+        if (style.Language is { } language && !LanguageTag().IsMatch(language))
+        {
+            Error(DiagnosticCodes.BadLanguage, $"\"{language}\" isn't a language tag. Use a BCP 47 tag such as \"de\", \"nb-NO\" or \"fr-CA\".", $"{path}/language");
+        }
+
         if (style.Size is { } size)
         {
             Positive(size, $"{path}/size");

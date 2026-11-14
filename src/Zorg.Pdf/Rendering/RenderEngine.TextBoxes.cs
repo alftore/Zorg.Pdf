@@ -93,7 +93,7 @@ internal sealed partial class RenderEngine
                 {
                     if (!open)
                     {
-                        element ??= _tagger.Begin(StructureRole.P, div);
+                        element ??= _tagger.Begin(StructureRole.P, div, texts[p].Language);
                         _content.BeginMarkedContent(Tagger.Name(StructureRole.P), _tagger.Mark(element, _page));
                         BeginText();
                         open = true;

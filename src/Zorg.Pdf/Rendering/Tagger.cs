@@ -38,7 +38,10 @@ internal sealed class Tagger
         [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD", "Figure", "L", "LI", "Lbl", "LBody", "Div" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
 
     private readonly PdfObjectWriter _writer;
-    private readonly List<List<PdfReference>> _parentTree = []; // Per page, the element that owns each MCID.
+    private readonly List<List<PdfReference>> _pageOwners = []; // Per page, the element that owns each MCID.
+    private readonly List<int> _pageKeys = []; // Per page, its /StructParents key in the parent tree.
+    private readonly List<(int Key, PdfReference Owner)> _objectOwners = []; // Annotations and other objects: /StructParent keys.
+    private int _nextKey;
     private readonly Element _root;
 
     public Tagger(PdfObjectWriter writer)
@@ -54,14 +57,35 @@ internal sealed class Tagger
 
     public static byte[] Name(StructureRole role) => RoleNames[(int)role];
 
-    /// <summary>Starts a page: its marked content gets MCIDs from 0.</summary>
-    public void StartPage() => _parentTree.Add([]);
+    /// <summary>
+    /// Starts a page: its marked content gets MCIDs from 0, and it takes the next parent-tree key. Pages and objects
+    /// (<see cref="ObjectKey"/>) share one ascending counter, so the tree can be written in key order at the end.
+    /// </summary>
+    public void StartPage()
+    {
+        _pageOwners.Add([]);
+        _pageKeys.Add(_nextKey++);
+    }
+
+    /// <summary>The page's <c>/StructParents</c> key.</summary>
+    public int PageKey(int page) => _pageKeys[page];
+
+    /// <summary>
+    /// A parent-tree key for an object that is content in its own right, such as a link annotation: the object's
+    /// <c>/StructParent</c>, mapping it back to <paramref name="owner"/>.
+    /// </summary>
+    public int ObjectKey(Element owner)
+    {
+        int key = _nextKey++;
+        _objectOwners.Add((key, owner.Reference));
+        return key;
+    }
 
     /// <summary>A new element under <paramref name="parent"/> (the document element when null), in reading order.</summary>
-    public Element Begin(StructureRole role, Element? parent = null)
+    public Element Begin(StructureRole role, Element? parent = null, string? language = null)
     {
         parent ??= _root;
-        var element = new Element(role, _writer.Allocate(), parent.Reference) { ColumnHeader = role == StructureRole.TH };
+        var element = new Element(role, _writer.Allocate(), parent.Reference) { ColumnHeader = role == StructureRole.TH, Language = language };
         parent.Kids.Add(element.Reference);
         return element;
     }
@@ -69,7 +93,7 @@ internal sealed class Tagger
     /// <summary>The next MCID on the page, owned by <paramref name="element"/>.</summary>
     public int Mark(Element element, int page)
     {
-        List<PdfReference> owners = _parentTree[page];
+        List<PdfReference> owners = _pageOwners[page];
         element.Kids.Add(new MarkedContent(page, owners.Count));
         owners.Add(element.Reference);
         return owners.Count - 1;
@@ -93,7 +117,7 @@ internal sealed class Tagger
         _writer.Name("ParentTree"u8);
         _writer.Reference(parentTree);
         _writer.Name("ParentTreeNextKey"u8);
-        _writer.Integer(_parentTree.Count);
+        _writer.Integer(_nextKey);
         _writer.EndDictionary();
         _writer.EndObject();
 
@@ -101,16 +125,29 @@ internal sealed class Tagger
         _writer.BeginDictionary();
         _writer.Name("Nums"u8);
         _writer.BeginArray();
-        for (int page = 0; page < _parentTree.Count; page++)
+        int nextObject = 0;
+        for (int page = 0; page < _pageOwners.Count; page++)
         {
-            _writer.Integer(page);
+            for (; nextObject < _objectOwners.Count && _objectOwners[nextObject].Key < _pageKeys[page]; nextObject++)
+            {
+                _writer.Integer(_objectOwners[nextObject].Key);
+                _writer.Reference(_objectOwners[nextObject].Owner);
+            }
+
+            _writer.Integer(_pageKeys[page]);
             _writer.BeginArray();
-            foreach (PdfReference owner in _parentTree[page])
+            foreach (PdfReference owner in _pageOwners[page])
             {
                 _writer.Reference(owner);
             }
 
             _writer.EndArray();
+        }
+
+        for (; nextObject < _objectOwners.Count; nextObject++)
+        {
+            _writer.Integer(_objectOwners[nextObject].Key);
+            _writer.Reference(_objectOwners[nextObject].Owner);
         }
 
         _writer.EndArray();
@@ -132,6 +169,12 @@ internal sealed class Tagger
         {
             _writer.Name("Alt"u8);
             _writer.TextString(alt);
+        }
+
+        if (element.Language is { } language)
+        {
+            _writer.Name("Lang"u8);
+            _writer.TextString(language);
         }
 
         if (element.BBox is { } box)
@@ -266,6 +309,9 @@ internal sealed class Tagger
 
         /// <summary>Replacement text, for a figure.</summary>
         public string? Alt { get; set; }
+
+        /// <summary>The element's language, when it differs from the document's.</summary>
+        public string? Language { get; set; }
 
         /// <summary>The bounding box on the page, for a figure.</summary>
         public (double Left, double Bottom, double Right, double Top)? BBox { get; set; }

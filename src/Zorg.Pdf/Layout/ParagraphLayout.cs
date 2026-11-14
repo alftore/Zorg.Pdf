@@ -48,7 +48,11 @@ internal sealed class FontChain(EmbeddedFont primary, IReadOnlyList<EmbeddedFont
 /// <param name="Fonts">The font and its fallbacks.</param>
 /// <param name="Size">The font size in points.</param>
 /// <param name="Color">The colour, or null for the default (black).</param>
-internal sealed record TextSegment(string Text, FontChain Fonts, double Size, Color? Color);
+internal sealed record TextSegment(string Text, FontChain Fonts, double Size, Color? Color)
+{
+    /// <summary>The language, when it differs from the paragraph's; null otherwise.</summary>
+    public string? Language { get; init; }
+}
 
 /// <summary>
 /// Part of a line in one font, size and colour: the glyphs, the extra space after each (kerning and justification, in
@@ -58,6 +62,9 @@ internal sealed record LineRun(EmbeddedFont Font, double Size, Color? Color, ush
 {
     /// <summary>Drawn thickened, because the family has no bold face.</summary>
     public bool SyntheticBold { get; init; }
+
+    /// <summary>The run's language, when it differs from its paragraph's; drawn as a Span with /Lang.</summary>
+    public string? Language { get; init; }
 
     /// <summary>Drawn slanted, because the family has no italic face.</summary>
     public bool SyntheticItalic { get; init; }
@@ -156,6 +163,7 @@ internal sealed class ParagraphLayout
         public ushort Glyph;
         public double Size;
         public Color? Color;
+        public string? Language;
         public bool Bold;
         public bool Italic;
         public bool Space;
@@ -252,6 +260,7 @@ internal sealed class ParagraphLayout
                         Glyph = glyph,
                         Size = segment.Size,
                         Color = segment.Color,
+                        Language = segment.Language,
                         Bold = segment.Fonts.SyntheticBold,
                         Italic = segment.Fonts.SyntheticItalic,
                         Space = space,
@@ -447,7 +456,8 @@ internal sealed class ParagraphLayout
             {
                 bool split = k == placed.Count
                     || !ReferenceEquals(placed[k].Font, placed[start].Font) || placed[k].Size != placed[start].Size || placed[k].Color != placed[start].Color
-                    || placed[k].Bold != placed[start].Bold || placed[k].Italic != placed[start].Italic;
+                    || placed[k].Bold != placed[start].Bold || placed[k].Italic != placed[start].Italic
+                    || !string.Equals(placed[k].Language, placed[start].Language, StringComparison.Ordinal);
                 if (!split)
                 {
                     continue;
@@ -465,7 +475,7 @@ internal sealed class ParagraphLayout
                     x += placed[start + g].Advance + extra[start + g];
                 }
 
-                runs.Add(new LineRun(first.Font, first.Size, first.Color, glyphs, after, runX) { SyntheticBold = first.Bold, SyntheticItalic = first.Italic });
+                runs.Add(new LineRun(first.Font, first.Size, first.Color, glyphs, after, runX) { SyntheticBold = first.Bold, SyntheticItalic = first.Italic, Language = first.Language });
                 start = k;
             }
 

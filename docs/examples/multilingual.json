@@ -31,7 +31,7 @@
             "weight": "bold"
           }
         },
-        "Blåbærsyltetøy er godt på vafler med rømme."
+        { "text": "Blåbærsyltetøy er godt på vafler med rømme.", "style": { "language": "nb" } }
       ]
     },
     {
@@ -43,7 +43,7 @@
             "weight": "bold"
           }
         },
-        "Příliš žluťoučký kůň úpěl ďábelské ódy."
+        { "text": "Příliš žluťoučký kůň úpěl ďábelské ódy.", "style": { "language": "cs" } }
       ]
     },
     {
@@ -55,7 +55,7 @@
             "weight": "bold"
           }
         },
-        "Zażółć gęślą jaźń, pchnąć w tę łódź jeża."
+        { "text": "Zażółć gęślą jaźń, pchnąć w tę łódź jeża.", "style": { "language": "pl" } }
       ]
     },
     {
@@ -67,7 +67,7 @@
             "weight": "bold"
           }
         },
-        "Pijamalı hasta yağız şoföre çabucak güvendi."
+        { "text": "Pijamalı hasta yağız şoföre çabucak güvendi.", "style": { "language": "tr" } }
       ]
     },
     {
@@ -86,7 +86,7 @@
             "weight": "bold"
           }
         },
-        "Ξεσκεπάζω την ψυχοφθόρα βδελυγμία."
+        { "text": "Ξεσκεπάζω την ψυχοφθόρα βδελυγμία.", "style": { "language": "el" } }
       ]
     },
     {
@@ -98,7 +98,7 @@
             "weight": "bold"
           }
         },
-        "Съешь же ещё этих мягких французских булок, да выпей чаю."
+        { "text": "Съешь же ещё этих мягких французских булок, да выпей чаю.", "style": { "language": "ru" } }
       ]
     },
     {
@@ -110,7 +110,7 @@
             "weight": "bold"
           }
         },
-        "Чуєш їх, доцю, га? Кумедна ж ти, прощайся без ґольфів!"
+        { "text": "Чуєш їх, доцю, га? Кумедна ж ти, прощайся без ґольфів!", "style": { "language": "uk" } }
       ]
     },
     {

@@ -184,6 +184,15 @@ internal sealed class ContentStreamBuilder
         return Operator("BDC"u8);
     }
 
+    /// <summary><c>/Span &lt;&lt;/Lang (de)&gt;&gt; BDC</c>: a passage in another language; end it with <see cref="EndMarkedContent"/>.</summary>
+    public ContentStreamBuilder BeginSpan(string language)
+    {
+        Write("/Span <</Lang "u8);
+        PdfFormat.WriteLiteralString(_buffer, System.Text.Encoding.ASCII.GetBytes(language));
+        Write(">> "u8);
+        return Operator("BDC"u8);
+    }
+
     /// <summary>
     /// <c>BDC</c> for an artifact: content that isn't part of the document's text, such as page numbers, rules and
     /// backgrounds. Screen readers skip it. <paramref name="subtype"/> is Header, Footer or Watermark for pagination
@@ -299,6 +308,99 @@ internal sealed class ContentStreamBuilder
         _buffer.Write("]"u8);
         Space();
         return Operator("TJ"u8);
+    }
+
+    /// <summary><c>m</c>: starts a new subpath at (x, y).</summary>
+    public ContentStreamBuilder MoveTo(double x, double y)
+    {
+        Number(x);
+        Number(y);
+        return Operator("m"u8);
+    }
+
+    /// <summary><c>l</c>: a straight segment to (x, y).</summary>
+    public ContentStreamBuilder LineTo(double x, double y)
+    {
+        Number(x);
+        Number(y);
+        return Operator("l"u8);
+    }
+
+    /// <summary><c>c</c>: a cubic Bézier segment through two control points to (x, y).</summary>
+    public ContentStreamBuilder CurveTo(double x1, double y1, double x2, double y2, double x, double y)
+    {
+        Number(x1);
+        Number(y1);
+        Number(x2);
+        Number(y2);
+        Number(x);
+        Number(y);
+        return Operator("c"u8);
+    }
+
+    /// <summary><c>h</c>: closes the current subpath with a straight segment to its start.</summary>
+    public ContentStreamBuilder ClosePath() => Operator("h"u8);
+
+    /// <summary><c>re</c>: appends a closed rectangle to the path, without painting it.</summary>
+    public ContentStreamBuilder Rectangle(double x, double y, double width, double height)
+    {
+        Number(x);
+        Number(y);
+        Number(width);
+        Number(height);
+        return Operator("re"u8);
+    }
+
+    /// <summary><c>f</c> or <c>f*</c>: fills the path with the non-zero or even-odd rule.</summary>
+    public ContentStreamBuilder Fill(bool evenOdd = false) => Operator(evenOdd ? "f*"u8 : "f"u8);
+
+    /// <summary><c>S</c>: strokes the path.</summary>
+    public ContentStreamBuilder Stroke() => Operator("S"u8);
+
+    /// <summary><c>B</c> or <c>B*</c>: fills, then strokes the path.</summary>
+    public ContentStreamBuilder FillAndStroke(bool evenOdd = false) => Operator(evenOdd ? "B*"u8 : "B"u8);
+
+    /// <summary><c>n</c>: ends the path without painting it (after a clip).</summary>
+    public ContentStreamBuilder EndPath() => Operator("n"u8);
+
+    /// <summary><c>W</c> or <c>W*</c>: intersects the clip with the path; follow with a painting operator or <see cref="EndPath"/>.</summary>
+    public ContentStreamBuilder Clip(bool evenOdd = false) => Operator(evenOdd ? "W*"u8 : "W"u8);
+
+    /// <summary><c>J</c>: line ends: 0 butt (the default), 1 round, 2 projecting square.</summary>
+    public ContentStreamBuilder SetLineCap(int cap)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(cap, 0);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(cap, 2);
+        Number(cap);
+        return Operator("J"u8);
+    }
+
+    /// <summary><c>j</c>: corners: 0 miter (the default), 1 round, 2 bevel.</summary>
+    public ContentStreamBuilder SetLineJoin(int join)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(join, 0);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(join, 2);
+        Number(join);
+        return Operator("j"u8);
+    }
+
+    /// <summary><c>d</c>: a dash pattern of on and off lengths, starting <paramref name="phase"/> into it; empty for solid.</summary>
+    public ContentStreamBuilder SetDash(ReadOnlySpan<double> pattern, double phase = 0)
+    {
+        Write("["u8);
+        for (int i = 0; i < pattern.Length; i++)
+        {
+            if (i > 0)
+            {
+                Space();
+            }
+
+            PdfFormat.WriteReal(_buffer, pattern[i]);
+        }
+
+        Write("] "u8);
+        Number(phase);
+        return Operator("d"u8);
     }
 
     private void WriteGlyphRun(ReadOnlySpan<ushort> glyphs)

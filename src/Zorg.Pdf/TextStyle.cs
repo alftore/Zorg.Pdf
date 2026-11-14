@@ -39,6 +39,18 @@ public sealed record TextStyle
     /// <summary>Line height as a multiple of the font size, such as 1.2.</summary>
     public double? LineHeight { get; init; }
 
+    /// <summary>
+    /// The language of the text, as a BCP 47 tag such as <c>"de"</c> or <c>"nb-NO"</c>, when it differs from the
+    /// document's <see cref="PdfDocument.Language"/>. Screen readers switch voice for it (PDF/UA requires the language
+    /// of every passage), and hyphenation will choose its patterns by it.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// new Paragraph(["The German word ", new TextRun("Fernweh") { Style = new TextStyle { Language = "de" } }, " has no English equal."])
+    /// </code>
+    /// </example>
+    public string? Language { get; init; }
+
     /// <summary>This style with every property <paramref name="over"/> sets taking its place.</summary>
     /// <param name="over">The style on top, or null.</param>
     /// <returns>The merged style.</returns>
@@ -50,6 +62,7 @@ public sealed record TextStyle
         FontStyle = over.FontStyle ?? FontStyle,
         Color = over.Color ?? Color,
         LineHeight = over.LineHeight ?? LineHeight,
+        Language = over.Language ?? Language,
     };
 }
 
