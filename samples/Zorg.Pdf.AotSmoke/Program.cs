@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Zorg.Pdf;
 using Zorg.Pdf.Fonts;
@@ -92,6 +93,7 @@ byte[] font = File.ReadAllBytes(fontPath);
             new Paragraph("Justified: " + Body + " " + Body) { Align = TextAlign.Justify },
             new Paragraph(["Centred text, for headings and covers.", LineBreak.Value, "A line break inside the paragraph."]) { Align = TextAlign.Center },
             new Paragraph("Right-aligned, like amounts: 1 234,50 kr") { Align = TextAlign.Right },
+            new Paragraph(["Runs: plain, ", new TextRun("bold") { Style = TextStyle.Bold }, ", ", new TextRun("italic") { Style = TextStyle.Italic }, ", ", new TextRun("bold italic") { Style = new TextStyle { Weight = FontWeight.Bold, FontStyle = FontStyle.Italic } }, ", ", new TextRun("large red") { Style = new TextStyle { Size = Length.Pt(16), Color = Color.Parse("#C00000") } }, " and plain again."]),
             new Heading("Languages") { Level = 2 },
             new Paragraph("Blåbærsyltetøy, 12 × 4,50 € = 54,00 €. Ελληνικά · Кириллица · Čeština · Polski: żółć."),
             new PageBreak(),
@@ -111,7 +113,9 @@ byte[] font = File.ReadAllBytes(fontPath);
     document.Render(synchronous, options);
     string text = Encoding.Latin1.GetString(asynchronous.ToArray());
     Check("render", result.PageCount == 2 && text.Contains("/S /H1", StringComparison.Ordinal) && text.Contains("<pdfuaid:part>1</pdfuaid:part>", StringComparison.Ordinal));
-    Check("render diagnostics", result.Diagnostics is [{ Code: "ZPDF-T001", Path: "/content/10/inlines/0" }]);
+    // Warnings only: the font has one face, so bold and italic are synthesised and reported as Info (ZPDF-F003).
+    PdfDiagnostic[] warnings = [.. result.Diagnostics.Where(d => d.Severity != DiagnosticSeverity.Info)];
+    Check("render diagnostics", warnings is [{ Code: "ZPDF-T001", Path: "/content/11/inlines/0" }] && result.Diagnostics.Any(d => d.Code == "ZPDF-F003"));
     Check("render sync equals async", asynchronous.ToArray().AsSpan().SequenceEqual(synchronous.ToArray()));
 
     try

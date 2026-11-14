@@ -23,30 +23,21 @@ internal sealed partial class TrueTypeFont
 
     // Per lookup, the offsets (from the start of GPOS) of its pair adjustment subtables, in order.
     private readonly List<int[]> _pairLookups = [];
-    private readonly Dictionary<uint, short> _kerningCache = [];
     private int _kernPairs; // Pairs in the legacy kern table, when that's the source.
     private int _kernPairsOffset = -1; // Offset of the first pair in the 'kern' table.
 
     /// <summary>Where the kerning comes from: "GPOS", "kern" or "none".</summary>
     public string KerningSource => _pairLookups.Count > 0 ? "GPOS" : _kernPairsOffset >= 0 ? "kern" : "none";
 
-    /// <summary>The adjustment to the advance of <paramref name="left"/> when followed by <paramref name="right"/>, in font units. Usually negative.</summary>
+    /// <summary>
+    /// The adjustment to the advance of <paramref name="left"/> when followed by <paramref name="right"/>, in font units.
+    /// Usually negative. Computed on every call: the parsed font is immutable and shared between renders, so caching is
+    /// the caller's job (<see cref="EmbeddedFont"/> caches per render).
+    /// </summary>
     public int Kerning(ushort left, ushort right)
     {
-        uint key = ((uint)left << 16) | right;
-        if (_kerningCache.TryGetValue(key, out short cached))
-        {
-            return cached;
-        }
-
         int value = _pairLookups.Count > 0 ? GposKerning(left, right) : KernTableKerning(left, right);
-        short clamped = (short)Math.Clamp(value, short.MinValue, short.MaxValue);
-        if (_kerningCache.Count < 65536)
-        {
-            _kerningCache[key] = clamped;
-        }
-
-        return clamped;
+        return Math.Clamp(value, short.MinValue, short.MaxValue);
     }
 
     /// <summary>The value from the legacy kern table alone, for tests that compare the two sources.</summary>

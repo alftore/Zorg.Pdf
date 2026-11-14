@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Zorg.Pdf.Fonts;
+using Zorg.Pdf.Layout;
 using Zorg.Pdf.Validation;
 using Zorg.Pdf.Writing;
 
@@ -69,60 +70,74 @@ internal sealed class StyleResolver
     public TextStyle Named(string name) => _styles.TryGetValue(name, out TextStyle? style) ? _styles["body"].Merge(style) : _styles["body"];
 }
 
+/// <summary>A face of a family: what a run of text asks for.</summary>
+internal readonly record struct FaceKey(string Family, FontWeight Weight, FontStyle Style)
+{
+    /// <summary>"bold italic", "bold", "italic" or "regular".</summary>
+    public string FaceName => (Weight, Style) switch
+    {
+        (FontWeight.Bold, FontStyle.Italic) => "bold italic",
+        (FontWeight.Bold, _) => "bold",
+        (_, FontStyle.Italic) => "italic",
+        _ => "regular",
+    };
+
+    public override string ToString() => $"{Family} {FaceName}";
+}
+
 /// <summary>
-/// The fonts of one render, loaded and parsed, by family. Each family's regular face becomes one embedded font with a
+/// The fonts of one render: for each face the text needs, a chain of the face and its family's fallbacks. Fonts come
+/// from <see cref="RenderOptions.Fonts"/>, then <see cref="RenderOptions.FontResolver"/>, and are parsed once per
+/// process through <see cref="FontCache"/>. Each parsed font becomes one <see cref="EmbeddedFont"/> per render, with a
 /// page resource name (<c>/F1</c>, <c>/F2</c> ...) and an object reference allocated when a page first uses it.
 /// </summary>
 internal sealed class FontSet
 {
-    private readonly Dictionary<string, EmbeddedFont> _byFamily = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<FaceKey, FontChain> _chains = [];
+    private readonly Dictionary<FaceKey, EmbeddedFont?> _faces = [];
+    private readonly Dictionary<FaceKey, (bool Bold, bool Italic)> _synthetic = [];
+    private readonly Dictionary<TrueTypeFont, EmbeddedFont> _embedded = [];
     private readonly Dictionary<EmbeddedFont, (byte[] Name, PdfReference Reference)> _resources = [];
+    private readonly FontCollection _collection;
+    private readonly IFontResolver? _resolver;
+    private readonly DiagnosticSink _sink;
+    private readonly bool _synchronous;
 
-    private FontSet(string? defaultFamily) => DefaultFamily = defaultFamily;
+    private FontSet(FontCollection collection, IFontResolver? resolver, DiagnosticSink sink, bool synchronous) =>
+        (_collection, _resolver, _sink, _synchronous) = (collection, resolver, sink, synchronous);
 
-    public string? DefaultFamily { get; }
-
-    /// <summary>Loads every family the document needs. Problems become diagnostics; a family that fails is left out.</summary>
-    public static async ValueTask<FontSet> LoadAsync(FontCollection fonts, IReadOnlyDictionary<string, string> needed, string? defaultFamily, DiagnosticSink sink, bool synchronous, CancellationToken cancellationToken)
+    /// <summary>Loads every face the document needs, with fallbacks. Problems become diagnostics; a face that fails is left out.</summary>
+    public static async ValueTask<FontSet> LoadAsync(RenderOptions options, IReadOnlyDictionary<FaceKey, string> needed, DiagnosticSink sink, bool synchronous, CancellationToken cancellationToken)
     {
-        var set = new FontSet(defaultFamily);
-        foreach ((string family, string path) in needed)
+        var set = new FontSet(options.Fonts, options.FontResolver, sink, synchronous);
+        foreach ((FaceKey face, string path) in needed)
         {
-            if (!fonts.Families.TryGetValue(family, out FontFamily? found))
+            EmbeddedFont? primary = await set.FaceAsync(face, path, cancellationToken).ConfigureAwait(false);
+            if (primary is null)
             {
-                sink.Error(DiagnosticCodes.UnknownFontFamily, $"There's no font family named \"{family}\" in the render's fonts. Add it to RenderOptions.Fonts, or use one of: {string.Join(", ", fonts.Families.Keys.Order(StringComparer.OrdinalIgnoreCase))}.", path);
                 continue;
             }
 
-            if (found.Regular is not { } source)
+            var fallbacks = new List<EmbeddedFont>();
+            if (options.Fonts.Families.TryGetValue(face.Family, out FontFamily? family))
             {
-                sink.Error(DiagnosticCodes.UnknownFontFamily, $"The font family \"{family}\" has no regular face. Set FontFamily.Regular.", path);
-                continue;
+                foreach (string name in family.Fallbacks)
+                {
+                    if (await set.FaceAsync(face with { Family = name }, path, cancellationToken).ConfigureAwait(false) is { } fallback && fallback != primary)
+                    {
+                        fallbacks.Add(fallback);
+                    }
+                }
             }
 
-            try
-            {
-                ReadOnlyMemory<byte> bytes = await source.ReadAsync(synchronous, cancellationToken).ConfigureAwait(false);
-                set._byFamily[family] = new EmbeddedFont(TrueTypeFont.Parse(bytes));
-            }
-            catch (PdfException ex)
-            {
-                sink.Error(DiagnosticCodes.FontUnreadable, $"The regular face of \"{family}\" ({source.Describe()}) can't be used: {ex.Message}", path);
-            }
-            catch (System.IO.IOException ex)
-            {
-                sink.Error(DiagnosticCodes.FontUnreadable, $"The regular face of \"{family}\" ({source.Describe()}) can't be read: {ex.Message}", path);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                sink.Error(DiagnosticCodes.FontUnreadable, $"The regular face of \"{family}\" ({source.Describe()}) can't be read: {ex.Message}", path);
-            }
+            (bool bold, bool italic) = set._synthetic.GetValueOrDefault(face);
+            set._chains[face] = new FontChain(primary, fallbacks, bold, italic);
         }
 
         return set;
     }
 
-    public bool TryGet(string family, out EmbeddedFont font) => _byFamily.TryGetValue(family, out font!);
+    public bool TryGet(FaceKey face, out FontChain chain) => _chains.TryGetValue(face, out chain!);
 
     /// <summary>The page resource name of a font, allocating its object the first time a page uses it.</summary>
     public byte[] Use(EmbeddedFont font, PdfObjectWriter writer)
@@ -141,4 +156,88 @@ internal sealed class FontSet
     /// <summary>Fonts some page used, in the order they were first used.</summary>
     public IEnumerable<(EmbeddedFont Font, byte[] Name, PdfReference Reference)> Used =>
         _resources.OrderBy(r => r.Value.Reference.Number).Select(r => (r.Key, r.Value.Name, r.Value.Reference));
+
+    /// <summary>One face, loaded once per render whichever runs ask for it.</summary>
+    private async ValueTask<EmbeddedFont?> FaceAsync(FaceKey face, string path, CancellationToken cancellationToken)
+    {
+        if (_faces.TryGetValue(face, out EmbeddedFont? known))
+        {
+            return known;
+        }
+
+        EmbeddedFont? font = null;
+        FontSource? source = await SourceAsync(face, path, cancellationToken).ConfigureAwait(false);
+        if (source is not null)
+        {
+            try
+            {
+                ReadOnlyMemory<byte> bytes = await source.ReadAsync(_synchronous, cancellationToken).ConfigureAwait(false);
+                TrueTypeFont parsed = FontCache.GetOrParse(bytes);
+                if (!_embedded.TryGetValue(parsed, out font))
+                {
+                    font = new EmbeddedFont(parsed);
+                    _embedded[parsed] = font;
+                }
+            }
+            catch (PdfException ex)
+            {
+                _sink.Error(DiagnosticCodes.FontUnreadable, $"The font for {face} ({source.Describe()}) can't be used: {ex.Message}", path);
+            }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+            {
+                _sink.Error(DiagnosticCodes.FontUnreadable, $"The font for {face} ({source.Describe()}) can't be read: {ex.Message}", path);
+            }
+        }
+
+        _faces[face] = font;
+        return font;
+    }
+
+    private async ValueTask<FontSource?> SourceAsync(FaceKey face, string path, CancellationToken cancellationToken)
+    {
+        if (_collection.Families.TryGetValue(face.Family, out FontFamily? family))
+        {
+            (FontSource? source, bool exact) = family.Face(face.Weight, face.Style);
+            if (source is null)
+            {
+                _sink.Error(DiagnosticCodes.UnknownFontFamily, $"The font family \"{face.Family}\" has no regular face. Set FontFamily.Regular.", path);
+            }
+            else if (!exact)
+            {
+                // Synthesise what the chosen face lacks: thicken for bold, slant for italic.
+                bool synthBold = face.Weight == FontWeight.Bold && !ReferenceEquals(source, family.Bold) && !ReferenceEquals(source, family.BoldItalic);
+                bool synthItalic = face.Style == FontStyle.Italic && !ReferenceEquals(source, family.Italic) && !ReferenceEquals(source, family.BoldItalic);
+                _synthetic[face] = (synthBold, synthItalic);
+                string how = (synthBold, synthItalic) switch
+                {
+                    (true, true) => "thickened and slanted",
+                    (true, false) => "thickened",
+                    _ => "slanted",
+                };
+                _sink.Info(DiagnosticCodes.MissingFace, $"The font family \"{face.Family}\" has no {face.FaceName} face, so it's drawn {how} from a face it has. Add the real face for better type.", path);
+            }
+
+            return source;
+        }
+
+        if (_resolver is not null)
+        {
+            ValueTask<FontSource?> lookup = _resolver.ResolveAsync(new FontRequest(face.Family, face.Weight, face.Style), cancellationToken);
+            if (_synchronous && !lookup.IsCompleted)
+            {
+                _sink.Error(DiagnosticCodes.UnknownFontFamily, $"The font resolver looked up \"{face.Family}\" asynchronously, which a synchronous render can't wait for. Use RenderAsync, or add the family to RenderOptions.Fonts.", path);
+                return null;
+            }
+
+            if (await lookup.ConfigureAwait(false) is { } resolved)
+            {
+                return resolved;
+            }
+        }
+
+        string where = _resolver is null ? "in the render's fonts" : "in the render's fonts or from its font resolver";
+        string choices = _collection.Families.IsEmpty ? "" : ", or use one of: " + string.Join(", ", _collection.Families.Keys.Order(StringComparer.OrdinalIgnoreCase));
+        _sink.Error(DiagnosticCodes.UnknownFontFamily, $"There's no font family named \"{face.Family}\" {where}. Add it to RenderOptions.Fonts{choices}.", path);
+        return null;
+    }
 }

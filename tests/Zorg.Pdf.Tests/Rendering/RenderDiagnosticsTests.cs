@@ -23,21 +23,50 @@ public sealed class RenderDiagnosticsTests
     }
 
     [Fact]
-    public async Task EveryMissingGlyphIsReportedWithItsPathBeforeAnyOutput()
+    public async Task EveryMissingGlyphIsAWarningWithItsPathAndDrawnAsNotdef()
     {
         var document = new PdfDocument("x")
         {
             Content = [new Paragraph("fine"), new Paragraph(["ok ", "bad \U000F0000 here"]), new Heading("also \U000F0001")],
         };
-        var output = new MemoryStream();
 
-        PdfDocumentException error = await Assert.ThrowsAsync<PdfDocumentException>(
-            () => document.RenderAsync(output, PdfInspect.Options(), TestContext.Current.CancellationToken).AsTask());
+        (byte[] file, RenderResult result) = await RenderTests.RenderAsync(document);
 
-        Assert.Equal(["ZPDF-F002 /content/1/inlines/1", "ZPDF-F002 /content/2/inlines/0"], error.Diagnostics.Select(d => $"{d.Code} {d.Path}"));
-        Assert.Contains("U+F0000", error.Diagnostics[0].Message, StringComparison.Ordinal);
-        Assert.Contains("at index 4", error.Diagnostics[0].Message, StringComparison.Ordinal);
-        Assert.Equal(0, output.Length);
+        PdfDiagnostic[] missing = [.. result.Diagnostics.Where(d => d.Code == "ZPDF-F002")];
+        Assert.Equal(["/content/1/inlines/1", "/content/2/inlines/0"], missing.Select(d => d.Path));
+        Assert.All(missing, d => Assert.Equal(DiagnosticSeverity.Warning, d.Severity));
+        Assert.Contains("U+F0000", missing[0].Message, StringComparison.Ordinal);
+        Assert.Contains("at index 4", missing[0].Message, StringComparison.Ordinal);
+        Assert.Contains("<0000> <FFFD>", InflateAll(file), StringComparison.Ordinal); // .notdef copies as U+FFFD.
+    }
+
+    /// <summary>Every Flate stream in the file, inflated and joined.</summary>
+    private static string InflateAll(byte[] file)
+    {
+        var text = new System.Text.StringBuilder();
+        string pdf = PdfInspect.Text(file);
+        for (int at = pdf.IndexOf("stream\n", StringComparison.Ordinal); at >= 0; at = pdf.IndexOf("stream\n", at + 1, StringComparison.Ordinal))
+        {
+            if (pdf[at - 1] == 'd')
+            {
+                continue; // "endstream".
+            }
+
+            try
+            {
+                int start = at + "stream\n".Length;
+                using var zlib = new System.IO.Compression.ZLibStream(new MemoryStream(file, start, file.Length - start), System.IO.Compression.CompressionMode.Decompress);
+                using var inflated = new MemoryStream();
+                zlib.CopyTo(inflated);
+                text.Append(System.Text.Encoding.Latin1.GetString(inflated.ToArray()));
+            }
+            catch (InvalidDataException)
+            {
+                // Not compressed.
+            }
+        }
+
+        return text.ToString();
     }
 
     [Fact]
@@ -94,8 +123,8 @@ public sealed class RenderDiagnosticsTests
         Assert.True(file.Length > 0);
         Assert.Equal(
             [
+                "Info ZPDF-F003 /content/0/inlines/1/style",
                 "Warning ZPDF-R001 /footer",
-                "Info ZPDF-R001 /content/0/inlines/1/style",
                 "Warning ZPDF-R001 /content/0/inlines/3",
                 "Warning ZPDF-R001 /content/1",
                 "Warning ZPDF-R001 /content/2",

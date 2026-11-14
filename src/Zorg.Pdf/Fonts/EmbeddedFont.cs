@@ -20,6 +20,7 @@ internal sealed class EmbeddedFont
     private const ushort BitmapOnly = 0x0200;
 
     private readonly SortedDictionary<ushort, string> _text = [];
+    private readonly Dictionary<uint, short> _kerning = [];
 
     public EmbeddedFont(TrueTypeFont font)
     {
@@ -77,6 +78,44 @@ internal sealed class EmbeddedFont
 
         _text.TryAdd(glyph, rune.ToString());
         return glyph;
+    }
+
+    /// <summary>
+    /// The glyph for a character, recorded as used, or false when the font has none (nothing is recorded then).
+    /// </summary>
+    public bool TryGlyph(Rune rune, out ushort glyph)
+    {
+        glyph = Font.GlyphFor(rune.Value);
+        if (glyph == 0)
+        {
+            return false;
+        }
+
+        _text.TryAdd(glyph, rune.ToString());
+        return true;
+    }
+
+    /// <summary>Records .notdef as used, for a character no font in the chain has. It maps to U+FFFD for copy and paste.</summary>
+    public ushort Notdef()
+    {
+        _text.TryAdd((ushort)0, "�");
+        return 0;
+    }
+
+    /// <summary>Pair kerning in thousandths of the font size, cached for this render.</summary>
+    public double Kerning(ushort left, ushort right)
+    {
+        uint key = ((uint)left << 16) | right;
+        if (!_kerning.TryGetValue(key, out short value))
+        {
+            value = (short)Font.Kerning(left, right);
+            if (_kerning.Count < 65536)
+            {
+                _kerning[key] = value;
+            }
+        }
+
+        return value * 1000.0 / Font.UnitsPerEm;
     }
 
     /// <summary>The advance width of a glyph in thousandths of the font size, the unit PDF widths use.</summary>

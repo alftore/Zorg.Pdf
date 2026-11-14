@@ -36,6 +36,7 @@ internal static class DiagnosticCodes
     // F: fonts.
     public const string NoFonts = "ZPDF-F001";
     public const string MissingGlyph = "ZPDF-F002";
+    public const string MissingFace = "ZPDF-F003";
     public const string UnknownFontFamily = "ZPDF-F004";
     public const string FontUnreadable = "ZPDF-F005";
 

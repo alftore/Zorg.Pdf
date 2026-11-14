@@ -41,6 +41,31 @@ internal static class TestFonts
         return [];
     }
 
+    /// <summary>Another face, or a fallback font, by kind; a skip (a failure when fonts are required) if missing.</summary>
+    public static byte[] Require(string kind)
+    {
+        string[] candidates = kind switch
+        {
+            "bold" => [@"C:\Windows\Fonts\arialbd.ttf", "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"],
+            "italic" => [@"C:\Windows\Fonts\ariali.ttf", "/usr/share/fonts/dejavu/DejaVuSans-Oblique.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"],
+            "devanagari" => [@"C:\Windows\Fonts\Nirmala.ttf", "/usr/share/fonts/noto/NotoSansDevanagari-Regular.ttf", "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf"],
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown font kind."),
+        };
+        if (Array.Find(candidates, File.Exists) is { } path)
+        {
+            return File.ReadAllBytes(path);
+        }
+
+        string message = $"No {kind} test font found.";
+        if (Environment.GetEnvironmentVariable("ZORG_REQUIRE_FONTS") == "1")
+        {
+            Assert.Fail(message);
+        }
+
+        Assert.Skip(message);
+        return [];
+    }
+
     private static byte[]? Load()
     {
         string? chosen = Environment.GetEnvironmentVariable("ZORG_PDF_TEST_FONT");

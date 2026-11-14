@@ -142,11 +142,19 @@ Zorg.Pdf.Fonts.FontCollection.Families.get -> System.Collections.Immutable.Immut
 Zorg.Pdf.Fonts.FontCollection.WithDefault(string! familyName) -> Zorg.Pdf.Fonts.FontCollection!
 Zorg.Pdf.Fonts.FontFamily
 Zorg.Pdf.Fonts.FontFamily.<Clone>$() -> Zorg.Pdf.Fonts.FontFamily!
+Zorg.Pdf.Fonts.FontFamily.Bold.get -> Zorg.Pdf.Fonts.FontSource?
+Zorg.Pdf.Fonts.FontFamily.Bold.init -> void
+Zorg.Pdf.Fonts.FontFamily.BoldItalic.get -> Zorg.Pdf.Fonts.FontSource?
+Zorg.Pdf.Fonts.FontFamily.BoldItalic.init -> void
 Zorg.Pdf.Fonts.FontFamily.Deconstruct(out string! Name) -> void
 Zorg.Pdf.Fonts.FontFamily.Equals(Zorg.Pdf.Fonts.FontFamily? other) -> bool
 override Zorg.Pdf.Fonts.FontFamily.Equals(object? obj) -> bool
+Zorg.Pdf.Fonts.FontFamily.Fallbacks.get -> System.Collections.Immutable.ImmutableArray<string!>
+Zorg.Pdf.Fonts.FontFamily.Fallbacks.init -> void
 Zorg.Pdf.Fonts.FontFamily.FontFamily(string! Name) -> void
 override Zorg.Pdf.Fonts.FontFamily.GetHashCode() -> int
+Zorg.Pdf.Fonts.FontFamily.Italic.get -> Zorg.Pdf.Fonts.FontSource?
+Zorg.Pdf.Fonts.FontFamily.Italic.init -> void
 Zorg.Pdf.Fonts.FontFamily.Name.get -> string!
 Zorg.Pdf.Fonts.FontFamily.Name.init -> void
 Zorg.Pdf.Fonts.FontFamily.Regular.get -> Zorg.Pdf.Fonts.FontSource?
@@ -154,6 +162,22 @@ Zorg.Pdf.Fonts.FontFamily.Regular.init -> void
 override Zorg.Pdf.Fonts.FontFamily.ToString() -> string!
 static Zorg.Pdf.Fonts.FontFamily.operator !=(Zorg.Pdf.Fonts.FontFamily? left, Zorg.Pdf.Fonts.FontFamily? right) -> bool
 static Zorg.Pdf.Fonts.FontFamily.operator ==(Zorg.Pdf.Fonts.FontFamily? left, Zorg.Pdf.Fonts.FontFamily? right) -> bool
+Zorg.Pdf.Fonts.FontRequest
+Zorg.Pdf.Fonts.FontRequest.Deconstruct(out string! Family, out Zorg.Pdf.FontWeight Weight, out Zorg.Pdf.FontStyle Style) -> void
+Zorg.Pdf.Fonts.FontRequest.Equals(Zorg.Pdf.Fonts.FontRequest other) -> bool
+Zorg.Pdf.Fonts.FontRequest.Family.get -> string!
+Zorg.Pdf.Fonts.FontRequest.Family.init -> void
+Zorg.Pdf.Fonts.FontRequest.FontRequest() -> void
+Zorg.Pdf.Fonts.FontRequest.FontRequest(string! Family, Zorg.Pdf.FontWeight Weight, Zorg.Pdf.FontStyle Style) -> void
+override Zorg.Pdf.Fonts.FontRequest.GetHashCode() -> int
+Zorg.Pdf.Fonts.FontRequest.Style.get -> Zorg.Pdf.FontStyle
+Zorg.Pdf.Fonts.FontRequest.Style.init -> void
+Zorg.Pdf.Fonts.FontRequest.Weight.get -> Zorg.Pdf.FontWeight
+Zorg.Pdf.Fonts.FontRequest.Weight.init -> void
+static Zorg.Pdf.Fonts.FontRequest.operator !=(Zorg.Pdf.Fonts.FontRequest left, Zorg.Pdf.Fonts.FontRequest right) -> bool
+static Zorg.Pdf.Fonts.FontRequest.operator ==(Zorg.Pdf.Fonts.FontRequest left, Zorg.Pdf.Fonts.FontRequest right) -> bool
+Zorg.Pdf.Fonts.FontResolvers
+static Zorg.Pdf.Fonts.FontResolvers.System() -> Zorg.Pdf.Fonts.IFontResolver!
 Zorg.Pdf.Fonts.FontSource
 abstract Zorg.Pdf.Fonts.FontSource.<Clone>$() -> Zorg.Pdf.Fonts.FontSource!
 virtual Zorg.Pdf.Fonts.FontSource.EqualityContract.get -> System.Type!
@@ -168,6 +192,8 @@ virtual Zorg.Pdf.Fonts.FontSource.PrintMembers(System.Text.StringBuilder! builde
 override Zorg.Pdf.Fonts.FontSource.ToString() -> string!
 static Zorg.Pdf.Fonts.FontSource.operator !=(Zorg.Pdf.Fonts.FontSource? left, Zorg.Pdf.Fonts.FontSource? right) -> bool
 static Zorg.Pdf.Fonts.FontSource.operator ==(Zorg.Pdf.Fonts.FontSource? left, Zorg.Pdf.Fonts.FontSource? right) -> bool
+Zorg.Pdf.Fonts.IFontResolver
+Zorg.Pdf.Fonts.IFontResolver.ResolveAsync(Zorg.Pdf.Fonts.FontRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Zorg.Pdf.Fonts.FontSource?>
 Zorg.Pdf.Heading
 override Zorg.Pdf.Heading.<Clone>$() -> Zorg.Pdf.Heading!
 Zorg.Pdf.Heading.Align.get -> Zorg.Pdf.TextAlign
@@ -443,6 +469,8 @@ Zorg.Pdf.RenderOptions.Conformance.init -> void
 Zorg.Pdf.RenderOptions.CreationDate.get -> System.DateTimeOffset?
 Zorg.Pdf.RenderOptions.CreationDate.init -> void
 static Zorg.Pdf.RenderOptions.Default.get -> Zorg.Pdf.RenderOptions!
+Zorg.Pdf.RenderOptions.FontResolver.get -> Zorg.Pdf.Fonts.IFontResolver?
+Zorg.Pdf.RenderOptions.FontResolver.init -> void
 Zorg.Pdf.RenderOptions.Fonts.get -> Zorg.Pdf.Fonts.FontCollection!
 Zorg.Pdf.RenderOptions.Fonts.init -> void
 Zorg.Pdf.RenderOptions.Limits.get -> Zorg.Pdf.PdfLimits!
@@ -604,6 +632,8 @@ Zorg.Pdf.ValidationResult.IsValid.get -> bool
 ~override Zorg.Pdf.Color.Equals(object obj) -> bool
 ~override Zorg.Pdf.ColumnWidth.Equals(object obj) -> bool
 ~override Zorg.Pdf.ColumnWidth.ToString() -> string
+~override Zorg.Pdf.Fonts.FontRequest.Equals(object obj) -> bool
+~override Zorg.Pdf.Fonts.FontRequest.ToString() -> string
 ~override Zorg.Pdf.Length.Equals(object obj) -> bool
 ~override Zorg.Pdf.PageSize.Equals(object obj) -> bool
 ~override Zorg.Pdf.PageSize.ToString() -> string

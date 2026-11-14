@@ -1,22 +1,86 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using Zorg.Pdf.Fonts;
 
 namespace Zorg.Pdf.Layout;
 
+/// <summary>A font and the fonts tried, in order, for characters it has no glyph for.</summary>
+internal sealed class FontChain(EmbeddedFont primary, IReadOnlyList<EmbeddedFont> fallbacks, bool syntheticBold = false, bool syntheticItalic = false)
+{
+    public EmbeddedFont Primary { get; } = primary;
+
+    /// <summary>The family has no bold face: draw the regular one thickened (fill and stroke).</summary>
+    public bool SyntheticBold { get; } = syntheticBold;
+
+    /// <summary>The family has no italic face: draw the upright one slanted.</summary>
+    public bool SyntheticItalic { get; } = syntheticItalic;
+
+    public IReadOnlyList<EmbeddedFont> Fallbacks { get; } = fallbacks;
+
+    /// <summary>The first font in the chain with a glyph for <paramref name="rune"/>, or the primary font's .notdef.</summary>
+    public (EmbeddedFont Font, ushort Glyph) Glyph(Rune rune)
+    {
+        if (Primary.TryGlyph(rune, out ushort glyph))
+        {
+            return (Primary, glyph);
+        }
+
+        foreach (EmbeddedFont fallback in Fallbacks)
+        {
+            if (fallback.TryGlyph(rune, out glyph))
+            {
+                return (fallback, glyph);
+            }
+        }
+
+        return (Primary, Primary.Notdef());
+    }
+
+    /// <summary>True when some font in the chain has a glyph for the code point. Records nothing.</summary>
+    public bool Covers(int codePoint) => Primary.Font.GlyphFor(codePoint) != 0 || Fallbacks.Any(f => f.Font.GlyphFor(codePoint) != 0);
+}
+
+/// <summary>Text in one font chain, size and colour: a run of a paragraph.</summary>
+/// <param name="Text">The text. Line feeds break the line.</param>
+/// <param name="Fonts">The font and its fallbacks.</param>
+/// <param name="Size">The font size in points.</param>
+/// <param name="Color">The colour, or null for the default (black).</param>
+internal sealed record TextSegment(string Text, FontChain Fonts, double Size, Color? Color);
+
 /// <summary>
-/// One laid-out line: the glyphs to show, the extra space after each (kerning and justification, in thousandths of
-/// the font size, as <c>TJ</c> takes it), the width it takes in points, and where it starts from the left edge.
+/// Part of a line in one font, size and colour: the glyphs, the extra space after each (kerning and justification, in
+/// thousandths of <see cref="Size"/>, as <c>TJ</c> takes it), and where it starts from the line's start, in points.
 /// </summary>
-internal sealed record LayoutLine(ushort[] Glyphs, double[] ExtraAfter, double Width, double Offset);
+internal sealed record LineRun(EmbeddedFont Font, double Size, Color? Color, ushort[] Glyphs, double[] ExtraAfter, double X)
+{
+    /// <summary>Drawn thickened, because the family has no bold face.</summary>
+    public bool SyntheticBold { get; init; }
+
+    /// <summary>Drawn slanted, because the family has no italic face.</summary>
+    public bool SyntheticItalic { get; init; }
+}
+
+/// <summary>
+/// One laid-out line: its runs, its width in points, where it starts from the left edge, and its height and ascent
+/// (the tallest run's, so mixed sizes share a baseline).
+/// </summary>
+internal sealed record LayoutLine(IReadOnlyList<LineRun> Runs, double Width, double Offset, double Ascent, double Height)
+{
+    /// <summary>All the line's glyphs, in order.</summary>
+    public ushort[] Glyphs => [.. Runs.SelectMany(r => r.Glyphs)];
+
+    /// <summary>The extra space after each glyph, in thousandths of its run's size. Meaningful for one-run lines.</summary>
+    public double[] ExtraAfter => [.. Runs.SelectMany(r => r.ExtraAfter)];
+}
 
 /// <summary>Something layout had to do that the author should know about. Code is stable; Index is in the source text.</summary>
 internal readonly record struct TextDiagnostic(string Code, string Message, int Index);
 
 /// <summary>
-/// Breaks a paragraph into lines that fit a width, greedily, with pair kerning.
+/// Breaks a paragraph of styled runs into lines that fit a width, greedily, with pair kerning within each run.
 /// </summary>
 /// <remarks>
 /// <para>Line breaking is a subset of Unicode's algorithm (UAX #14), enough for European text and ideographs:</para>
@@ -29,7 +93,7 @@ internal readonly record struct TextDiagnostic(string Code, string Message, int 
 /// </list>
 /// <para>
 /// A word wider than the whole width is broken between characters, and reported as diagnostic ZPDF-T001, never
-/// clipped or dropped.
+/// clipped or dropped. A character no font in a run's chain has is drawn as .notdef; the renderer reports it first.
 /// </para>
 /// </remarks>
 internal sealed class ParagraphLayout
@@ -49,52 +113,30 @@ internal sealed class ParagraphLayout
 
     public IReadOnlyList<TextDiagnostic> Diagnostics { get; }
 
-    public static ParagraphLayout Create(string text, EmbeddedFont font, double size, double width, TextAlign align)
+    /// <summary>One run of text in one font: the common case, and the one the spike renderer uses.</summary>
+    public static ParagraphLayout Create(string text, EmbeddedFont font, double size, double width, TextAlign align) =>
+        Create([new TextSegment(text, new FontChain(font, []), size, null)], width, align, font.LineHeight);
+
+    /// <summary>Lays out runs of text as one paragraph.</summary>
+    /// <param name="segments">The runs, in order. At least one, so an empty paragraph still has a size.</param>
+    /// <param name="width">The width to fill, in points.</param>
+    /// <param name="align">Horizontal alignment.</param>
+    /// <param name="lineHeight">Line height as a multiple of each run's size; a line is as tall as its tallest run.</param>
+    public static ParagraphLayout Create(IReadOnlyList<TextSegment> segments, double width, TextAlign align, double lineHeight)
     {
-        ArgumentNullException.ThrowIfNull(text);
-        ArgumentNullException.ThrowIfNull(font);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
+        ArgumentNullException.ThrowIfNull(segments);
+        ArgumentOutOfRangeException.ThrowIfZero(segments.Count);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+        foreach (TextSegment segment in segments)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(segment.Size);
+        }
 
         var lines = new List<LayoutLine>();
         var diagnostics = new List<TextDiagnostic>();
-        int start = 0;
-        while (true)
-        {
-            int end = FindHardBreak(text, start, out int next);
-            var builder = new LineBuilder(font, size, width, align, start, lines, diagnostics);
-            builder.Layout(text.AsSpan(start, end - start));
-            if (next < 0)
-            {
-                break;
-            }
-
-            start = next;
-        }
-
+        var builder = new LineBuilder(width, align, lineHeight, lines, diagnostics);
+        builder.Layout(segments);
         return new ParagraphLayout(lines, diagnostics);
-    }
-
-    /// <summary>The end of the hard line starting at <paramref name="start"/>, and where the next one starts (-1 if none).</summary>
-    private static int FindHardBreak(string text, int start, out int next)
-    {
-        for (int i = start; i < text.Length; i++)
-        {
-            switch (text[i])
-            {
-                case '\r':
-                    next = i + 1 < text.Length && text[i + 1] == '\n' ? i + 2 : i + 1;
-                    return i;
-                case '\n':
-                case (char)0x2028:
-                case (char)0x2029:
-                    next = i + 1;
-                    return i;
-            }
-        }
-
-        next = -1;
-        return text.Length;
     }
 
     private static bool IsBreakingSpace(Rune rune) =>
@@ -107,111 +149,160 @@ internal sealed class ParagraphLayout
         c is (>= 0x3040 and <= 0x30FF) or (>= 0x3400 and <= 0x4DBF) or (>= 0x4E00 and <= 0x9FFF) or (>= 0xF900 and <= 0xFAFF)
             or (>= 0x20000 and <= 0x3FFFF);
 
-    /// <summary>Lays out one hard line (no line feeds inside) into one or more lines.</summary>
-    private sealed class LineBuilder(EmbeddedFont font, double size, double width, TextAlign align, int textOffset, List<LayoutLine> lines, List<TextDiagnostic> diagnostics)
+    /// <summary>One glyph and what line breaking needs to know about it. Widths are in points.</summary>
+    private struct Item
     {
-        private readonly List<ushort> _glyphs = [];
-        private readonly List<bool> _space = [];
-        private readonly List<bool> _breakAfter = [];
-        private readonly List<bool> _softHyphenAfter = [];
-        private readonly List<int> _source = [];
+        public EmbeddedFont Font;
+        public ushort Glyph;
+        public double Size;
+        public Color? Color;
+        public bool Bold;
+        public bool Italic;
+        public bool Space;
+        public bool BreakAfter;
+        public bool SoftHyphenAfter;
+        public int Source;
+        public double Advance;
+        public double Kern; // Kerning to the next item, when it's in the same font and size.
+    }
 
-        // Advances and kerning in thousandths of the font size.
-        private double[] _advance = [];
-        private double[] _kern = [];
+    private sealed class LineBuilder(double width, TextAlign align, double lineHeight, List<LayoutLine> lines, List<TextDiagnostic> diagnostics)
+    {
+        private readonly List<Item> _items = [];
+        private TextSegment _lastSegment = null!;
 
-        private double Max => width * 1000 / size;
-
-        public void Layout(ReadOnlySpan<char> line)
+        public void Layout(IReadOnlyList<TextSegment> segments)
         {
-            Collect(line);
-            Measure();
-            if (_glyphs.Count == 0)
+            _lastSegment = segments[0];
+            bool afterHyphen = false;
+            int offset = 0;
+            foreach (TextSegment segment in segments)
             {
-                lines.Add(new LayoutLine([], [], 0, 0)); // An empty line still takes its height.
-                return;
+                _lastSegment = segment;
+                string text = segment.Text;
+                int index = 0;
+                while (index < text.Length)
+                {
+                    if (Rune.DecodeFromUtf16(text.AsSpan(index), out Rune rune, out int consumed) != System.Buffers.OperationStatus.Done)
+                    {
+                        throw new PdfException(string.Create(CultureInfo.InvariantCulture, $"The text has a lone surrogate at index {offset + index}."));
+                    }
+
+                    int at = offset + index;
+                    index += consumed;
+                    int c = rune.Value;
+                    if (c is '\n' or '\r' or 0x2028 or 0x2029)
+                    {
+                        if (c == '\r' && index < text.Length && text[index] == '\n')
+                        {
+                            index++;
+                        }
+
+                        FinishHardLine();
+                        afterHyphen = false;
+                        continue;
+                    }
+
+                    if (c == 0x00AD || c == 0x200B)
+                    {
+                        // Soft hyphen and zero-width space: break opportunities with nothing to draw.
+                        if (_items.Count > 0)
+                        {
+                            Item last = _items[^1];
+                            last.BreakAfter = true;
+                            last.SoftHyphenAfter |= c == 0x00AD;
+                            _items[^1] = last;
+                        }
+
+                        continue;
+                    }
+
+                    if (c == '\t')
+                    {
+                        rune = new Rune(' ');
+                        c = ' ';
+                    }
+                    else if (c < 0x20 || c is >= 0x7F and < 0xA0)
+                    {
+                        throw new PdfException(string.Create(CultureInfo.InvariantCulture, $"The text has the control character U+{c:X4} at index {at}, which can't be drawn."));
+                    }
+
+                    if (afterHyphen && Rune.IsDigit(rune))
+                    {
+                        SetLastBreakAfter(false); // "10-5", "-5": keep the number with its sign.
+                    }
+
+                    bool space = IsBreakingSpace(rune);
+                    bool ideograph = IsIdeographic(c);
+                    if (ideograph && _items.Count > 0 && !_items[^1].Space)
+                    {
+                        SetLastBreakAfter(true);
+                    }
+
+                    if (space && _items.Count > 0 && _items[^1].Space)
+                    {
+                        SetLastBreakAfter(false); // Break after the last space of a run, never inside it.
+                    }
+
+                    bool hyphen = IsBreakingHyphen(c) && _items.Count > 0 && !_items[^1].Space;
+                    (EmbeddedFont font, ushort glyph) = segment.Fonts.Glyph(rune);
+                    _items.Add(new Item
+                    {
+                        Font = font,
+                        Glyph = glyph,
+                        Size = segment.Size,
+                        Color = segment.Color,
+                        Bold = segment.Fonts.SyntheticBold,
+                        Italic = segment.Fonts.SyntheticItalic,
+                        Space = space,
+                        BreakAfter = space || ideograph || hyphen,
+                        Source = at,
+                        Advance = font.Width(glyph) * segment.Size / 1000,
+                    });
+                    afterHyphen = hyphen;
+                }
+
+                offset += text.Length;
+            }
+
+            FinishHardLine();
+        }
+
+        private void SetLastBreakAfter(bool value)
+        {
+            Item last = _items[^1]; // A struct: change the copy and put it back.
+            last.BreakAfter = value;
+            _items[^1] = last;
+        }
+
+        private void FinishHardLine()
+        {
+            for (int i = 0; i + 1 < _items.Count; i++)
+            {
+                Item a = _items[i];
+                Item b = _items[i + 1];
+                if (ReferenceEquals(a.Font, b.Font) && a.Size == b.Size)
+                {
+                    a.Kern = a.Font.Kerning(a.Glyph, b.Glyph) * a.Size / 1000;
+                    _items[i] = a;
+                }
+            }
+
+            if (_items.Count == 0)
+            {
+                // An empty line still takes its height, in the size of the run it's in.
+                EmbeddedFont font = _lastSegment.Fonts.Primary;
+                double size = _lastSegment.Size;
+                lines.Add(new LayoutLine([], 0, 0, font.Font.LayoutAscender * size / font.Font.UnitsPerEm, size * lineHeight));
             }
 
             int start = 0;
-            while (start < _glyphs.Count)
+            while (start < _items.Count)
             {
                 start = NextLine(start);
             }
-        }
 
-        private void Collect(ReadOnlySpan<char> line)
-        {
-            bool afterHyphen = false;
-            int index = 0;
-            while (index < line.Length)
-            {
-                if (Rune.DecodeFromUtf16(line[index..], out Rune rune, out int consumed) != System.Buffers.OperationStatus.Done)
-                {
-                    throw new PdfException(string.Create(CultureInfo.InvariantCulture, $"The text has a lone surrogate at index {textOffset + index}."));
-                }
-
-                int at = textOffset + index;
-                index += consumed;
-                int c = rune.Value;
-                if (c == 0x00AD || c == 0x200B)
-                {
-                    // Soft hyphen and zero-width space: break opportunities with nothing to draw.
-                    if (_glyphs.Count > 0)
-                    {
-                        _breakAfter[^1] = true;
-                        _softHyphenAfter[^1] |= c == 0x00AD;
-                    }
-
-                    continue;
-                }
-
-                if (c == '\t')
-                {
-                    rune = new Rune(' ');
-                    c = ' ';
-                }
-                else if (c < 0x20 || c is >= 0x7F and < 0xA0)
-                {
-                    throw new PdfException(string.Create(CultureInfo.InvariantCulture, $"The text has the control character U+{c:X4} at index {at}, which can't be drawn."));
-                }
-
-                if (afterHyphen && Rune.IsDigit(rune))
-                {
-                    _breakAfter[^1] = false; // "10-5", "-5": keep the number with its sign.
-                }
-
-                bool space = IsBreakingSpace(rune);
-                bool ideograph = IsIdeographic(c);
-                if (ideograph && _glyphs.Count > 0 && !_space[^1])
-                {
-                    _breakAfter[^1] = true;
-                }
-
-                if (space && _glyphs.Count > 0 && _space[^1])
-                {
-                    _breakAfter[^1] = false; // Break after the last space of a run, never inside it.
-                }
-
-                bool hyphen = IsBreakingHyphen(c) && _glyphs.Count > 0 && !_space[^1];
-                _glyphs.Add(font.Glyph(rune, at));
-                _space.Add(space);
-                _breakAfter.Add(space || ideograph || hyphen);
-                _softHyphenAfter.Add(false);
-                _source.Add(at);
-                afterHyphen = hyphen;
-            }
-        }
-
-        private void Measure()
-        {
-            int count = _glyphs.Count;
-            _advance = new double[count];
-            _kern = new double[count];
-            for (int i = 0; i < count; i++)
-            {
-                _advance[i] = font.Width(_glyphs[i]);
-                _kern[i] = i + 1 < count ? font.Font.Kerning(_glyphs[i], _glyphs[i + 1]) * 1000.0 / font.Font.UnitsPerEm : 0;
-            }
+            _items.Clear();
         }
 
         /// <summary>Fills one line from <paramref name="start"/> and returns where the next one starts.</summary>
@@ -222,24 +313,24 @@ internal sealed class ParagraphLayout
             int lastBreak = -1;
             double widthAtBreak = 0;
             int i = start;
-            for (; i < _glyphs.Count; i++)
+            for (; i < _items.Count; i++)
             {
-                double add = _advance[i] + (i > start ? _kern[i - 1] : 0);
-                if (!_space[i] && used + add > Max + Tolerance)
+                double add = _items[i].Advance + (i > start ? _items[i - 1].Kern : 0);
+                if (!_items[i].Space && used + add > width + Tolerance)
                 {
                     break;
                 }
 
                 used += add;
-                if (!_space[i])
+                if (!_items[i].Space)
                 {
                     visible = used;
                 }
 
-                if (_breakAfter[i] && i + 1 < _glyphs.Count)
+                if (_items[i].BreakAfter && i + 1 < _items.Count)
                 {
-                    double candidate = visible + (_softHyphenAfter[i] ? HyphenWidth(_glyphs[i]) : 0);
-                    if (candidate <= Max + Tolerance)
+                    double candidate = visible + (_items[i].SoftHyphenAfter ? HyphenWidth(_items[i]) : 0);
+                    if (candidate <= width + Tolerance)
                     {
                         lastBreak = i;
                         widthAtBreak = candidate;
@@ -247,15 +338,15 @@ internal sealed class ParagraphLayout
                 }
             }
 
-            if (i == _glyphs.Count)
+            if (i == _items.Count)
             {
-                Emit(start, _glyphs.Count - 1, visible, hyphenate: false, last: true);
-                return _glyphs.Count;
+                Emit(start, _items.Count - 1, visible, hyphenate: false, last: true);
+                return _items.Count;
             }
 
             if (lastBreak >= start)
             {
-                Emit(start, lastBreak, widthAtBreak, hyphenate: _softHyphenAfter[lastBreak], last: false);
+                Emit(start, lastBreak, widthAtBreak, hyphenate: _items[lastBreak].SoftHyphenAfter, last: false);
                 return lastBreak + 1;
             }
 
@@ -264,53 +355,55 @@ internal sealed class ParagraphLayout
             double emergency = 0;
             for (int k = start; k < end; k++)
             {
-                emergency += _advance[k] + (k > start ? _kern[k - 1] : 0);
+                emergency += _items[k].Advance + (k > start ? _items[k - 1].Kern : 0);
             }
 
             // Once per word: the lines after the first piece of a broken word start mid-word.
-            bool wordStart = start == 0 || _breakAfter[start - 1];
-            if (wordStart)
+            if (start == 0 || _items[start - 1].BreakAfter)
             {
                 diagnostics.Add(new TextDiagnostic(
                     WordTooWide,
-                    string.Create(CultureInfo.InvariantCulture, $"The word at index {_source[start]} is wider than the {width:0.##} pt column at {size:0.##} pt, so it was broken between characters."),
-                    _source[start]));
+                    string.Create(CultureInfo.InvariantCulture, $"The word at index {_items[start].Source} is wider than the {width:0.##} pt column at {_items[start].Size:0.##} pt, so it was broken between characters."),
+                    _items[start].Source));
             }
 
-            Emit(start, end - 1, emergency, hyphenate: false, last: end == _glyphs.Count);
+            Emit(start, end - 1, emergency, hyphenate: false, last: end == _items.Count);
             return end;
         }
 
-        private double HyphenWidth(ushort before)
+        private static double HyphenWidth(Item before)
         {
-            ushort hyphen = font.Font.GlyphFor('-');
-            return hyphen == 0 ? 0 : font.Width(hyphen) + (font.Font.Kerning(before, hyphen) * 1000.0 / font.Font.UnitsPerEm);
+            ushort hyphen = before.Font.Font.GlyphFor('-');
+            return hyphen == 0 ? 0 : (before.Font.Width(hyphen) + before.Font.Kerning(before.Glyph, hyphen)) * before.Size / 1000;
         }
 
         private void Emit(int start, int end, double lineWidth, bool hyphenate, bool last)
         {
-            while (end > start && _space[end])
+            while (end > start && _items[end].Space)
             {
                 end--; // Trailing spaces hang and aren't drawn.
             }
 
-            var glyphs = new List<ushort>(end - start + 2);
-            var extra = new List<double>(end - start + 2);
+            var placed = new List<Item>(end - start + 2);
+            var extra = new List<double>(end - start + 2); // Points after each placed item.
             for (int k = start; k <= end; k++)
             {
-                glyphs.Add(_glyphs[k]);
-                extra.Add(k < end ? _kern[k] : 0);
+                placed.Add(_items[k]);
+                extra.Add(k < end ? _items[k].Kern : 0);
             }
 
             if (hyphenate)
             {
-                ushort hyphen = font.Glyph(new Rune('-'), _source[end]);
-                extra[^1] = font.Font.Kerning(_glyphs[end], hyphen) * 1000.0 / font.Font.UnitsPerEm;
-                glyphs.Add(hyphen);
-                extra.Add(0);
+                Item before = _items[end];
+                if (before.Font.TryGlyph(new Rune('-'), out ushort hyphen))
+                {
+                    extra[^1] = before.Font.Kerning(before.Glyph, hyphen) * before.Size / 1000;
+                    placed.Add(before with { Glyph = hyphen, Space = false, Advance = before.Font.Width(hyphen) * before.Size / 1000 });
+                    extra.Add(0);
+                }
             }
 
-            double points = lineWidth * size / 1000;
+            double points = lineWidth;
             double offset = align switch
             {
                 TextAlign.Right => width - points,
@@ -321,17 +414,17 @@ internal sealed class ParagraphLayout
             if (align == TextAlign.Justify && !last)
             {
                 int spaces = 0;
-                for (int k = 0; k < glyphs.Count - 1; k++)
+                for (int k = 0; k < placed.Count - 1; k++)
                 {
-                    spaces += _space[start + k] && start + k <= end ? 1 : 0;
+                    spaces += placed[k].Space ? 1 : 0;
                 }
 
-                if (spaces > 0 && lineWidth < Max)
+                if (spaces > 0 && lineWidth < width)
                 {
-                    double each = (Max - lineWidth) / spaces;
-                    for (int k = 0; k < glyphs.Count - 1; k++)
+                    double each = (width - lineWidth) / spaces;
+                    for (int k = 0; k < placed.Count - 1; k++)
                     {
-                        if (start + k <= end && _space[start + k])
+                        if (placed[k].Space)
                         {
                             extra[k] += each;
                         }
@@ -341,7 +434,47 @@ internal sealed class ParagraphLayout
                 }
             }
 
-            lines.Add(new LayoutLine([.. glyphs], [.. extra], points, Math.Max(offset, 0)));
+            lines.Add(new LayoutLine(Runs(placed, extra), points, Math.Max(offset, 0), Ascent(placed), Height(placed)));
         }
+
+        /// <summary>Groups placed glyphs into runs of one font, size and colour, each placed from the line's start.</summary>
+        private static List<LineRun> Runs(List<Item> placed, List<double> extra)
+        {
+            var runs = new List<LineRun>();
+            double x = 0;
+            int start = 0;
+            for (int k = 0; k <= placed.Count; k++)
+            {
+                bool split = k == placed.Count
+                    || !ReferenceEquals(placed[k].Font, placed[start].Font) || placed[k].Size != placed[start].Size || placed[k].Color != placed[start].Color
+                    || placed[k].Bold != placed[start].Bold || placed[k].Italic != placed[start].Italic;
+                if (!split)
+                {
+                    continue;
+                }
+
+                Item first = placed[start];
+                int count = k - start;
+                ushort[] glyphs = new ushort[count];
+                double[] after = new double[count];
+                double runX = x;
+                for (int g = 0; g < count; g++)
+                {
+                    glyphs[g] = placed[start + g].Glyph;
+                    after[g] = g < count - 1 ? extra[start + g] * 1000 / first.Size : 0; // The last gap goes into the next run's X.
+                    x += placed[start + g].Advance + extra[start + g];
+                }
+
+                runs.Add(new LineRun(first.Font, first.Size, first.Color, glyphs, after, runX) { SyntheticBold = first.Bold, SyntheticItalic = first.Italic });
+                start = k;
+            }
+
+            return runs;
+        }
+
+        private static double Ascent(List<Item> placed) =>
+            placed.Max(i => i.Font.Font.LayoutAscender * i.Size / i.Font.Font.UnitsPerEm);
+
+        private double Height(List<Item> placed) => placed.Max(i => i.Size) * lineHeight;
     }
 }

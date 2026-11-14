@@ -35,7 +35,7 @@ public sealed class RenderTests
         PdfFile.CheckStructure(file);
         Assert.Equal(1, result.PageCount);
         Assert.Equal(file.Length, result.BytesWritten);
-        Assert.Empty(result.Diagnostics);
+        Assert.False(result.HasWarnings); // Only Info: the headings use a synthetic bold.
         string text = PdfInspect.Text(file);
         Assert.Single(PdfInspect.Elements(file, "H1"));
         Assert.Single(PdfInspect.Elements(file, "H2"));

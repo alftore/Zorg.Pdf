@@ -23,8 +23,14 @@ public sealed class RenderOptions
     /// <summary>No fonts, no conformance claim, default limits. Rendering with it fails until fonts are added.</summary>
     public static RenderOptions Default { get; } = new();
 
-    /// <summary>The fonts text may use. Required: there are no system fonts by default.</summary>
+    /// <summary>The fonts text may use. There are no system fonts by default; see <see cref="FontResolver"/>.</summary>
     public FontCollection Fonts { get; init; } = FontCollection.Empty;
+
+    /// <summary>
+    /// Finds families the <see cref="Fonts"/> collection doesn't have, such as <see cref="FontResolvers.System"/>.
+    /// Null (the default): only the collection is used, so output doesn't depend on the machine.
+    /// </summary>
+    public IFontResolver? FontResolver { get; init; }
 
     /// <summary>
     /// A standard to claim and check. Output is always tagged; <see cref="PdfConformance.PdfUA1"/> also writes the

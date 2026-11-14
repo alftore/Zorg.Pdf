@@ -10,7 +10,8 @@ Async-first PDF generation for .NET 10, in C# only. Early 0.1: the public API is
 - Data that changes per render is a slot: `TableRows.Bound("lines")` / `{"$data": "lines"}`, `ImageSource.FromSlot("logo")`. Documents never name files.
 - `PdfDocument.TryParseJson` never throws; `Validate()` never throws for a bad document. Both return diagnostics with a code (`docs/diagnostics.md`) and a JSON pointer.
 - The JSON Schema is `PdfJsonSchema.Current`; `PdfDocument.ToJson()` writes `$schema`. Unknown JSON properties are errors.
-- Rendering needs fonts: `new RenderOptions { Fonts = FontCollection.Empty.Add(new FontFamily("Inter") { Regular = FontSource.FromFile("Inter-Regular.ttf") }) }`. There are no system fonts. `await document.RenderAsync(stream, options, ct)`; `Render(stream, options)` for sync callers.
+- Rendering needs fonts: `new RenderOptions { Fonts = FontCollection.Empty.Add(new FontFamily("Inter") { Regular = FontSource.FromFile("Inter-Regular.ttf"), Bold = ..., Italic = ..., Fallbacks = ["Noto Sans Symbols"] }) }`. No system fonts unless `FontResolver = FontResolvers.System()`. `await document.RenderAsync(stream, options, ct)`; `Render(stream, options)` for sync callers.
+- Styles: `new TextRun("bold") { Style = TextStyle.Bold }`; a style sets font family, size, weight, style, colour, line height. A missing face is synthesised (ZPDF-F003 Info).
 - A render checks everything it can before writing (validation, fonts, glyphs, control characters) and throws `PdfDocumentException` with every problem; warnings come back in `RenderResult.Diagnostics`. Output is always tagged; `Conformance = PdfConformance.PdfUA1` also claims PDF/UA-1.
 
 ## Working on the repo

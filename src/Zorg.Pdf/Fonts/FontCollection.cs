@@ -9,14 +9,18 @@ namespace Zorg.Pdf.Fonts;
 
 /// <summary>
 /// The fonts a render may use, by family name. There are no system fonts and no bundled font: a render with an empty
-/// collection fails before writing anything, with diagnostic ZPDF-F001, so output never depends on the machine.
+/// collection and no <see cref="RenderOptions.FontResolver"/> fails before writing anything, with diagnostic
+/// ZPDF-F001, so output never depends on the machine unless you ask for that.
 /// </summary>
 /// <example>
 /// <code>
 /// static readonly FontCollection Fonts = FontCollection.Empty
-///     .Add(new FontFamily("Inter") { Regular = FontSource.FromFile("fonts/Inter-Regular.ttf") });
-///
-/// var options = new RenderOptions { Fonts = Fonts };
+///     .Add(new FontFamily("Inter")
+///     {
+///         Regular = FontSource.FromFile("fonts/Inter-Regular.ttf"),
+///         Bold = FontSource.FromFile("fonts/Inter-Bold.ttf"),
+///         Fallbacks = ["Noto Sans Symbols"],
+///     });
 /// </code>
 /// </example>
 [SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "A set of fonts by family name; it names what it holds, as System.Drawing.Text.FontCollection does.")]
@@ -44,24 +48,56 @@ public sealed class FontCollection
     }
 
     /// <summary>A collection whose default family is <paramref name="familyName"/>.</summary>
-    /// <param name="familyName">A family in the collection.</param>
+    /// <param name="familyName">A family name. It needn't be in the collection when a font resolver will find it.</param>
     /// <returns>The new collection.</returns>
-    /// <exception cref="ArgumentException">There's no family of that name.</exception>
-    public FontCollection WithDefault(string familyName) =>
-        Families.ContainsKey(familyName)
-            ? new FontCollection(Families, familyName)
-            : throw new ArgumentException($"There's no font family named '{familyName}' in the collection.", nameof(familyName));
+    public FontCollection WithDefault(string familyName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(familyName);
+        return new FontCollection(Families, familyName);
+    }
 }
 
 /// <summary>
-/// A font family. 0.1 draws all text with <see cref="Regular"/>; the other faces are used once bold and italic text
-/// is supported.
+/// A font family: up to four faces and the families to try for characters it doesn't have. Text in a face the
+/// family lacks uses the regular face, with warning ZPDF-F003.
 /// </summary>
 /// <param name="Name">The name styles refer to, such as <c>"Inter"</c>. Case-insensitive.</param>
+/// <example>
+/// <code>
+/// var inter = new FontFamily("Inter")
+/// {
+///     Regular = FontSource.FromFile("Inter-Regular.ttf"),
+///     Bold = FontSource.FromFile("Inter-Bold.ttf"),
+///     Italic = FontSource.FromFile("Inter-Italic.ttf"),
+/// };
+/// </code>
+/// </example>
 public sealed record FontFamily(string Name)
 {
     /// <summary>The regular face. Required for a family to be used.</summary>
     public FontSource? Regular { get; init; }
+
+    /// <summary>The bold face.</summary>
+    public FontSource? Bold { get; init; }
+
+    /// <summary>The italic face.</summary>
+    public FontSource? Italic { get; init; }
+
+    /// <summary>The bold italic face. Without it, bold italic text uses the bold face, then the italic face.</summary>
+    public FontSource? BoldItalic { get; init; }
+
+    /// <summary>Family names tried in order for characters this family has no glyph for.</summary>
+    public ImmutableArray<string> Fallbacks { get; init; } = [];
+
+    /// <summary>The source for a face, falling back through the faces this family has; null when it has no regular face.</summary>
+    internal (FontSource? Source, bool Exact) Face(FontWeight weight, FontStyle style) => (weight, style) switch
+    {
+        (FontWeight.Bold, FontStyle.Italic) when BoldItalic is not null => (BoldItalic, true),
+        (FontWeight.Bold, FontStyle.Italic) => (Bold ?? Italic ?? Regular, false),
+        (FontWeight.Bold, _) => (Bold ?? Regular, Bold is not null),
+        (_, FontStyle.Italic) => (Italic ?? Regular, Italic is not null),
+        _ => (Regular, true),
+    };
 }
 
 /// <summary>Where a font file comes from: its bytes, or a file read when the render starts.</summary>
@@ -89,7 +125,6 @@ public abstract record FontSource
 
 /// <summary>A font from bytes in memory.</summary>
 /// <param name="Bytes">The font file.</param>
-[SuppressMessage("Design", "CA1812", Justification = "Created by FontSource.FromBytes.")]
 internal sealed record BytesFontSource(ReadOnlyMemory<byte> Bytes) : FontSource
 {
     internal override string Describe() => $"{Bytes.Length:N0} bytes";
@@ -110,4 +145,40 @@ internal sealed record FileFontSource(string Path) : FontSource
 
     private async ValueTask<ReadOnlyMemory<byte>> ReadCoreAsync(CancellationToken cancellationToken) =>
         await File.ReadAllBytesAsync(Path, cancellationToken).ConfigureAwait(false);
+}
+
+/// <summary>A request for one face of a family.</summary>
+/// <param name="Family">The family name, as a style names it.</param>
+/// <param name="Weight">Normal or bold.</param>
+/// <param name="Style">Normal or italic.</param>
+public readonly record struct FontRequest(string Family, FontWeight Weight, FontStyle Style);
+
+/// <summary>
+/// Finds fonts the <see cref="FontCollection"/> doesn't have, such as a company's font server or the system's fonts.
+/// It's asked once per face a render needs, before anything is written.
+/// </summary>
+/// <example>
+/// <code>
+/// var options = new RenderOptions { FontResolver = FontResolvers.System() };   // opt-in: output then depends on the machine
+/// </code>
+/// </example>
+public interface IFontResolver
+{
+    /// <summary>The source for a face, or null when the resolver doesn't have the family.</summary>
+    /// <param name="request">The family and face.</param>
+    /// <param name="cancellationToken">Stops the lookup.</param>
+    /// <returns>A source, or null. Return the nearest face of the family when the exact one is missing.</returns>
+    public ValueTask<FontSource?> ResolveAsync(FontRequest request, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Ready-made font resolvers.</summary>
+public static class FontResolvers
+{
+    /// <summary>
+    /// The fonts installed on this machine (TrueType files in the usual Windows, macOS and Linux font folders), found
+    /// by family name. An opt-in: the same document then renders differently on machines with different fonts. The
+    /// folders are scanned once per process, reading only each file's name and style tables.
+    /// </summary>
+    /// <returns>The resolver.</returns>
+    public static IFontResolver System() => SystemFontResolver.Instance;
 }

@@ -2,7 +2,7 @@
 
 Every problem Zorg.Pdf reports has a stable code, a severity, a message that says how to fix it, and a JSON pointer to where it is in the document, such as `/content/2/rows/1`. The pointer means the same for a document built in C#. A code never changes meaning; a retired code stays in this table, marked retired.
 
-`PdfDocument.TryParseJson` reports the J00x codes. `PdfDocument.Validate` reports the rest of the J codes and the A codes. Rendering checks fonts and text before it writes anything (F codes, T002, R001), so errors never leave half a file behind; T001 comes from layout while rendering.
+`PdfDocument.TryParseJson` reports the J00x codes. `PdfDocument.Validate` reports the rest of the J codes and the A codes. Rendering checks fonts and text before it writes anything (F codes, T002, R001), so errors never leave half a file behind; T001 comes from layout while rendering. Some severities depend on the conformance claimed: under `PdfConformance.PdfUA1`, F002 is an error.
 
 Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **L** layout and pagination, **I** images, **A** accessibility, **R** rendering and limits.
 
@@ -28,9 +28,10 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-A002 | Error | The language isn't a BCP 47 tag. Screen readers pick their voice from it. | Use a tag such as `en`, `nb-NO` or `de-CH`. |
 | ZPDF-A003 | Error | An image has no alt text and isn't marked decorative. | Add `alt` saying what the image shows, or set `decorative: true`. |
 | ZPDF-F001 | Error | The render has no fonts. There are no system fonts by default. | Add one: `new RenderOptions { Fonts = FontCollection.Empty.Add(new FontFamily("Inter") { Regular = FontSource.FromFile("Inter-Regular.ttf") }) }`. |
-| ZPDF-F002 | Error | The font has no glyph for a character in the text. | Use a font that covers the text, or change the text. |
+| ZPDF-F002 | Warning (Error under PdfUA1) | No font in the run's chain (its face and the family's fallbacks) has a glyph for a character, so it's drawn as an empty box (.notdef). | Add a fallback family that covers the text, or change the text. |
+| ZPDF-F003 | Info | The family has no bold or italic face that the text asks for, so it's drawn thickened or slanted from a face it has. | Add the real face to the `FontFamily` for better type. |
 | ZPDF-F004 | Error | A style names a font family the render doesn't have, or the family has no regular face. | Add the family to `RenderOptions.Fonts`, or use one that's there. |
 | ZPDF-F005 | Error | A font file can't be read or used: damaged, not TrueType, or its licence forbids embedding. | Use another font file; the message says why. |
 | ZPDF-T001 | Warning | A word was wider than its column and was broken between characters. | Widen the column, make the text smaller, or add break points (spaces, soft hyphens). |
 | ZPDF-T002 | Error | The text has a control character that can't be drawn. | Remove it; use a line feed (`\n`) to break a line. |
-| ZPDF-R001 | Warning | This version doesn't draw that part yet (tables, images, headers, footers, page number fields), so it's left out. Styles on text runs are reported as Info. | Wait for the release that draws it, or leave it out. |
+| ZPDF-R001 | Warning | This version doesn't draw that part yet (tables, images, headers, footers, page number fields), so it's left out. | Wait for the release that draws it, or leave it out. |

@@ -20,6 +20,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - Checks before writing: no fonts (ZPDF-F001), missing glyphs (F002), unknown families (F004), unreadable fonts (F005) and control characters (T002) stop a render before the first byte. Parts not drawn yet are warnings (R001).
 - The Info dictionary and XMP now carry the same title, language, producer and optional dates; the PDF/UA identifier is written only when `PdfUA1` is claimed.
 
+- Fonts: bold, italic and bold-italic faces on `FontFamily`, synthesised (thickened or slanted, ZPDF-F003 Info) when missing; styled text runs (face, size, colour) within a line; fallback families for missing characters; `IFontResolver` and `FontResolvers.System()` as an opt-in; parsed fonts shared across renders.
+- A character no font has is now drawn as an empty box with warning ZPDF-F002 (an error under `PdfUA1`), not a failed render.
+
 ### Removed
 
 - The spike's single-page documents (`HelloDocument`, `FontDocument`, `ParagraphDocument`), replaced by the public render API. The spike's table renderer stays until tables move to the engine.

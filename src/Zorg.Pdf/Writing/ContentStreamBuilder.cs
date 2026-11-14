@@ -37,6 +37,34 @@ internal sealed class ContentStreamBuilder
         return Operator("cm"u8);
     }
 
+    /// <summary><c>Tm</c> with a slant: places the next line at (x, y), sheared by <paramref name="shear"/> (tan of the angle).</summary>
+    public ContentStreamBuilder SetTextMatrix(double shear, double x, double y)
+    {
+        Write("1 0 "u8);
+        Number(shear);
+        Write("1 "u8);
+        Number(x);
+        Number(y);
+        return Operator("Tm"u8);
+    }
+
+    /// <summary><c>Tr</c>: text rendering mode. 0 fills; 2 fills then strokes, which thickens glyphs.</summary>
+    public ContentStreamBuilder SetTextRenderingMode(int mode)
+    {
+        PdfFormat.WriteInteger(_buffer, mode);
+        Space();
+        return Operator("Tr"u8);
+    }
+
+    /// <summary><c>RG</c>: stroke colour in DeviceRGB, each component 0 to 1.</summary>
+    public ContentStreamBuilder SetStrokeRgb(double r, double g, double b)
+    {
+        Number(r);
+        Number(g);
+        Number(b);
+        return Operator("RG"u8);
+    }
+
     /// <summary><c>q</c>: saves the graphics state.</summary>
     public ContentStreamBuilder SaveState() => Operator("q"u8);
 
