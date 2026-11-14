@@ -132,6 +132,18 @@ public sealed class PdfData
     /// <returns>The data with the slot set; this instance is unchanged.</returns>
     public PdfData WithPdf(string slot, Func<CancellationToken, ValueTask<ReadOnlyMemory<byte>>> load) => WithImage(slot, load);
 
+    /// <summary>Any file for a slot, such as an attachment's XML. Files share one set of slots with images.</summary>
+    /// <param name="slot">The slot name an attachment's source names.</param>
+    /// <param name="bytes">The file's bytes.</param>
+    /// <returns>The data with the slot set; this instance is unchanged.</returns>
+    public PdfData WithFile(string slot, ReadOnlyMemory<byte> bytes) => WithImage(slot, bytes);
+
+    /// <summary>Any file for a slot, loaded when the render starts.</summary>
+    /// <param name="slot">The slot name an attachment's source names.</param>
+    /// <param name="load">Loads the bytes, once per render, before the first page.</param>
+    /// <returns>The data with the slot set; this instance is unchanged.</returns>
+    public PdfData WithFile(string slot, Func<CancellationToken, ValueTask<ReadOnlyMemory<byte>>> load) => WithImage(slot, load);
+
     /// <summary>Rows for a slot, each a list of cells (strings convert to cells).</summary>
     /// <param name="slot">The slot name a table's rows are bound to.</param>
     /// <param name="rows">The rows.</param>

@@ -86,7 +86,7 @@ public enum PdfConformance
     PdfUA1,
 }
 
-/// <summary>A PDF/A level (ISO 19005-2) a document claims, for long-term archiving.</summary>
+/// <summary>A PDF/A level (ISO 19005-2 or -3) a document claims, for long-term archiving. PDF/A-3 is PDF/A-2 with attachments.</summary>
 [JsonConverter(typeof(CamelCaseEnumConverter<PdfArchive>))]
 public enum PdfArchive
 {
@@ -104,6 +104,35 @@ public enum PdfArchive
     /// (images without alt text, skipped heading levels) stop the render, as under PDF/UA.
     /// </summary>
     PdfA2a,
+
+    /// <summary>PDF/A-3b: as PDF/A-2b, and files may be attached (<see cref="PdfDocument.Attachments"/>), such as an e-invoice's XML.</summary>
+    PdfA3b,
+
+    /// <summary>PDF/A-3u: as PDF/A-2u, with attachments.</summary>
+    PdfA3u,
+
+    /// <summary>PDF/A-3a: as PDF/A-2a, with attachments.</summary>
+    PdfA3a,
+}
+
+/// <summary>What a <see cref="PdfArchive"/> level means.</summary>
+internal static class PdfArchiveLevels
+{
+    /// <summary>2 or 3; 0 for none.</summary>
+    public static int Part(this PdfArchive archive) => archive switch
+    {
+        PdfArchive.None => 0,
+        PdfArchive.PdfA3a or PdfArchive.PdfA3u or PdfArchive.PdfA3b => 3,
+        _ => 2,
+    };
+
+    /// <summary>A, U or B.</summary>
+    public static string Level(this PdfArchive archive) => archive switch
+    {
+        PdfArchive.PdfA2a or PdfArchive.PdfA3a => "A",
+        PdfArchive.PdfA2u or PdfArchive.PdfA3u => "U",
+        _ => "B",
+    };
 }
 
 /// <summary>Limits that stop a render before it uses unbounded time or memory. Exceeding one throws <see cref="PdfLimitException"/>.</summary>
@@ -126,6 +155,9 @@ public sealed record PdfLimits
     /// per pixel, so this bounds the memory a render needs for it.
     /// </summary>
     public long MaxImagePixels { get; init; } = 50_000_000;
+
+    /// <summary>The largest attachment, in bytes: 50 MB.</summary>
+    public long MaxAttachmentBytes { get; init; } = 50_000_000;
 }
 
 /// <summary>Progress of a render: pages and bytes written so far.</summary>

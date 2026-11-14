@@ -1,4 +1,29 @@
 #nullable enable
+Zorg.Pdf.Attachment
+Zorg.Pdf.Attachment.<Clone>$() -> Zorg.Pdf.Attachment!
+Zorg.Pdf.Attachment.Attachment(string! name, Zorg.Pdf.ImageSource! source) -> void
+Zorg.Pdf.Attachment.Description.get -> string?
+Zorg.Pdf.Attachment.Description.init -> void
+Zorg.Pdf.Attachment.Equals(Zorg.Pdf.Attachment? other) -> bool
+override Zorg.Pdf.Attachment.Equals(object? obj) -> bool
+override Zorg.Pdf.Attachment.GetHashCode() -> int
+Zorg.Pdf.Attachment.MimeType.get -> string!
+Zorg.Pdf.Attachment.MimeType.init -> void
+Zorg.Pdf.Attachment.Name.get -> string!
+Zorg.Pdf.Attachment.Name.init -> void
+Zorg.Pdf.Attachment.Relationship.get -> Zorg.Pdf.AttachmentRelationship
+Zorg.Pdf.Attachment.Relationship.init -> void
+Zorg.Pdf.Attachment.Source.get -> Zorg.Pdf.ImageSource!
+Zorg.Pdf.Attachment.Source.init -> void
+override Zorg.Pdf.Attachment.ToString() -> string!
+static Zorg.Pdf.Attachment.operator !=(Zorg.Pdf.Attachment? left, Zorg.Pdf.Attachment? right) -> bool
+static Zorg.Pdf.Attachment.operator ==(Zorg.Pdf.Attachment? left, Zorg.Pdf.Attachment? right) -> bool
+Zorg.Pdf.AttachmentRelationship
+Zorg.Pdf.AttachmentRelationship.Alternative = 3 -> Zorg.Pdf.AttachmentRelationship
+Zorg.Pdf.AttachmentRelationship.Data = 2 -> Zorg.Pdf.AttachmentRelationship
+Zorg.Pdf.AttachmentRelationship.Source = 1 -> Zorg.Pdf.AttachmentRelationship
+Zorg.Pdf.AttachmentRelationship.Supplement = 4 -> Zorg.Pdf.AttachmentRelationship
+Zorg.Pdf.AttachmentRelationship.Unspecified = 0 -> Zorg.Pdf.AttachmentRelationship
 Zorg.Pdf.Bind
 override Zorg.Pdf.Bind.<Clone>$() -> Zorg.Pdf.Bind!
 Zorg.Pdf.Bind.Bind(string! Path) -> void
@@ -522,12 +547,17 @@ Zorg.Pdf.PdfArchive.None = 0 -> Zorg.Pdf.PdfArchive
 Zorg.Pdf.PdfArchive.PdfA2a = 3 -> Zorg.Pdf.PdfArchive
 Zorg.Pdf.PdfArchive.PdfA2b = 1 -> Zorg.Pdf.PdfArchive
 Zorg.Pdf.PdfArchive.PdfA2u = 2 -> Zorg.Pdf.PdfArchive
+Zorg.Pdf.PdfArchive.PdfA3a = 6 -> Zorg.Pdf.PdfArchive
+Zorg.Pdf.PdfArchive.PdfA3b = 4 -> Zorg.Pdf.PdfArchive
+Zorg.Pdf.PdfArchive.PdfA3u = 5 -> Zorg.Pdf.PdfArchive
 Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfConformance.None = 0 -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfConformance.PdfUA1 = 1 -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfData
 static Zorg.Pdf.PdfData.Empty.get -> Zorg.Pdf.PdfData!
 static Zorg.Pdf.PdfData.ParseJson(string! json) -> Zorg.Pdf.PdfData!
+Zorg.Pdf.PdfData.WithFile(string! slot, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.ReadOnlyMemory<byte>>>! load) -> Zorg.Pdf.PdfData!
+Zorg.Pdf.PdfData.WithFile(string! slot, System.ReadOnlyMemory<byte> bytes) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithImage(string! slot, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.ReadOnlyMemory<byte>>>! load) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithImage(string! slot, System.ReadOnlyMemory<byte> bytes) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithModel(System.Text.Json.JsonElement model) -> Zorg.Pdf.PdfData!
@@ -559,6 +589,8 @@ static Zorg.Pdf.PdfDiagnostic.operator !=(Zorg.Pdf.PdfDiagnostic? left, Zorg.Pdf
 static Zorg.Pdf.PdfDiagnostic.operator ==(Zorg.Pdf.PdfDiagnostic? left, Zorg.Pdf.PdfDiagnostic? right) -> bool
 Zorg.Pdf.PdfDocument
 Zorg.Pdf.PdfDocument.<Clone>$() -> Zorg.Pdf.PdfDocument!
+Zorg.Pdf.PdfDocument.Attachments.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Attachment!>
+Zorg.Pdf.PdfDocument.Attachments.init -> void
 Zorg.Pdf.PdfDocument.Background.get -> Zorg.Pdf.PageBackground?
 Zorg.Pdf.PdfDocument.Background.init -> void
 Zorg.Pdf.PdfDocument.Content.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!>
@@ -694,6 +726,8 @@ static Zorg.Pdf.PdfLimits.Default.get -> Zorg.Pdf.PdfLimits!
 Zorg.Pdf.PdfLimits.Equals(Zorg.Pdf.PdfLimits? other) -> bool
 override Zorg.Pdf.PdfLimits.Equals(object? obj) -> bool
 override Zorg.Pdf.PdfLimits.GetHashCode() -> int
+Zorg.Pdf.PdfLimits.MaxAttachmentBytes.get -> long
+Zorg.Pdf.PdfLimits.MaxAttachmentBytes.init -> void
 Zorg.Pdf.PdfLimits.MaxImageBytes.get -> long
 Zorg.Pdf.PdfLimits.MaxImageBytes.init -> void
 Zorg.Pdf.PdfLimits.MaxImagePixels.get -> long

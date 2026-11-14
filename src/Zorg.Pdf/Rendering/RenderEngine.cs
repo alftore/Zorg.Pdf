@@ -37,6 +37,7 @@ internal sealed partial class RenderEngine : IDisposable
     private readonly FontSet _fonts;
     private readonly ImageSet _images;
     private readonly BackgroundSet? _background;
+    private IReadOnlyList<(Attachment Attachment, ReadOnlyMemory<byte> Bytes)> _attachments = [];
     private readonly HashSet<ImageSet.Entry> _pageImages = [];
     private readonly string? _defaultFamily;
     private readonly DiagnosticSink _sink;
@@ -101,7 +102,7 @@ internal sealed partial class RenderEngine : IDisposable
         foreach (PdfDiagnostic diagnostic in document.Validate().Diagnostics)
         {
             // Under PDF/UA and PDF/A-2a a skipped heading level fails conformance, so it stops the render.
-            sink.AddRange([diagnostic.Code == DiagnosticCodes.HeadingSkipsLevel && (options.Conformance == PdfConformance.PdfUA1 || options.Archive == PdfArchive.PdfA2a) ? diagnostic with { Severity = DiagnosticSeverity.Error } : diagnostic]);
+            sink.AddRange([diagnostic.Code == DiagnosticCodes.HeadingSkipsLevel && (options.Conformance == PdfConformance.PdfUA1 || options.Archive.Level() == "A" && options.Archive != PdfArchive.None) ? diagnostic with { Severity = DiagnosticSeverity.Error } : diagnostic]);
         }
         if (!sink.HasErrors && TemplateBinder.IsTemplate(document))
         {
@@ -120,13 +121,32 @@ internal sealed partial class RenderEngine : IDisposable
         FontSet fonts = await FontSet.LoadAsync(options, needed, sink, synchronous, cancellationToken).ConfigureAwait(false);
         ImageSet images = await ImageSet.LoadAsync(document, options, sink, synchronous, cancellationToken).ConfigureAwait(false);
         BackgroundSet? background = sink.HasErrors ? null : await BackgroundSet.PrepareAsync(document, options, sink, synchronous, cancellationToken).ConfigureAwait(false);
+        var attachments = new List<(Attachment, ReadOnlyMemory<byte>)>();
+        if (!document.Attachments.IsEmpty && options.Archive.Part() == 2)
+        {
+            sink.Error(DiagnosticCodes.AttachmentNeedsPdfA3, "PDF/A-2 allows only PDF/A files as attachments. Claim PDF/A-3 (PdfArchive.PdfA3b, PdfA3u or PdfA3a), which allows any file.", "/attachments");
+        }
+
+        for (int i = 0; i < document.Attachments.Length && !sink.HasErrors; i++)
+        {
+            string at = string.Create(CultureInfo.InvariantCulture, $"/attachments/{i}");
+            if (await ImageSet.BytesAsync(document.Attachments[i].Source, options, sink, synchronous, at, cancellationToken).ConfigureAwait(false) is { } bytes)
+            {
+                if (bytes.Length > options.Limits.MaxAttachmentBytes)
+                {
+                    sink.Error(DiagnosticCodes.AttachmentTooLarge, $"The attachment \"{document.Attachments[i].Name}\" is {bytes.Length:N0} bytes, over PdfLimits.MaxAttachmentBytes ({options.Limits.MaxAttachmentBytes:N0}).", at);
+                }
+
+                attachments.Add((document.Attachments[i], bytes));
+            }
+        }
         Preflight.Check(document, styles, fonts, defaultFamily, options, synchronous, sink);
         if (sink.HasErrors)
         {
             throw new PdfDocumentException(sink.ToImmutable());
         }
 
-        using var engine = new RenderEngine(document, options, styles, fonts, images, background, defaultFamily, sink, output, synchronous);
+        using var engine = new RenderEngine(document, options, styles, fonts, images, background, defaultFamily, sink, output, synchronous) { _attachments = attachments };
         if (sink.HasErrors)
         {
             throw new PdfDocumentException(sink.ToImmutable()); // The bands leave no room; nothing has been written yet.
@@ -208,7 +228,7 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         _tagger.Finish(_documentWriter.Pages);
-        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot, _outline, _destinations, PageLabels());
+        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot, _outline, _destinations, PageLabels(), _attachments);
         await _writer.FinishAsync(_documentWriter.Catalog, info, cancellationToken).ConfigureAwait(false);
     }
 

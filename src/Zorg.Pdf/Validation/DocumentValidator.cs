@@ -74,6 +74,31 @@ internal sealed partial class DocumentValidator
             }
         }
 
+        var attachmentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < document.Attachments.Length; i++)
+        {
+            Attachment attachment = document.Attachments[i];
+            string at = Invariant($"/attachments/{i}");
+            if (string.IsNullOrWhiteSpace(attachment.Name) || attachment.Name.Length > 255 || attachment.Name.IndexOfAny(['/', '\\', ':']) >= 0 || System.Linq.Enumerable.Any(attachment.Name, char.IsControl))
+            {
+                Error(DiagnosticCodes.BadAttachment, "An attachment's name is a file name such as \"invoice.xml\": no folders, colons or control characters, at most 255 characters.", $"{at}/name");
+            }
+            else if (!attachmentNames.Add(attachment.Name))
+            {
+                Error(DiagnosticCodes.BadAttachment, $"Two attachments are named \"{attachment.Name}\"; names are unique.", $"{at}/name");
+            }
+
+            if (attachment.Source is null)
+            {
+                Error(DiagnosticCodes.BadAttachment, "An attachment needs a source: its bytes or a data slot.", $"{at}/source");
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(attachment.MimeType ?? "", "^[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]{0,63}/[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]{0,126}$"))
+            {
+                Error(DiagnosticCodes.BadAttachment, $"\"{attachment.MimeType}\" isn't a media type such as \"application/xml\".", $"{at}/mimeType");
+            }
+        }
+
         if (document.Background is { } background)
         {
             if (background.Source is null)

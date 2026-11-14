@@ -15,6 +15,7 @@
     "footer": { "description": "Content at the bottom of every page.", "$ref": "#/$defs/pageBand" },
     "watermark": { "description": "Text or an image across every page, such as DRAFT.", "$ref": "#/$defs/watermark" },
     "background": { "description": "A page of an existing PDF behind the pages, such as letterhead.", "$ref": "#/$defs/background" },
+    "attachments": { "description": "Files carried in the PDF, such as an e-invoice's XML.", "type": "array", "items": { "$ref": "#/$defs/attachment" } },
     "numbering": { "description": "How pages are numbered until the first section break.", "$ref": "#/$defs/pageNumberStyle" },
     "outlineLevels": { "description": "Headings of level 1 to this one become the viewer's bookmarks; 0 for none.", "type": "integer", "minimum": 0, "maximum": 6, "default": 3 },
     "styles": { "$ref": "#/$defs/styleSheet" },
@@ -272,6 +273,19 @@
         "layer": { "enum": ["over", "behind"], "default": "over" }
       },
       "oneOf": [{ "required": ["text"] }, { "required": ["image"] }]
+    },
+    "attachment": {
+      "description": "A file carried in the PDF. Under PDF/A it needs PDF/A-3.",
+      "type": "object",
+      "required": ["name", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "description": "The file name, such as invoice.xml. No folders.", "type": "string", "minLength": 1, "maxLength": 255 },
+        "source": { "description": "The file: { \"$data\": \"slot\" } or { \"base64\": \"...\" }.", "$ref": "#/$defs/imageSource" },
+        "mimeType": { "description": "The media type, such as application/xml.", "type": "string", "default": "application/octet-stream" },
+        "description": { "description": "What the file is.", "type": "string" },
+        "relationship": { "enum": ["unspecified", "source", "data", "alternative", "supplement"], "default": "unspecified" }
+      }
     },
     "background": {
       "description": "A page of an existing PDF (letterhead, stationery) drawn behind the pages, scaled to fit if its size differs. Screen readers skip it.",

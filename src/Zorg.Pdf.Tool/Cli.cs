@@ -62,13 +62,15 @@ internal static class Cli
         Options:
           -o, --output <file.pdf>    Where the PDF goes; "-" for standard output. Default: the document's name with .pdf
           -d, --data <data.json>     Table rows, images and the template model
-              --image <slot=file>    An image, or a PDF for a background, for a data slot; repeatable
+              --image <slot=file>    An image, a PDF for a background or an attachment, for a data slot;
+                                     repeatable. --file is the same
               --fonts <folder>       Use the TrueType fonts in a folder; repeatable
               --font <file.ttf>      Use a font file; repeatable
               --default-font <name>  The family for text whose style names none
               --system-fonts         Also use installed fonts. On when no --fonts or --font is given
               --pdfua                Claim PDF/UA-1 and treat accessibility warnings as errors
-              --pdfa <2a|2u|2b>      Claim PDF/A-2 for archiving (sRGB output intent, no CMYK images)
+              --pdfa <2a|2u|2b|3a|3u|3b>  Claim PDF/A for archiving (sRGB output intent, no CMYK images);
+                                     3 allows attachments
               --warnaserror          Exit with 1 when there are warnings
               --json                 Print results as JSON, one object per line
               --preview              With render and watch: also draw pages as PNG beside the PDF

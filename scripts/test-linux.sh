@@ -97,6 +97,18 @@ for pdf in $(cd "$out" && ls example-*.pdf); do
   fi
 done
 
+# Files with attachments claim PDF/A-3a instead.
+for pdf in $(cd "$out" && ls pdfa3-*.pdf); do
+  report="$(run_cli 300 run -i --rm --entrypoint sh "$verapdf" -c 'cat > /tmp/f.pdf && /opt/verapdf/verapdf --flavour 3a --format xml /tmp/f.pdf 2>/dev/null' < "$out/$pdf")"
+  if grep -q 'isCompliant="true"' <<<"$report"; then
+    echo "ok   $pdf is PDF/A-3a compliant"
+  else
+    echo "FAIL $pdf is not PDF/A-3a compliant:"
+    grep -E '<rule |<description>' <<<"$report" | head -40 || true
+    failed=1
+  fi
+done
+
 if [ -n "$keep" ]; then
   mkdir -p "$keep"
   cp "$out"/*.pdf "$keep"/

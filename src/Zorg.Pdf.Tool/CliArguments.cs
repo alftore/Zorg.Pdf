@@ -89,7 +89,7 @@ internal sealed class CliArguments
                 inline = arg[(equals + 1)..];
             }
 
-            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi" or "--pdfa" or "--pages" or "--title" or "--author" or "--subject" or "--keywords" or "--lang";
+            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--file" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi" or "--pdfa" or "--pages" or "--title" or "--author" or "--subject" or "--keywords" or "--lang";
             string? value = inline;
             if (takesValue && value is null)
             {
@@ -124,7 +124,7 @@ internal sealed class CliArguments
                 case "-d" or "--data":
                     result.Data = value;
                     break;
-                case "--image":
+                case "--image" or "--file":
                     int split = value!.IndexOf('=', StringComparison.Ordinal);
                     if (split <= 0 || split == value.Length - 1)
                     {
@@ -150,10 +150,10 @@ internal sealed class CliArguments
                     result.PdfUA = true;
                     break;
                 case "--pdfa":
-                    PdfArchive? archive = value switch { "2a" => PdfArchive.PdfA2a, "2u" => PdfArchive.PdfA2u, "2b" => PdfArchive.PdfA2b, _ => null };
+                    PdfArchive? archive = value switch { "2a" => PdfArchive.PdfA2a, "2u" => PdfArchive.PdfA2u, "2b" => PdfArchive.PdfA2b, "3a" => PdfArchive.PdfA3a, "3u" => PdfArchive.PdfA3u, "3b" => PdfArchive.PdfA3b, _ => null };
                     if (archive is null)
                     {
-                        error = $"--pdfa takes 2a, 2u or 2b, not \"{value}\".";
+                        error = $"--pdfa takes 2a, 2u, 2b, 3a, 3u or 3b, not \"{value}\".";
                         return false;
                     }
 

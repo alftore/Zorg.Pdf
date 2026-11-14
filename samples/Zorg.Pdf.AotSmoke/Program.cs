@@ -360,6 +360,28 @@ else
     }
 }
 
+// 0.4 slice 4: an attachment under PDF/A-3a and PDF/UA-1; the gate checks it with veraPDF (3a, ua1) and qpdf.
+{
+    var withXml = new PdfDocument("Invoice with its XML")
+    {
+        Attachments = [new Attachment("invoice.xml", ImageSource.FromSlot("xml")) { MimeType = "application/xml", Relationship = AttachmentRelationship.Data, Description = "The invoice as XML" }],
+        Content = [new Heading("Invoice 42"), new Paragraph("The invoice's data is attached as XML.")],
+    };
+    using var attached = new MemoryStream();
+    RenderResult a3 = withXml.RenderAsync(attached, new RenderOptions
+    {
+        Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }),
+        Conformance = PdfConformance.PdfUA1,
+        Archive = PdfArchive.PdfA3a,
+        Data = PdfData.Empty.WithFile("xml", Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><invoice id=\"42\"/>")),
+    }).AsTask().GetAwaiter().GetResult();
+    Check("attachment", !a3.HasWarnings && Readable(attached.ToArray()).Contains("/AFRelationship /Data", StringComparison.Ordinal));
+    if (saveTo is not null)
+    {
+        File.WriteAllBytes(Path.Combine(saveTo, "pdfa3-attachment.pdf"), attached.ToArray());
+    }
+}
+
 // 0.4 slice 3: every example, merged into one file, then its even pages taken out again. Not tagged (tags aren't
 // kept), so the gate checks these with qpdf, MuPDF and pdffonts but not veraPDF.
 if (saveTo is not null)

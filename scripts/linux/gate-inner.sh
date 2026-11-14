@@ -92,6 +92,15 @@ if ! grep -q "Ελληνικά · Кириллица · Čeština" /tmp/document
   echo "FAIL pdftotext document.pdf: the Greek, Cyrillic and Czech text doesn't extract"; failed=1
 fi
 
+# The attachment must be listed by qpdf and come out byte for byte.
+if ! qpdf --list-attachments /out/pdfa3-attachment.pdf | grep -q "invoice.xml"; then
+  echo "FAIL qpdf pdfa3-attachment.pdf: invoice.xml isn't listed"; failed=1
+fi
+qpdf --show-attachment=invoice.xml /out/pdfa3-attachment.pdf > /tmp/invoice.xml
+if ! grep -q '<invoice id="42"/>' /tmp/invoice.xml; then
+  echo "FAIL qpdf pdfa3-attachment.pdf: invoice.xml doesn't come out as written"; failed=1
+fi
+
 stage "Reader against qpdf"
 # PdfFileInfo (zorg-pdf info) reads each smoke PDF as other tools rewrite it: object streams packed or unpacked, a
 # classic cross-reference table, QDF, linearized, cleaned and decompressed by MuPDF, and encrypted with an empty user

@@ -46,8 +46,8 @@ public sealed record PdfDocument
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, Watermark? watermark = null, StyleSheet? styles = null, ImmutableArray<Block> content = default, int outlineLevels = 3, PageNumberStyle numbering = PageNumberStyle.Number, PageBackground? background = null) =>
-        (Title, Schema, Language, Page, Header, Footer, Watermark, Styles, Content, OutlineLevels, Numbering, Background) = (title, schema, language, page ?? PageSettings.A4, header, footer, watermark, styles, content.IsDefault ? [] : content, outlineLevels, numbering, background);
+    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, Watermark? watermark = null, StyleSheet? styles = null, ImmutableArray<Block> content = default, int outlineLevels = 3, PageNumberStyle numbering = PageNumberStyle.Number, PageBackground? background = null, ImmutableArray<Attachment> attachments = default) =>
+        (Title, Schema, Language, Page, Header, Footer, Watermark, Styles, Content, OutlineLevels, Numbering, Background, Attachments) = (title, schema, language, page ?? PageSettings.A4, header, footer, watermark, styles, content.IsDefault ? [] : content, outlineLevels, numbering, background, attachments.IsDefault ? [] : attachments);
 
     /// <summary>A document with a title.</summary>
     /// <param name="title">The title, shown by viewers in place of the file name and required for accessibility.</param>
@@ -104,6 +104,10 @@ public sealed record PdfDocument
     /// <summary>A page of an existing PDF behind the pages, such as letterhead. Null: none.</summary>
     public PageBackground? Background { get; init; }
 
+    /// <summary>Files carried in the PDF, such as an e-invoice's XML. Under PDF/A they need PDF/A-3.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public ImmutableArray<Attachment> Attachments { get; init; } = [];
+
     /// <summary>Named styles, on top of <see cref="StyleSheet.Default"/>. Null: the defaults only.</summary>
     public StyleSheet? Styles { get; init; }
 
@@ -156,7 +160,7 @@ public sealed record PdfDocument
     /// <summary>The document as JSON, with <c>$schema</c> set to the current schema. Default values are left out.</summary>
     /// <param name="indented">Indent for reading.</param>
     /// <returns>The JSON text.</returns>
-    public string ToJson(bool indented = false) => DocumentJson.Write(this with { Schema = PdfJsonSchema.Id }, indented);
+    public string ToJson(bool indented = false) => DocumentJson.Write(this with { Schema = PdfJsonSchema.Id, Attachments = Attachments.IsEmpty ? default : Attachments }, indented); // No attachments: no property.
 
     /// <summary>
     /// Renders the document as PDF to <paramref name="output"/>, streaming pages as they're finished.

@@ -172,8 +172,9 @@ internal sealed class DocumentWriter
     }
 
     /// <summary>Writes the page tree, Info, XMP and catalog. Returns the Info dictionary for the trailer.</summary>
-    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot, IReadOnlyList<OutlineEntry> outline, IReadOnlyDictionary<string, (int Page, double Top)> destinations, IReadOnlyList<PageSection> labels)
+    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot, IReadOnlyList<OutlineEntry> outline, IReadOnlyDictionary<string, (int Page, double Top)> destinations, IReadOnlyList<PageSection> labels, IReadOnlyList<(Attachment Attachment, ReadOnlyMemory<byte> Bytes)> attachments)
     {
+        List<(byte[] Key, PdfReference Spec)> files = WriteAttachments(attachments, options);
         PdfReference? outlines = outline.Count > 0 ? WriteOutline(outline) : null;
         _writer.BeginObject(PageTree);
         _writer.BeginDictionary();
@@ -287,24 +288,58 @@ internal sealed class DocumentWriter
             _writer.EndDictionary();
         }
 
-        if (destinations.Count > 0)
+        if (destinations.Count > 0 || files.Count > 0)
         {
-            // A name tree with one node: every destination, sorted by name as the tree requires (ISO 32000-1, 7.9.6).
             _writer.Name("Names"u8);
             _writer.BeginDictionary();
-            _writer.Name("Dests"u8);
-            _writer.BeginDictionary();
-            _writer.Name("Names"u8);
-            _writer.BeginArray();
-            foreach ((string name, (int page, double top)) in destinations.OrderBy(d => d.Key, StringComparer.Ordinal))
+            if (destinations.Count > 0)
             {
-                _writer.TextString(name);
-                Destination(page, top);
+                // A name tree with one node: every destination, sorted by name as the tree requires (ISO 32000-1, 7.9.6).
+                _writer.Name("Dests"u8);
+                _writer.BeginDictionary();
+                _writer.Name("Names"u8);
+                _writer.BeginArray();
+                foreach ((string name, (int page, double top)) in destinations.OrderBy(d => d.Key, StringComparer.Ordinal))
+                {
+                    _writer.TextString(name);
+                    Destination(page, top);
+                }
+
+                _writer.EndArray();
+                _writer.EndDictionary();
+            }
+
+            if (files.Count > 0)
+            {
+                // The attachments panel: a name tree sorted by the keys' bytes.
+                _writer.Name("EmbeddedFiles"u8);
+                _writer.BeginDictionary();
+                _writer.Name("Names"u8);
+                _writer.BeginArray();
+                foreach ((byte[] key, PdfReference spec) in files)
+                {
+                    _writer.HexString(key);
+                    _writer.Reference(spec);
+                }
+
+                _writer.EndArray();
+                _writer.EndDictionary();
+            }
+
+            _writer.EndDictionary();
+        }
+
+        if (files.Count > 0)
+        {
+            // Associated files of the document (PDF/A-3, 6.8; ISO 32000-2, 14.13).
+            _writer.Name("AF"u8);
+            _writer.BeginArray();
+            foreach ((_, PdfReference spec) in files)
+            {
+                _writer.Reference(spec);
             }
 
             _writer.EndArray();
-            _writer.EndDictionary();
-            _writer.EndDictionary();
         }
 
         if (options.Archive != PdfArchive.None)
@@ -486,8 +521,7 @@ internal sealed class DocumentWriter
 
         if (options.Archive != PdfArchive.None)
         {
-            string level = options.Archive switch { PdfArchive.PdfA2a => "A", PdfArchive.PdfA2u => "U", _ => "B" };
-            xmp.Append(CultureInfo.InvariantCulture, $"<pdfaid:part>2</pdfaid:part>\n<pdfaid:conformance>{level}</pdfaid:conformance>\n");
+            xmp.Append(CultureInfo.InvariantCulture, $"<pdfaid:part>{options.Archive.Part()}</pdfaid:part>\n<pdfaid:conformance>{options.Archive.Level()}</pdfaid:conformance>\n");
         }
 
         xmp.Append("</rdf:Description>\n");
@@ -511,6 +545,76 @@ internal sealed class DocumentWriter
     }
 
     /// <summary>A PDF date string (ISO 32000-1, 7.9.4): <c>D:YYYYMMDDHHmmSS+HH'mm'</c>.</summary>
+    /// <summary>
+    /// Writes each attachment as an embedded file stream and its file specification, before the catalog: the name as
+    /// /F (ASCII) and /UF (Unicode), the media type, size, MD5 checksum and relationship. Sorted by the name tree's keys.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5351:Do Not Use Broken Cryptographic Algorithms", Justification = "ISO 32000-1, 7.11.4: an embedded file's /CheckSum is MD5. It identifies, it doesn't protect.")]
+    private List<(byte[] Key, PdfReference Spec)> WriteAttachments(IReadOnlyList<(Attachment Attachment, ReadOnlyMemory<byte> Bytes)> attachments, RenderOptions options)
+    {
+        var files = new List<(byte[] Key, PdfReference Spec)>();
+        foreach ((Attachment attachment, ReadOnlyMemory<byte> bytes) in attachments)
+        {
+            PdfReference stream = _writer.Allocate(), spec = _writer.Allocate();
+            _writer.BeginStreamObject(stream);
+            _writer.Name("Type"u8);
+            _writer.Name("EmbeddedFile"u8);
+            _writer.Name("Subtype"u8);
+            _writer.Name(Encoding.ASCII.GetBytes(attachment.MimeType));
+            _writer.Name("Params"u8);
+            _writer.BeginDictionary();
+            _writer.Name("Size"u8);
+            _writer.Integer(bytes.Length);
+            _writer.Name("CheckSum"u8);
+            _writer.HexString(System.Security.Cryptography.MD5.HashData(bytes.Span));
+            if (options.CreationDate is { } created)
+            {
+                _writer.Name("ModDate"u8);
+                _writer.TextString(PdfDate(created));
+            }
+
+            _writer.EndDictionary();
+            _writer.EndStreamObject(bytes.Span, compress: true);
+
+            _writer.BeginObject(spec);
+            _writer.BeginDictionary();
+            _writer.Name("Type"u8);
+            _writer.Name("Filespec"u8);
+            _writer.Name("F"u8);
+            _writer.TextString(new string([.. attachment.Name.Select(c => c is >= ' ' and <= '~' ? c : '_')]));
+            _writer.Name("UF"u8);
+            _writer.TextString(attachment.Name);
+            if (attachment.Description is { Length: > 0 } description)
+            {
+                _writer.Name("Desc"u8);
+                _writer.TextString(description);
+            }
+
+            _writer.Name("AFRelationship"u8);
+            _writer.Name(attachment.Relationship switch
+            {
+                AttachmentRelationship.Source => "Source"u8,
+                AttachmentRelationship.Data => "Data"u8,
+                AttachmentRelationship.Alternative => "Alternative"u8,
+                AttachmentRelationship.Supplement => "Supplement"u8,
+                _ => "Unspecified"u8,
+            });
+            _writer.Name("EF"u8);
+            _writer.BeginDictionary();
+            _writer.Name("F"u8);
+            _writer.Reference(stream);
+            _writer.Name("UF"u8);
+            _writer.Reference(stream);
+            _writer.EndDictionary();
+            _writer.EndDictionary();
+            _writer.EndObject();
+            files.Add((Encoding.BigEndianUnicode.GetPreamble().Concat(Encoding.BigEndianUnicode.GetBytes(attachment.Name)).ToArray(), spec));
+        }
+
+        files.Sort((a, b) => a.Key.AsSpan().SequenceCompareTo(b.Key));
+        return files;
+    }
+
     internal static string PdfDate(DateTimeOffset date)
     {
         TimeSpan offset = date.Offset;
