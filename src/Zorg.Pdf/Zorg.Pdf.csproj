@@ -15,6 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The JSON Schema of the document format, served by PdfJsonSchema.Current. -->
+    <EmbeddedResource Include="..\..\schema\document-0.1.schema.json" LogicalName="document.schema.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Zorg.Pdf.Tests" />
     <InternalsVisibleTo Include="Zorg.Pdf.AotSmoke" />
     <InternalsVisibleTo Include="Zorg.Pdf.Benchmarks" />

@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using Zorg.Pdf.Layout;
 using Zorg.Pdf.Spike;
 using Zorg.Pdf.Tests.Fonts;
 using Zorg.Pdf.Tests.Writing;

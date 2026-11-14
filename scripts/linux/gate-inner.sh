@@ -20,6 +20,38 @@ mkdir -p /out
 rm -f /out/*.pdf # The volume outlives the container: start clean.
 timeout 300 dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release --no-build -- /out
 
+stage "Validate documents against the JSON Schema (python-jsonschema)"
+python3 - schema/document-0.1.schema.json docs/examples/*.json /out/*.json <<'PY' || exit 1
+import json, sys
+from jsonschema import Draft202012Validator
+schema = json.load(open(sys.argv[1], encoding="utf-8"))
+Draft202012Validator.check_schema(schema)
+validator = Draft202012Validator(schema)
+failed = False
+for path in sys.argv[2:]:
+    errors = sorted(validator.iter_errors(json.load(open(path, encoding="utf-8"))), key=lambda e: list(e.absolute_path))
+    for error in errors:
+        print(f"FAIL {path} at /{'/'.join(map(str, error.absolute_path))}: {error.message[:200]}")
+    failed |= bool(errors)
+    if not errors:
+        print(f"ok   {path}")
+# The schema must also reject what the parser rejects, or agents get no warning from it.
+for bad in [
+    {"title": "t", "colour": "red"},
+    {"title": "t", "content": [{"type": "paragraph"}]},
+    {"title": "t", "content": [{"type": "chart"}]},
+    {"title": "t", "styles": {"styles": {"x": {"color": "red"}}}},
+    {"title": "t", "content": [{"type": "table", "columns": [{"header": "A"}], "rows": [[{"text": "x"}]]}]},
+    {"content": []},
+]:
+    if validator.is_valid(bad):
+        print(f"FAIL the schema accepts an invalid document: {json.dumps(bad)}")
+        failed = True
+if not failed:
+    print("ok   the schema rejects six invalid documents")
+sys.exit(1 if failed else 0)
+PY
+
 stage "Check every PDF"
 failed=0
 for pdf in /out/*.pdf; do

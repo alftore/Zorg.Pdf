@@ -1,0 +1,33 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Invoice 2026-0042",
+  "language": "en",
+  "page": { "size": "A4", "margin": "2cm" },
+  "footer": {
+    "content": [
+      { "type": "paragraph", "style": "footer", "align": "right", "inlines": ["Page ", { "field": "pageNumber" }, " of ", { "field": "pageCount" }] }
+    ]
+  },
+  "content": [
+    { "type": "heading", "inlines": ["Invoice 2026-0042"] },
+    { "type": "paragraph", "inlines": ["Zorg Consulting AS", { "lineBreak": true }, "Storgata 1, 0155 Oslo"] },
+    { "type": "paragraph", "align": "right", "inlines": ["Bill to: Blåbær & Syltetøy AB, Kungsgatan 12, 111 43 Stockholm"] },
+    {
+      "type": "paragraph",
+      "align": "justify",
+      "spaceAfter": "12pt",
+      "inlines": ["Thank you for your order. This invoice covers the consulting work below. Payment is due within ", { "text": "30 days", "style": { "weight": "bold" } }, "."]
+    },
+    {
+      "type": "table",
+      "columns": [
+        { "header": "#", "width": "0.6*", "align": "right" },
+        { "header": "Description", "width": "5*" },
+        { "header": "Hours", "width": "1.1*", "align": "right" },
+        { "header": "Amount", "width": "1.6*", "align": "right" }
+      ],
+      "rows": { "$data": "lines" }
+    },
+    { "type": "paragraph", "align": "right", "inlines": [{ "text": "Total: 54 375,00 NOK", "style": { "weight": "bold" } }] }
+  ]
+}

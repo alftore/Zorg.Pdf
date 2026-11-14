@@ -1,0 +1,38 @@
+namespace Zorg.Pdf.Validation;
+
+/// <summary>
+/// Every diagnostic code. A code never changes meaning; a retired code stays here and in <c>docs/diagnostics.md</c>
+/// marked retired. A test fails when a code here isn't documented, or a documented code isn't here.
+/// </summary>
+/// <remarks>
+/// Areas: J JSON and model shape, D data slots, F fonts, T text, L layout and pagination, I images, A accessibility,
+/// R rendering and limits.
+/// </remarks>
+internal static class DiagnosticCodes
+{
+    // J: JSON and model shape.
+    public const string SchemaVersion = "ZPDF-J001";
+    public const string UnknownProperty = "ZPDF-J002";
+    public const string InvalidJson = "ZPDF-J003";
+    public const string MissingProperty = "ZPDF-J004";
+    public const string UnknownType = "ZPDF-J005";
+    public const string DocumentTooLarge = "ZPDF-J006";
+    public const string HeadingLevel = "ZPDF-J010";
+    public const string NoColumns = "ZPDF-J011";
+    public const string CellCount = "ZPDF-J012";
+    public const string BadLength = "ZPDF-J013";
+    public const string NoContentArea = "ZPDF-J014";
+    public const string UnknownStyle = "ZPDF-J015";
+    public const string BadColumnWidth = "ZPDF-J016";
+    public const string EmptySlot = "ZPDF-J017";
+    public const string BandContent = "ZPDF-J018";
+    public const string BadLineHeight = "ZPDF-J019";
+
+    // A: accessibility.
+    public const string NoTitle = "ZPDF-A001";
+    public const string BadLanguage = "ZPDF-A002";
+    public const string NoAltText = "ZPDF-A003";
+
+    // T: text.
+    public const string WordTooWide = "ZPDF-T001";
+}

@@ -1,0 +1,275 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Zorg.Pdf document",
+  "description": "A PDF document for Zorg.Pdf: a title, page settings, optional header and footer, styles, and blocks that flow down the pages. Text is always literal (no template syntax). Lengths are numbers of points or strings with a unit (\"12pt\", \"5mm\", \"2cm\", \"0.5in\"). Data that changes per render, such as table rows and images, can be named as a slot ({\"$data\": \"name\"}) and supplied when rendering. Unknown properties are errors.",
+  "type": "object",
+  "required": ["title"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "description": "This schema's $id.", "const": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json" },
+    "title": { "description": "The title. Viewers show it in place of the file name; PDF/UA requires one.", "type": "string", "minLength": 1, "examples": ["Invoice 2026-0042"] },
+    "language": { "description": "BCP 47 language tag of the text. Screen readers pick their voice from it.", "type": "string", "default": "en", "examples": ["en", "nb-NO", "de-CH"] },
+    "page": { "$ref": "#/$defs/pageSettings" },
+    "header": { "description": "Content at the top of every page.", "$ref": "#/$defs/pageBand" },
+    "footer": { "description": "Content at the bottom of every page.", "$ref": "#/$defs/pageBand" },
+    "styles": { "$ref": "#/$defs/styleSheet" },
+    "content": { "description": "The blocks, in reading order.", "type": "array", "items": { "$ref": "#/$defs/block" } }
+  },
+  "$defs": {
+    "length": {
+      "description": "A distance: a number of points (1/72 inch), or a string with a unit.",
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string", "pattern": "^\\s*-?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?\\s*(pt|mm|cm|in)?\\s*$" }
+      ],
+      "examples": ["2cm", "12pt", "5mm", 36]
+    },
+    "thickness": {
+      "description": "Space on four sides: one length for all, or each side.",
+      "oneOf": [
+        { "$ref": "#/$defs/length" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "top": { "$ref": "#/$defs/length" },
+            "right": { "$ref": "#/$defs/length" },
+            "bottom": { "$ref": "#/$defs/length" },
+            "left": { "$ref": "#/$defs/length" }
+          }
+        }
+      ]
+    },
+    "color": { "description": "sRGB colour as #RRGGBB or #RGB.", "type": "string", "pattern": "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$", "examples": ["#1F6FEB"] },
+    "textAlign": { "description": "Horizontal alignment.", "enum": ["left", "center", "right", "justify"] },
+    "pageSize": {
+      "description": "A paper size in portrait: a name, or width and height.",
+      "oneOf": [
+        { "enum": ["A3", "A4", "A5", "Letter", "Legal"] },
+        {
+          "type": "object",
+          "required": ["width", "height"],
+          "additionalProperties": false,
+          "properties": { "width": { "$ref": "#/$defs/length" }, "height": { "$ref": "#/$defs/length" } }
+        }
+      ]
+    },
+    "pageSettings": {
+      "description": "Size, orientation and margins of every page.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "size": { "$ref": "#/$defs/pageSize", "default": "A4" },
+        "orientation": { "enum": ["portrait", "landscape"], "default": "portrait" },
+        "margin": { "$ref": "#/$defs/thickness", "default": "2cm" }
+      }
+    },
+    "textStyle": {
+      "description": "How text looks. Unset properties come from the style underneath (block, named style, then body).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fontFamily": { "description": "A font family name from the render's font collection.", "type": "string" },
+        "size": { "description": "Font size.", "$ref": "#/$defs/length" },
+        "weight": { "enum": ["normal", "bold"] },
+        "fontStyle": { "enum": ["normal", "italic"] },
+        "color": { "$ref": "#/$defs/color" },
+        "lineHeight": { "description": "Line height as a multiple of the font size.", "type": "number", "exclusiveMinimum": 0, "maximum": 10 }
+      }
+    },
+    "styleSheet": {
+      "description": "Named styles, added to and overriding the built-in ones: body, heading1 to heading6, tableHeader, tableCell, footer.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "styles": { "type": "object", "additionalProperties": { "$ref": "#/$defs/textStyle" } },
+        "defaultFontFamily": { "type": "string" }
+      }
+    },
+    "inline": {
+      "description": "A piece of text: a plain string, a styled run, a line break, or a page number field.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "required": ["text"],
+          "additionalProperties": false,
+          "properties": { "text": { "type": "string" }, "style": { "$ref": "#/$defs/textStyle" } }
+        },
+        {
+          "type": "object",
+          "required": ["field"],
+          "additionalProperties": false,
+          "properties": { "field": { "description": "Filled in when the page is drawn.", "enum": ["pageNumber", "pageCount"] } }
+        },
+        {
+          "type": "object",
+          "required": ["lineBreak"],
+          "additionalProperties": false,
+          "properties": { "lineBreak": { "const": true } }
+        }
+      ]
+    },
+    "inlines": {
+      "description": "Text as an array of inlines, such as [\"Page \", {\"field\": \"pageNumber\"}].",
+      "type": "array",
+      "items": { "$ref": "#/$defs/inline" },
+      "examples": [["Hello, world"], ["Total: ", { "text": "12 450,00 NOK", "style": { "weight": "bold" } }]]
+    },
+    "slot": {
+      "description": "A value supplied when rendering, by name.",
+      "type": "object",
+      "required": ["$data"],
+      "additionalProperties": false,
+      "properties": { "$data": { "type": "string", "minLength": 1 } }
+    },
+    "block": {
+      "description": "Something that flows down the page. The \"type\" property says which.",
+      "type": "object",
+      "required": ["type"],
+      "properties": { "type": { "enum": ["heading", "paragraph", "table", "image", "spacer", "pageBreak"] } },
+      "oneOf": [
+        { "$ref": "#/$defs/heading" },
+        { "$ref": "#/$defs/paragraph" },
+        { "$ref": "#/$defs/table" },
+        { "$ref": "#/$defs/image" },
+        { "$ref": "#/$defs/spacer" },
+        { "$ref": "#/$defs/pageBreak" }
+      ]
+    },
+    "heading": {
+      "description": "A heading, tagged H1 to H6.",
+      "type": "object",
+      "required": ["type", "inlines"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "heading" },
+        "style": { "description": "A named style.", "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "level": { "type": "integer", "minimum": 1, "maximum": 6, "default": 1 },
+        "inlines": { "$ref": "#/$defs/inlines" },
+        "align": { "$ref": "#/$defs/textAlign" }
+      }
+    },
+    "paragraph": {
+      "description": "Text that wraps to the width of the page.",
+      "type": "object",
+      "required": ["type", "inlines"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "paragraph" },
+        "style": { "description": "A named style.", "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "inlines": { "$ref": "#/$defs/inlines" },
+        "align": { "$ref": "#/$defs/textAlign" },
+        "spaceAfter": { "$ref": "#/$defs/length" }
+      }
+    },
+    "columnWidth": {
+      "description": "A share of the free width (\"*\", \"2*\") or a fixed length.",
+      "oneOf": [
+        { "type": "string", "pattern": "^([0-9]*\\.?[0-9]+)?\\*$" },
+        { "$ref": "#/$defs/length" }
+      ],
+      "default": "*"
+    },
+    "column": {
+      "type": "object",
+      "required": ["header"],
+      "additionalProperties": false,
+      "properties": {
+        "header": { "description": "The header text, tagged as a column header.", "type": "string" },
+        "width": { "$ref": "#/$defs/columnWidth" },
+        "align": { "$ref": "#/$defs/textAlign" }
+      }
+    },
+    "cell": {
+      "description": "A cell: a string, or inlines with an alignment.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "required": ["inlines"],
+          "additionalProperties": false,
+          "properties": { "inlines": { "$ref": "#/$defs/inlines" }, "align": { "$ref": "#/$defs/textAlign" } }
+        }
+      ]
+    },
+    "table": {
+      "description": "A table with a header row of column titles. Rows never split across pages; the header repeats on each page.",
+      "type": "object",
+      "required": ["type", "columns"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "table" },
+        "style": { "description": "A named style.", "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "columns": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/column" } },
+        "rows": {
+          "description": "Rows in the document (each one cell per column), or a slot filled when rendering.",
+          "oneOf": [
+            { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/cell" } } },
+            { "$ref": "#/$defs/slot" }
+          ]
+        },
+        "repeatHeader": { "type": "boolean", "default": true }
+      }
+    },
+    "imageSource": {
+      "description": "The image file as base64, or a slot filled when rendering. Documents never name files.",
+      "oneOf": [
+        { "type": "object", "required": ["base64"], "additionalProperties": false, "properties": { "base64": { "type": "string", "contentEncoding": "base64" } } },
+        { "$ref": "#/$defs/slot" }
+      ]
+    },
+    "image": {
+      "description": "A JPEG or PNG picture. Needs alt text unless decorative.",
+      "type": "object",
+      "required": ["type", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "image" },
+        "style": { "description": "A named style.", "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "source": { "$ref": "#/$defs/imageSource" },
+        "alt": { "description": "What the image shows, for screen readers.", "type": "string" },
+        "decorative": { "description": "The image adds nothing to the text; screen readers skip it.", "type": "boolean", "default": false },
+        "width": { "$ref": "#/$defs/length" },
+        "height": { "$ref": "#/$defs/length" },
+        "align": { "$ref": "#/$defs/textAlign" }
+      }
+    },
+    "spacer": {
+      "description": "Empty vertical space.",
+      "type": "object",
+      "required": ["type", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "spacer" },
+        "style": { "description": "A named style.", "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "height": { "$ref": "#/$defs/length" }
+      }
+    },
+    "pageBreak": {
+      "description": "Starts a new page.",
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "pageBreak" },
+        "style": { "description": "A named style.", "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false }
+      }
+    },
+    "pageBand": {
+      "type": "object",
+      "required": ["content"],
+      "additionalProperties": false,
+      "properties": {
+        "content": { "description": "Paragraphs, images and spacers.", "type": "array", "items": { "$ref": "#/$defs/block" } }
+      }
+    }
+  }
+}

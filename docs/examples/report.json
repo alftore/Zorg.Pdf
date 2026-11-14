@@ -1,0 +1,48 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Monthly sales report, October 2026",
+  "language": "en-GB",
+  "page": { "size": "A4", "orientation": "landscape", "margin": "1.5cm" },
+  "header": {
+    "content": [
+      { "type": "image", "source": { "$data": "logo" }, "alt": "Zorg Consulting", "height": "1cm" }
+    ]
+  },
+  "footer": {
+    "content": [
+      { "type": "paragraph", "style": "footer", "align": "center", "inlines": ["Monthly sales report · page ", { "field": "pageNumber" }, " of ", { "field": "pageCount" }] }
+    ]
+  },
+  "content": [
+    { "type": "heading", "inlines": ["Monthly sales report"] },
+    { "type": "paragraph", "inlines": ["October 2026. Figures in thousands of NOK, excluding VAT."] },
+    { "type": "heading", "level": 2, "keepWithNext": true, "inlines": ["Sales by region"] },
+    {
+      "type": "table",
+      "columns": [
+        { "header": "Region", "width": "2*" },
+        { "header": "Orders", "width": "*", "align": "right" },
+        { "header": "Revenue", "width": "*", "align": "right" },
+        { "header": "Change", "width": "*", "align": "right" }
+      ],
+      "rows": [
+        ["Oslo", "412", "8 912", "+4.1 %"],
+        ["Bergen", "198", "3 870", "-1.2 %"],
+        ["Trondheim", "131", "2 455", "+0.8 %"],
+        [{ "inlines": [{ "text": "Total", "style": { "weight": "bold" } }] }, "741", "15 237", "+2.2 %"]
+      ]
+    },
+    { "type": "pageBreak" },
+    { "type": "heading", "level": 2, "inlines": ["All orders"] },
+    {
+      "type": "table",
+      "columns": [
+        { "header": "Order", "width": "3cm" },
+        { "header": "Customer", "width": "3*" },
+        { "header": "Date", "width": "3cm" },
+        { "header": "Amount", "width": "*", "align": "right" }
+      ],
+      "rows": { "$data": "orders" }
+    }
+  ]
+}

@@ -6,17 +6,6 @@ using Zorg.Pdf.Fonts;
 
 namespace Zorg.Pdf.Layout;
 
-/// <summary>Horizontal alignment of the lines in a paragraph.</summary>
-internal enum TextAlign
-{
-    Left,
-    Center,
-    Right,
-
-    /// <summary>Stretches the spaces so every line but the last of each paragraph fills the width.</summary>
-    Justify,
-}
-
 /// <summary>
 /// One laid-out line: the glyphs to show, the extra space after each (kerning and justification, in thousandths of
 /// the font size, as <c>TJ</c> takes it), the width it takes in points, and where it starts from the left edge.
@@ -46,7 +35,7 @@ internal readonly record struct TextDiagnostic(string Code, string Message, int 
 internal sealed class ParagraphLayout
 {
     /// <summary>A word didn't fit the width and was broken inside.</summary>
-    public const string WordTooWide = "ZPDF-T001";
+    public const string WordTooWide = Validation.DiagnosticCodes.WordTooWide;
 
     private const double Tolerance = 1e-6;
 

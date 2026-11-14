@@ -24,6 +24,42 @@ void Check(string name, bool ok)
 
 Check("exception keeps its message", new PdfException("smoke").Message == "smoke");
 
+// 0.1 slice 1: the document model through the source-generated JSON layer. Trimming would break reflection here.
+{
+    var document = new PdfDocument("Invoice 2026-0042")
+    {
+        Page = PageSettings.A4 with { Orientation = PageOrientation.Landscape, Margin = Thickness.All(Length.Cm(1.5)) },
+        Footer = new PageBand([new Paragraph(["Page ", Field.PageNumber, " of ", Field.PageCount]) { Align = TextAlign.Right }]),
+        Content =
+        [
+            new Heading("Invoice 2026-0042"),
+            new Paragraph(["Due in ", new TextRun("30 days") { Style = TextStyle.Bold }, LineBreak.Value, "Thank you."]),
+            new Table([new Column("Item") { Width = ColumnWidth.Star(3) }, new Column("Amount") { Width = ColumnWidth.Fixed(Length.Cm(3)), Align = TextAlign.Right }])
+            {
+                Rows = TableRows.Inline([["Consulting", "1 250,00"], [new Cell("Total") { Align = TextAlign.Right }, "1 250,00"]]),
+            },
+            new Image(ImageSource.FromSlot("logo")) { Alt = "Logo" },
+            new Spacer(Length.Mm(5)),
+            new PageBreak(),
+        ],
+    };
+    string json = document.ToJson();
+    PdfDocument back = PdfDocument.ParseJson(json);
+    Check("model json round trip", back.ToJson() == json && back.Validate().IsValid && back.Page.Orientation == PageOrientation.Landscape);
+
+    DocumentParseResult bad = PdfDocument.TryParseJson("""{"title":"t","content":[{"type":"heading","inlines":["x"],"colour":"red"}]}""");
+    Check("model json diagnostics", !bad.IsSuccess && bad.Diagnostics[0].Code == "ZPDF-J002" && bad.Diagnostics[0].Path == "/content/0/colour");
+
+    PdfDocument defaults = PdfDocument.ParseJson("""{"title":"t","content":[{"type":"heading","inlines":["x"]},{"type":"table","columns":[{"header":"A"}]}]}""");
+    Check("model json defaults", defaults.Content[0] is Heading { Level: 1 } && defaults.Content[1] is Table { RepeatHeader: true, Rows: InlineTableRows } && defaults.Language == "en");
+    Check("schema resource", PdfJsonSchema.Current.Contains(PdfJsonSchema.Id, StringComparison.Ordinal));
+    if (saveTo is not null)
+    {
+        // The Linux gate validates this against the schema with an independent validator.
+        File.WriteAllText(Path.Combine(saveTo, "model.json"), document.ToJson(indented: true));
+    }
+}
+
 // Spike S1 and S2: one page of Helvetica through the object writer, deterministic.
 {
     using var first = new MemoryStream();

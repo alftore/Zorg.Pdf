@@ -1,6 +1,15 @@
 # Working on Zorg.Pdf
 
-Async-first PDF generation for .NET 10, in C# only. Scaffold stage: the public API is only `PdfException`. Nothing else exists yet, so don't call types from the design notes as if they did.
+Async-first PDF generation for .NET 10, in C# only. Early 0.1: the public API is the document model (`PdfDocument`, blocks, inlines, styles, units), its JSON form and validation. There's no public render API yet, so don't call `RenderAsync` or other types from the design notes as if they existed.
+
+## Writing code that uses Zorg.Pdf
+
+- A document is an immutable record tree: `new PdfDocument("Title") { Content = [new Heading("..."), new Paragraph("..."), new Table([new Column("A")]) { Rows = ... }] }`. Change it with `with`.
+- Blocks with a required part take it in the constructor: `new Heading(text)`, `new Paragraph(text or inlines)`, `new Table(columns)`, `new Image(source)`, `new Spacer(height)`, `new PageBand(content)`. Inlines are strings, `TextRun`, `LineBreak.Value` and `Field.PageNumber`/`Field.PageCount`.
+- Lengths: `Length.Pt/Mm/Cm/In`, or strings like `"2cm"` in JSON. Column widths: `ColumnWidth.Star(2)` / `"2*"`, `ColumnWidth.Fixed(...)`.
+- Data that changes per render is a slot: `TableRows.Bound("lines")` / `{"$data": "lines"}`, `ImageSource.FromSlot("logo")`. Documents never name files.
+- `PdfDocument.TryParseJson` never throws; `Validate()` never throws for a bad document. Both return diagnostics with a code (`docs/diagnostics.md`) and a JSON pointer.
+- The JSON Schema is `PdfJsonSchema.Current`; `PdfDocument.ToJson()` writes `$schema`. Unknown JSON properties are errors.
 
 ## Working on the repo
 

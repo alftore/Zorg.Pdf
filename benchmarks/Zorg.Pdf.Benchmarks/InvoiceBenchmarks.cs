@@ -7,9 +7,11 @@ using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
 using PdfSharp.Fonts;
-using Zorg.Pdf.Layout;
 using Zorg.Pdf.Spike;
+using MigraColumn = MigraDoc.DocumentObjectModel.Tables.Column;
 using MigraParagraphAlignment = MigraDoc.DocumentObjectModel.ParagraphAlignment;
+using MigraParagraph = MigraDoc.DocumentObjectModel.Paragraph;
+using MigraTable = MigraDoc.DocumentObjectModel.Tables.Table;
 
 namespace Zorg.Pdf.Benchmarks;
 
@@ -66,7 +68,7 @@ public class InvoiceBenchmarks
         section.PageSetup.PageFormat = PageFormat.A4;
         section.PageSetup.TopMargin = section.PageSetup.BottomMargin = section.PageSetup.LeftMargin = section.PageSetup.RightMargin = Unit.FromCentimeter(2);
 
-        Paragraph footer = section.Footers.Primary.AddParagraph();
+        MigraParagraph footer = section.Footers.Primary.AddParagraph();
         footer.Format.Font.Size = 8;
         footer.AddText("Page ");
         footer.AddPageField();
@@ -78,7 +80,7 @@ public class InvoiceBenchmarks
             switch (block)
             {
                 case FlowParagraph p:
-                    Paragraph paragraph = section.AddParagraph(p.Text);
+                    MigraParagraph paragraph = section.AddParagraph(p.Text);
                     paragraph.Format.Font.Size = p.Size;
                     paragraph.Format.SpaceAfter = Unit.FromPoint(p.SpaceAfter);
                     paragraph.Format.Alignment = p.Align switch
@@ -91,13 +93,13 @@ public class InvoiceBenchmarks
                     break;
 
                 case FlowTable t:
-                    Table table = section.AddTable();
+                    MigraTable table = section.AddTable();
                     table.Format.Font.Size = t.Size;
                     double total = t.Columns.Sum(c => c.Share);
                     double width = Unit.FromCentimeter(21 - 4).Point;
                     foreach (FlowColumn c in t.Columns)
                     {
-                        Column column = table.AddColumn(Unit.FromPoint(width * c.Share / total));
+                        MigraColumn column = table.AddColumn(Unit.FromPoint(width * c.Share / total));
                         column.Format.Alignment = c.Align == TextAlign.Right ? MigraParagraphAlignment.Right : MigraParagraphAlignment.Left;
                     }
 
