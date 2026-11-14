@@ -168,7 +168,8 @@ internal sealed class SchemaTool() : PdfTool(
 {
     internal const string Guide = """
         A document is JSON: { "title": "...", "language": "en", "content": [blocks] }, with optional "page", "header", "footer" and "styles".
-        Blocks have a "type": "heading" (with "level" 1 to 6, never skipping a level), "paragraph", "table", "image", "spacer" or "pageBreak".
+        Blocks have a "type": "heading" (with "level" 1 to 6, never skipping a level), "paragraph", "list", "table", "image", "spacer" or "pageBreak".
+        Lists: { "type": "list", "marker": "bullet" or "number", "items": ["text", { "content": [paragraphs and nested lists] }] }.
         Text is "inlines": an array of strings, { "text": "...", "style": { "weight": "bold" } }, { "lineBreak": true } and, in headers and footers, { "field": "pageNumber" } or { "field": "pageCount" }.
         Tables have "columns" ([{ "header": "Amount", "width": "2*", "align": "right" }]) and "rows": an array of rows of cells (strings), or { "$data": "slot" } to take them from data.
         Images need "alt" text unless "decorative": true. Their "source" is { "$data": "slot" } (or { "base64": "..." } for small ones).

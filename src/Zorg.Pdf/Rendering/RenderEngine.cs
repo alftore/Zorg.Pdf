@@ -147,6 +147,9 @@ internal sealed partial class RenderEngine : IDisposable
                 case Image image:
                     await PlaceImageAsync(i, image, cancellationToken).ConfigureAwait(false);
                     break;
+                case List list:
+                    await PlaceListAsync(i, list, cancellationToken).ConfigureAwait(false);
+                    break;
             }
 
             _prepared.Remove(i);
@@ -186,6 +189,17 @@ internal sealed partial class RenderEngine : IDisposable
             _y -= text.SpaceBefore;
         }
 
+        await PlaceLinesAsync(text, _geometry.Left, parent: null, firstLine: null, cancellationToken).ConfigureAwait(false);
+        _y -= text.SpaceAfter;
+    }
+
+    /// <summary>
+    /// Places laid-out lines from the current position at <paramref name="left"/>, breaking pages as needed, tagged as
+    /// one element under <paramref name="parent"/>. <paramref name="firstLine"/> is called with the first line's
+    /// baseline, once that line's page is known and before it's drawn (a list item draws its marker there).
+    /// </summary>
+    private async ValueTask PlaceLinesAsync(PreparedText text, double left, Tagger.Element? parent, Action<double>? firstLine, CancellationToken cancellationToken)
+    {
         Tagger.Element? element = null;
         bool open = false;
         foreach (LayoutLine line in text.Lines)
@@ -201,17 +215,23 @@ internal sealed partial class RenderEngine : IDisposable
                 await NewPageAsync(cancellationToken).ConfigureAwait(false);
             }
 
+            if (firstLine is not null)
+            {
+                firstLine(_y - line.Ascent);
+                firstLine = null;
+            }
+
             if (line.Runs.Count > 0)
             {
                 if (!open)
                 {
-                    element ??= _tagger.Begin(text.Role);
+                    element ??= _tagger.Begin(text.Role, parent);
                     _content.BeginMarkedContent(Tagger.Name(text.Role), _tagger.Mark(element, _page));
                     BeginText();
                     open = true;
                 }
 
-                DrawRuns(line, _geometry.Left + line.Offset, _y - line.Ascent);
+                DrawRuns(line, left + line.Offset, _y - line.Ascent);
             }
 
             _y -= line.Height;
@@ -227,8 +247,6 @@ internal sealed partial class RenderEngine : IDisposable
         {
             _tagger.End(element, _documentWriter.Pages);
         }
-
-        _y -= text.SpaceAfter;
     }
 
     /// <summary>Starts a text object; the font is set again by the first run in it.</summary>
@@ -313,6 +331,8 @@ internal sealed partial class RenderEngine : IDisposable
                     return Prepare(i).FirstLineHeight;
                 case Image { Source: { } source } image when _images.TryGet(source, out ImageSet.Entry entry):
                     return ImageSize(image, entry, _geometry.ContentWidth, _geometry.ContentHeight).Height;
+                case List list:
+                    return FirstListLineHeight(list, $"/content/{i}");
                 case Spacer:
                     continue;
                 default:
@@ -342,7 +362,7 @@ internal sealed partial class RenderEngine : IDisposable
     /// fields (in headers and footers); without it they're left out. Layout warnings are reported when
     /// <paramref name="report"/> is set, so a band laid out on every page reports them once.
     /// </summary>
-    private PreparedText LayoutText(Block block, TextStyle style, string path, Func<FieldKind, string>? fields, bool report)
+    private PreparedText LayoutText(Block block, TextStyle style, string path, Func<FieldKind, string>? fields, bool report, double? width = null)
     {
         double size = style.Size?.Points ?? 10;
         ImmutableArray<Inline> inlines = Preflight.Inlines(block)!.Value;
@@ -354,13 +374,14 @@ internal sealed partial class RenderEngine : IDisposable
         };
 
         List<TextSegment> segments = Segments(inlines, style, out List<(int Offset, int Inline)> starts, fields);
-        ParagraphLayout layout = ParagraphLayout.Create(segments, _geometry.ContentWidth, align, style.LineHeight ?? 1.2);
+        double textWidth = width ?? _geometry.ContentWidth;
+        ParagraphLayout layout = ParagraphLayout.Create(segments, textWidth, align, style.LineHeight ?? 1.2);
         foreach (TextDiagnostic diagnostic in report ? layout.Diagnostics : [])
         {
             (int start, int inline) = starts.FindLast(s => s.Offset <= diagnostic.Index);
             _sink.Warning(
                 diagnostic.Code,
-                string.Create(CultureInfo.InvariantCulture, $"The word at index {diagnostic.Index - start} is wider than the page's {_geometry.ContentWidth:0.##} pt text width, so it was broken between characters."),
+                string.Create(CultureInfo.InvariantCulture, $"The word at index {diagnostic.Index - start} is wider than the {textWidth:0.##} pt text width, so it was broken between characters."),
                 $"{path}/inlines/{inline}");
         }
 

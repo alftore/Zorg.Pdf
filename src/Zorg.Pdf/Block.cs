@@ -5,13 +5,14 @@ using System.Text.Json.Serialization;
 namespace Zorg.Pdf;
 
 /// <summary>
-/// Something that flows down the page: a heading, paragraph, table, image, spacer or page break. In JSON every block
-/// has a <c>"type"</c>: <c>"heading"</c>, <c>"paragraph"</c>, <c>"table"</c>, <c>"image"</c>, <c>"spacer"</c> or
-/// <c>"pageBreak"</c>.
+/// Something that flows down the page: a heading, paragraph, list, table, image, spacer or page break. In JSON every
+/// block has a <c>"type"</c>: <c>"heading"</c>, <c>"paragraph"</c>, <c>"list"</c>, <c>"table"</c>, <c>"image"</c>,
+/// <c>"spacer"</c> or <c>"pageBreak"</c>.
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type", UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
 [JsonDerivedType(typeof(Heading), "heading")]
 [JsonDerivedType(typeof(Paragraph), "paragraph")]
+[JsonDerivedType(typeof(List), "list")]
 [JsonDerivedType(typeof(Table), "table")]
 [JsonDerivedType(typeof(Image), "image")]
 [JsonDerivedType(typeof(Spacer), "spacer")]

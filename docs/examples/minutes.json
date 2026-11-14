@@ -38,6 +38,21 @@
       "type": "heading",
       "level": 2,
       "inlines": [
+        "Agenda"
+      ]
+    },
+    {
+      "type": "list",
+      "items": [
+        "Report pipeline",
+        "Accessibility",
+        "Any other business"
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "inlines": [
         "Attendees"
       ]
     },
@@ -95,9 +110,29 @@
       ]
     },
     {
-      "type": "paragraph",
-      "inlines": [
-        "Invoices and statements move first. Contracts stay on the old pipeline until 0.2 brings templates."
+      "type": "list",
+      "marker": "number",
+      "items": [
+        "Invoices and statements move first.",
+        {
+          "content": [
+            {
+              "type": "paragraph",
+              "inlines": [
+                "Contracts stay on the old pipeline until 0.2 brings templates, because they need:"
+              ]
+            },
+            {
+              "type": "list",
+              "items": [
+                "conditional clauses",
+                "repeated schedules per customer",
+                "signatures"
+              ]
+            }
+          ]
+        },
+        "Reports follow once page previews exist."
       ]
     },
     {

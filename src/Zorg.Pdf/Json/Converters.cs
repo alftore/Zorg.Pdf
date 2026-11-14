@@ -438,6 +438,51 @@ internal sealed class CellJsonConverter : JsonConverter<Cell>
     }
 }
 
+/// <summary>A list item: a string (one paragraph), or <c>{ "content": [blocks] }</c>.</summary>
+internal sealed class ListItemJsonConverter : JsonConverter<ListItem>
+{
+    public override ListItem Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            return new ListItem(reader.GetString()!);
+        }
+
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw PdfJsonException.Invalid("Expected a list item: a string, or { \"content\": [paragraphs and lists] }.");
+        }
+
+        ImmutableArray<Block>? content = null;
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            string name = reader.GetString()!;
+            reader.Read();
+            content = name == "content"
+                ? PdfJsonException.Read<ImmutableArray<Block>>(ref reader, options, "content")
+                : throw PdfJsonException.UnknownProperty(name, "content");
+        }
+
+        return content is { } found
+            ? new ListItem(found)
+            : throw new PdfJsonException(DiagnosticCodes.MissingProperty, "A list item object needs \"content\".");
+    }
+
+    public override void Write(Utf8JsonWriter writer, ListItem value, JsonSerializerOptions options)
+    {
+        if (value.Content is [Paragraph { Inlines: [TextRun { Style: null } run], Align: TextAlign.Left, SpaceAfter: null, Style: null, KeepWithNext: false }])
+        {
+            writer.WriteStringValue(run.Text);
+            return;
+        }
+
+        writer.WriteStartObject();
+        writer.WritePropertyName("content");
+        JsonSerializer.Serialize(writer, value.Content, (JsonTypeInfo<ImmutableArray<Block>>)options.GetTypeInfo(typeof(ImmutableArray<Block>)));
+        writer.WriteEndObject();
+    }
+}
+
 /// <summary>Table rows: an array of rows, or <c>{ "$data": "slot" }</c>.</summary>
 internal sealed class TableRowsJsonConverter : JsonConverter<TableRows>
 {

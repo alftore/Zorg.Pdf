@@ -161,6 +161,67 @@ internal sealed partial class DocumentValidator
             case Spacer spacer:
                 NotNegative(spacer.Height, $"{path}/height");
                 break;
+
+            case List list:
+                List(list, path, 1);
+                break;
+        }
+    }
+
+    /// <summary>The deepest a list may nest: six levels, as HTML's renderers and most style guides go.</summary>
+    internal const int MaxListDepth = 6;
+
+    private void List(List list, string path, int depth)
+    {
+        if (list.Indent is { } indent)
+        {
+            NotNegative(indent, $"{path}/indent");
+        }
+
+        if (list.Start < 0)
+        {
+            Error(DiagnosticCodes.ListShape, Invariant($"A list starts at {list.Start}; numbering starts at 0 or more."), $"{path}/start");
+        }
+
+        if (list.Items.IsDefaultOrEmpty)
+        {
+            Error(DiagnosticCodes.ListShape, "A list needs at least one item.", $"{path}/items");
+            return;
+        }
+
+        for (int i = 0; i < list.Items.Length; i++)
+        {
+            string itemPath = $"{path}/items/{i}";
+            if (list.Items[i] is not { Content.IsDefaultOrEmpty: false } item)
+            {
+                Error(DiagnosticCodes.ListShape, "A list item needs content: a string, or paragraphs and lists.", itemPath);
+                continue;
+            }
+
+            for (int b = 0; b < item.Content.Length; b++)
+            {
+                string blockPath = $"{itemPath}/content/{b}";
+                switch (item.Content[b])
+                {
+                    case Paragraph paragraph:
+                        Block(paragraph, blockPath);
+                        break;
+                    case List nested when depth >= MaxListDepth:
+                        Error(DiagnosticCodes.ListContent, Invariant($"Lists nest at most {MaxListDepth} deep."), blockPath);
+                        break;
+                    case List nested:
+                        if (nested.Style is { } style && !_styles.ContainsKey(style))
+                        {
+                            Warning(DiagnosticCodes.UnknownStyle, $"There's no style named \"{style}\", so the list's default style is used. Add it to \"styles\" or use a built-in name.", $"{blockPath}/style");
+                        }
+
+                        List(nested, blockPath, depth + 1);
+                        break;
+                    default:
+                        Error(DiagnosticCodes.ListContent, "A list item holds paragraphs and nested lists only. Put headings, tables and images between lists.", blockPath);
+                        break;
+                }
+            }
         }
     }
 

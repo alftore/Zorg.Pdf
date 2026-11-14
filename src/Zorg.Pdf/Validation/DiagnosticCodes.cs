@@ -27,6 +27,8 @@ internal static class DiagnosticCodes
     public const string EmptySlot = "ZPDF-J017";
     public const string BandContent = "ZPDF-J018";
     public const string BadLineHeight = "ZPDF-J019";
+    public const string ListShape = "ZPDF-J020";
+    public const string ListContent = "ZPDF-J021";
 
     // D: data slots.
     public const string MissingSlot = "ZPDF-D001";

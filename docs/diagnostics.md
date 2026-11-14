@@ -24,6 +24,8 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-J017 | Error | A data slot has no name. | Give `$data` a name. |
 | ZPDF-J018 | Error | A header or footer holds a block other than a paragraph, image or spacer. | Move tables and headings into the content. |
 | ZPDF-J019 | Error | A line height isn't between 0 and 10. | Use a multiple of the font size, such as `1.2`. |
+| ZPDF-J020 | Error | A list has no items, an item has no content, or `start` is negative. | Give every list items and every item text; number from 0 or more. |
+| ZPDF-J021 | Error | A list item holds something other than paragraphs and lists, or lists nest more than six deep. | Put headings, tables and images between lists; flatten deep nesting. |
 | ZPDF-D001 | Error | A table or image names a data slot (`{"$data": ...}`) that the render has no rows or image for. | Supply them: `RenderOptions.Data = PdfData.Empty.WithRows("slot", rows)` or `.WithImage("slot", bytes)`. |
 | ZPDF-A001 | Error | The document has no title. Viewers show it in place of the file name; PDF/UA requires one. | Set `title`. |
 | ZPDF-A002 | Error | The language isn't a BCP 47 tag. Screen readers pick their voice from it. | Use a tag such as `en`, `nb-NO` or `de-CH`. |

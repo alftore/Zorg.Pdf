@@ -128,10 +128,11 @@
       "description": "Something that flows down the page. The \"type\" property says which.",
       "type": "object",
       "required": ["type"],
-      "properties": { "type": { "enum": ["heading", "paragraph", "table", "image", "spacer", "pageBreak"] } },
+      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak"] } },
       "oneOf": [
         { "$ref": "#/$defs/heading" },
         { "$ref": "#/$defs/paragraph" },
+        { "$ref": "#/$defs/list" },
         { "$ref": "#/$defs/table" },
         { "$ref": "#/$defs/image" },
         { "$ref": "#/$defs/spacer" },
@@ -165,6 +166,37 @@
         "align": { "$ref": "#/$defs/textAlign" },
         "spaceAfter": { "$ref": "#/$defs/length" }
       }
+    },
+    "list": {
+      "description": "A bulleted or numbered list, tagged for screen readers. Items hold paragraphs and nested lists.",
+      "type": "object",
+      "required": ["type", "items"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "list" },
+        "style": { "description": "A named style for the items' text.", "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/listItem" } },
+        "marker": {
+          "description": "What marks each item. Nested bullet lists use other bullet shapes.",
+          "enum": ["bullet", "number", "lowerAlpha", "upperAlpha", "lowerRoman", "upperRoman", "none"],
+          "default": "bullet"
+        },
+        "start": { "description": "The number of the first item.", "type": "integer", "minimum": 0, "default": 1 },
+        "indent": { "description": "How far items are indented; the marker sits in this space. Default 18pt.", "$ref": "#/$defs/length" }
+      }
+    },
+    "listItem": {
+      "description": "A list item: a string for one paragraph, or blocks (paragraphs and nested lists).",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "required": ["content"],
+          "additionalProperties": false,
+          "properties": { "content": { "type": "array", "items": { "$ref": "#/$defs/block" } } }
+        }
+      ]
     },
     "columnWidth": {
       "description": "A share of the free width (\"*\", \"2*\") or a fixed length.",

@@ -34,7 +34,7 @@ internal static partial class DocumentJson
         catch (NotSupportedException ex) when (MissingTypePath().Match(ex.Message) is { Success: true } match)
         {
             // The serializer can't make an abstract block without a "type"; it reports that as unsupported.
-            return Failed(DiagnosticCodes.UnknownType, "A block needs a \"type\": \"heading\", \"paragraph\", \"table\", \"image\", \"spacer\" or \"pageBreak\".", Pointer(match.Groups[1].Value));
+            return Failed(DiagnosticCodes.UnknownType, "A block needs a \"type\": \"heading\", \"paragraph\", \"list\", \"table\", \"image\", \"spacer\" or \"pageBreak\".", Pointer(match.Groups[1].Value));
         }
 
         if (document is null)
@@ -111,7 +111,7 @@ internal static partial class DocumentJson
 
         if (UnknownDiscriminator().Match(message) is { Success: true } discriminator)
         {
-            return Error(DiagnosticCodes.UnknownType, $"Unknown block type \"{discriminator.Groups[1].Value}\". Use \"heading\", \"paragraph\", \"table\", \"image\", \"spacer\" or \"pageBreak\".", path);
+            return Error(DiagnosticCodes.UnknownType, $"Unknown block type \"{discriminator.Groups[1].Value}\". Use \"heading\", \"paragraph\", \"list\", \"table\", \"image\", \"spacer\" or \"pageBreak\".", path);
         }
 
         // Syntax errors come from the reader, wrapped by the serializer.

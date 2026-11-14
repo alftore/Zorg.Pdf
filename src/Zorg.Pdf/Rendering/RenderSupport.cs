@@ -67,6 +67,10 @@ internal sealed class StyleResolver
         return block.Style is { } name && _styles.TryGetValue(name, out TextStyle? named) ? style.Merge(named) : style;
     }
 
+    /// <summary>A paragraph in a list item: its own style, or else the nearest list's, over <c>body</c>.</summary>
+    public TextStyle ForListParagraph(Paragraph paragraph, string? listStyle) =>
+        For(paragraph.Style is null && listStyle is not null ? paragraph with { Style = listStyle } : paragraph);
+
     /// <summary>A paragraph in a header or footer: <c>body</c>, then <c>header</c> or <c>footer</c>, then its own style.</summary>
     public TextStyle ForBand(Block block, string band) =>
         block.Style is { } name && _styles.TryGetValue(name, out TextStyle? own) ? Named(band).Merge(own) : Named(band);

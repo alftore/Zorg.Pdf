@@ -311,6 +311,46 @@ override Zorg.Pdf.LineBreak.ToString() -> string!
 static Zorg.Pdf.LineBreak.Value.get -> Zorg.Pdf.LineBreak!
 static Zorg.Pdf.LineBreak.operator !=(Zorg.Pdf.LineBreak? left, Zorg.Pdf.LineBreak? right) -> bool
 static Zorg.Pdf.LineBreak.operator ==(Zorg.Pdf.LineBreak? left, Zorg.Pdf.LineBreak? right) -> bool
+Zorg.Pdf.List
+override Zorg.Pdf.List.<Clone>$() -> Zorg.Pdf.List!
+override sealed Zorg.Pdf.List.Equals(Zorg.Pdf.Block? other) -> bool
+Zorg.Pdf.List.Equals(Zorg.Pdf.List? other) -> bool
+override Zorg.Pdf.List.Equals(object? obj) -> bool
+override Zorg.Pdf.List.GetHashCode() -> int
+Zorg.Pdf.List.Indent.get -> Zorg.Pdf.Length?
+Zorg.Pdf.List.Indent.init -> void
+Zorg.Pdf.List.Items.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.ListItem!>
+Zorg.Pdf.List.Items.init -> void
+Zorg.Pdf.List.List(System.Collections.Immutable.ImmutableArray<Zorg.Pdf.ListItem!> items) -> void
+Zorg.Pdf.List.Marker.get -> Zorg.Pdf.ListMarker
+Zorg.Pdf.List.Marker.init -> void
+Zorg.Pdf.List.Start.get -> int
+Zorg.Pdf.List.Start.init -> void
+override Zorg.Pdf.List.ToString() -> string!
+static Zorg.Pdf.List.operator !=(Zorg.Pdf.List? left, Zorg.Pdf.List? right) -> bool
+static Zorg.Pdf.List.operator ==(Zorg.Pdf.List? left, Zorg.Pdf.List? right) -> bool
+Zorg.Pdf.ListItem
+Zorg.Pdf.ListItem.<Clone>$() -> Zorg.Pdf.ListItem!
+Zorg.Pdf.ListItem.Content.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!>
+Zorg.Pdf.ListItem.Content.init -> void
+Zorg.Pdf.ListItem.Equals(Zorg.Pdf.ListItem? other) -> bool
+override Zorg.Pdf.ListItem.Equals(object? obj) -> bool
+static Zorg.Pdf.ListItem.FromString(string! text) -> Zorg.Pdf.ListItem!
+override Zorg.Pdf.ListItem.GetHashCode() -> int
+Zorg.Pdf.ListItem.ListItem(System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!> content) -> void
+Zorg.Pdf.ListItem.ListItem(string! text) -> void
+override Zorg.Pdf.ListItem.ToString() -> string!
+static Zorg.Pdf.ListItem.implicit operator Zorg.Pdf.ListItem!(string! text) -> Zorg.Pdf.ListItem!
+static Zorg.Pdf.ListItem.operator !=(Zorg.Pdf.ListItem? left, Zorg.Pdf.ListItem? right) -> bool
+static Zorg.Pdf.ListItem.operator ==(Zorg.Pdf.ListItem? left, Zorg.Pdf.ListItem? right) -> bool
+Zorg.Pdf.ListMarker
+Zorg.Pdf.ListMarker.Bullet = 0 -> Zorg.Pdf.ListMarker
+Zorg.Pdf.ListMarker.LowerAlpha = 2 -> Zorg.Pdf.ListMarker
+Zorg.Pdf.ListMarker.LowerRoman = 4 -> Zorg.Pdf.ListMarker
+Zorg.Pdf.ListMarker.None = 6 -> Zorg.Pdf.ListMarker
+Zorg.Pdf.ListMarker.Number = 1 -> Zorg.Pdf.ListMarker
+Zorg.Pdf.ListMarker.UpperAlpha = 3 -> Zorg.Pdf.ListMarker
+Zorg.Pdf.ListMarker.UpperRoman = 5 -> Zorg.Pdf.ListMarker
 Zorg.Pdf.PageBand
 Zorg.Pdf.PageBand.<Clone>$() -> Zorg.Pdf.PageBand!
 Zorg.Pdf.PageBand.Content.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!>

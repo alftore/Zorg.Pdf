@@ -51,6 +51,15 @@ internal static class Preflight
                 Need(style, blockPath);
                 Runs(inlines, style, $"/content/{i}/inlines");
             }
+            else if (block is List list)
+            {
+                foreach ((Paragraph paragraph, string path, string? listStyle) in ListParagraphs(list, $"/content/{i}", list.Style))
+                {
+                    TextStyle style = styles.ForListParagraph(paragraph, listStyle);
+                    Need(style, paragraph.Style is not null ? $"{path}/style" : path);
+                    Runs(paragraph.Inlines, style, $"{path}/inlines");
+                }
+            }
             else if (block is Table table)
             {
                 Need(styles.TableHeader(), $"/content/{i}/columns");
@@ -125,6 +134,13 @@ internal static class Preflight
                     break;
                 case Table table:
                     Table(table, path);
+                    break;
+                case List list:
+                    foreach ((Paragraph paragraph, string itemPath, string? listStyle) in ListParagraphs(list, path, list.Style))
+                    {
+                        Inlines(paragraph.Inlines, styles.ForListParagraph(paragraph, listStyle), $"{itemPath}/inlines");
+                    }
+
                     break;
             }
         }
@@ -220,6 +236,32 @@ internal static class Preflight
                 }
 
                 index += rune.Utf16SequenceLength;
+            }
+        }
+    }
+
+    /// <summary>Every paragraph in a list and its nested lists, with its path and the nearest list's style.</summary>
+    public static IEnumerable<(Paragraph Paragraph, string Path, string? ListStyle)> ListParagraphs(List list, string path, string? listStyle)
+    {
+        for (int i = 0; i < (list.Items.IsDefault ? 0 : list.Items.Length); i++)
+        {
+            ImmutableArray<Block> content = list.Items[i]?.Content ?? [];
+            for (int b = 0; b < (content.IsDefault ? 0 : content.Length); b++)
+            {
+                string blockPath = $"{path}/items/{i}/content/{b}";
+                switch (content[b])
+                {
+                    case Paragraph paragraph:
+                        yield return (paragraph, blockPath, listStyle);
+                        break;
+                    case List nested:
+                        foreach ((Paragraph Paragraph, string Path, string? ListStyle) inner in ListParagraphs(nested, blockPath, nested.Style ?? listStyle))
+                        {
+                            yield return inner;
+                        }
+
+                        break;
+                }
             }
         }
     }

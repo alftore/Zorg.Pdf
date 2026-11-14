@@ -20,6 +20,10 @@ internal enum StructureRole
     TH,
     TD,
     Figure,
+    L,
+    LI,
+    Lbl,
+    LBody,
 }
 
 /// <summary>
@@ -30,7 +34,7 @@ internal enum StructureRole
 internal sealed class Tagger
 {
     private static readonly byte[][] RoleNames =
-        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD", "Figure" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
+        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD", "Figure", "L", "LI", "Lbl", "LBody" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
 
     private readonly PdfObjectWriter _writer;
     private readonly List<List<PdfReference>> _parentTree = []; // Per page, the element that owns each MCID.
@@ -146,6 +150,18 @@ internal sealed class Tagger
             _writer.EndDictionary();
         }
 
+        if (element.ListNumbering is { } numbering)
+        {
+            // How the items are marked (ISO 32000-1, 14.8.5.5), which PDF/UA expects on lists with labels.
+            _writer.Name("A"u8);
+            _writer.BeginDictionary();
+            _writer.Name("O"u8);
+            _writer.Name("List"u8);
+            _writer.Name("ListNumbering"u8);
+            _writer.Name(System.Text.Encoding.ASCII.GetBytes(numbering));
+            _writer.EndDictionary();
+        }
+
         if (element.ColumnHeader)
         {
             // Header cells say what they head (PDF/UA-1 7.5): every header here heads its column.
@@ -220,6 +236,9 @@ internal sealed class Tagger
 
         /// <summary>A TH that heads its column.</summary>
         public bool ColumnHeader { get; init; }
+
+        /// <summary>The ListNumbering attribute, for a list: Disc, Decimal, LowerAlpha and so on.</summary>
+        public string? ListNumbering { get; set; }
 
         /// <summary>Replacement text, for a figure.</summary>
         public string? Alt { get; set; }
