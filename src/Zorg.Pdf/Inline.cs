@@ -9,8 +9,8 @@ namespace Zorg.Pdf;
 /// </summary>
 /// <remarks>
 /// In JSON an inline is a bare string (a run of plain text), <c>{ "text": "...", "style": { ... } }</c>,
-/// <c>{ "lineBreak": true }</c>, or <c>{ "field": "pageNumber" }</c>. Text is always literal: there's no template
-/// syntax, so <c>{{</c> prints as typed.
+/// <c>{ "lineBreak": true }</c>, <c>{ "field": "pageNumber" }</c> or <c>{ "bind": "customer.name" }</c>. Text is
+/// always literal, so <c>{{</c> prints as typed: values from data are <see cref="Bind"/> inlines.
 /// </remarks>
 /// <example>
 /// <code>

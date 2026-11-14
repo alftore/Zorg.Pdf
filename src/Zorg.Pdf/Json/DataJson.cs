@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text.Json;
 using Zorg.Pdf.Validation;
 
 namespace Zorg.Pdf.Json;
 
 /// <summary>
-/// Reads render data from JSON: an object whose properties are slots. An array is a table's rows, each an array of
-/// cells as in a document (a string, or <c>{ "inlines": [...] }</c>); an object with <c>"base64"</c> is an image.
-/// Every problem is collected with a JSON pointer, as for documents.
+/// Reads render data from JSON: an object whose properties are slots. An array of arrays is a table's rows, each an
+/// array of cells as in a document (a string, or <c>{ "inlines": [...] }</c>); an object with <c>"base64"</c> is an
+/// image. The whole object is also the model that template bindings read. Every problem is collected with a JSON
+/// pointer, as for documents.
 /// </summary>
 internal static class DataJson
 {
@@ -46,12 +48,14 @@ internal static class DataJson
                 string path = "/" + slot.Name.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal);
                 try
                 {
-                    data = slot.Value.ValueKind switch
+                    // Arrays of arrays are table rows, objects with "base64" are images; everything is also model,
+                    // for templates to bind (an array of objects, say, is model only).
+                    data = slot.Value switch
                     {
                         _ when string.IsNullOrWhiteSpace(slot.Name) => throw new PdfJsonException(DiagnosticCodes.EmptySlot, "A data slot needs a name."),
-                        JsonValueKind.Array => data.WithRows(slot.Name, Rows(slot.Value)),
-                        JsonValueKind.Object => data.WithImage(slot.Name, Image(slot.Value)),
-                        _ => throw new PdfJsonException(DiagnosticCodes.InvalidJson, "A slot is an array of rows, or an image: { \"base64\": \"...\" }."),
+                        { ValueKind: JsonValueKind.Array } rows when rows.EnumerateArray().All(r => r.ValueKind == JsonValueKind.Array) => data.WithRows(slot.Name, Rows(rows)),
+                        { ValueKind: JsonValueKind.Object } image when image.TryGetProperty("base64", out _) || image.TryGetProperty("$data", out _) => data.WithImage(slot.Name, Image(image)),
+                        _ => data,
                     };
                 }
                 catch (JsonException ex)
@@ -61,7 +65,7 @@ internal static class DataJson
                 }
             }
 
-            return problems.Count == 0 ? data : throw new PdfDocumentException([.. problems]);
+            return problems.Count == 0 ? data.WithModel(json.RootElement) : throw new PdfDocumentException([.. problems]);
         }
     }
 

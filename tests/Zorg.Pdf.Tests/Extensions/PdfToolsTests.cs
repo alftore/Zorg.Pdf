@@ -82,11 +82,11 @@ public sealed class PdfToolsTests
         JsonElement result = await Call("render_document", new()
         {
             ["document"] = Json("""{ "title": "x", "content": [{ "type": "table", "columns": [{ "header": "A" }], "rows": { "$data": "lines" } }] }"""),
-            ["data"] = Json("""{ "lines": "not rows" }"""),
+            ["data"] = Json("""{ "lines": [["a", { "inlines": ["b"], "colour": "red" }]] }"""),
         });
 
         Assert.False(result.GetProperty("rendered").GetBoolean());
-        Assert.Equal(["ZPDF-J003 data:/lines"], result.GetProperty("diagnostics").EnumerateArray().Select(d => $"{d.GetProperty("code").GetString()} {d.GetProperty("path").GetString()}"));
+        Assert.Equal(["ZPDF-J002 data:/lines/0/1"], result.GetProperty("diagnostics").EnumerateArray().Select(d => $"{d.GetProperty("code").GetString()} {d.GetProperty("path").GetString()}"));
 
         JsonElement missing = await Call("render_document", new() { ["document"] = Json("""{ "title": "x", "content": [{ "type": "table", "columns": [{ "header": "A" }], "rows": { "$data": "lines" } }] }""") });
         Assert.Contains("ZPDF-D001", missing.GetProperty("diagnostics").EnumerateArray().Select(d => d.GetProperty("code").GetString()));

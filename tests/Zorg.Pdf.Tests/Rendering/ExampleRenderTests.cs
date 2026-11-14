@@ -44,7 +44,7 @@ public sealed class ExampleRenderTests
         PdfDocumentException error = Assert.Throws<PdfDocumentException>(
             () => PdfData.ParseJson("""{ "lines": [["a", { "inlines": ["b"], "colour": "red" }]], "logo": { "$data": "x" }, "n": 3 }"""));
 
-        Assert.Equal(["ZPDF-J002 /lines/0/1", "ZPDF-J003 /logo", "ZPDF-J003 /n"], error.Diagnostics.Select(d => $"{d.Code} {d.Path}"));
+        Assert.Equal(["ZPDF-J002 /lines/0/1", "ZPDF-J003 /logo"], error.Diagnostics.Select(d => $"{d.Code} {d.Path}"));
     }
 
     [Fact]

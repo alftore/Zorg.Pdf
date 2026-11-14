@@ -135,7 +135,7 @@ internal sealed partial class DocumentValidator
         for (int i = 0; i < band.Content.Length; i++)
         {
             Block block = band.Content[i];
-            if (block is not (Paragraph or Zorg.Pdf.Image or Spacer))
+            if (block is not (Paragraph or Zorg.Pdf.Image or Spacer or Repeat or Conditional))
             {
                 Error(DiagnosticCodes.BandContent, "Headers and footers hold paragraphs, images and spacers only.", $"{path}/content/{i}");
                 continue;
@@ -193,6 +193,38 @@ internal sealed partial class DocumentValidator
             case List list:
                 List(list, path, 1);
                 break;
+
+            case Repeat repeat:
+                if (string.IsNullOrWhiteSpace(repeat.Items))
+                {
+                    Error(DiagnosticCodes.BadTemplate, "A repeat needs \"items\": the path of an array in the model.", $"{path}/items");
+                }
+
+                TemplateContent(repeat.Content, path, "A repeat");
+                break;
+
+            case Conditional conditional:
+                if (string.IsNullOrWhiteSpace(conditional.Test))
+                {
+                    Error(DiagnosticCodes.BadTemplate, "A when needs \"test\": the path of a value in the model.", $"{path}/test");
+                }
+
+                TemplateContent(conditional.Content, path, "A when");
+                break;
+        }
+    }
+
+    private void TemplateContent(System.Collections.Immutable.ImmutableArray<Block> content, string path, string what)
+    {
+        if (content.IsDefaultOrEmpty)
+        {
+            Error(DiagnosticCodes.BadTemplate, $"{what} needs \"content\": the blocks it shows.", $"{path}/content");
+            return;
+        }
+
+        for (int b = 0; b < content.Length; b++)
+        {
+            Block(content[b], $"{path}/content/{b}");
         }
     }
 
@@ -244,6 +276,9 @@ internal sealed partial class DocumentValidator
                         }
 
                         List(nested, blockPath, depth + 1);
+                        break;
+                    case Repeat or Conditional:
+                        Block(item.Content[b], blockPath); // Checked as template parts; what they hold is checked once bound.
                         break;
                     default:
                         Error(DiagnosticCodes.ListContent, "A list item holds paragraphs and nested lists only. Put headings, tables and images between lists.", blockPath);
@@ -380,6 +415,18 @@ internal sealed partial class DocumentValidator
                     break;
                 case TextRun { Style: { } style }:
                     Style(style, $"{path}/{i}/style");
+                    break;
+                case Bind bind:
+                    if (string.IsNullOrWhiteSpace(bind.Path))
+                    {
+                        Error(DiagnosticCodes.BadTemplate, "A binding needs a path, such as \"customer.name\".", $"{path}/{i}/bind");
+                    }
+
+                    if (bind.Style is { } bound)
+                    {
+                        Style(bound, $"{path}/{i}/style");
+                    }
+
                     break;
             }
         }

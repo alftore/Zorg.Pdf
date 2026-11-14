@@ -92,6 +92,12 @@ internal sealed partial class RenderEngine : IDisposable
             // Under PDF/UA a skipped heading level fails conformance, so it stops the render.
             sink.AddRange([diagnostic.Code == DiagnosticCodes.HeadingSkipsLevel && options.Conformance == PdfConformance.PdfUA1 ? diagnostic with { Severity = DiagnosticSeverity.Error } : diagnostic]);
         }
+        if (!sink.HasErrors && TemplateBinder.IsTemplate(document))
+        {
+            // A template: bound to the model first, so everything after sees a plain document.
+            document = TemplateBinder.Bind(document, options.Data.Model, sink);
+        }
+
         var styles = new StyleResolver(document.Styles);
         string? defaultFamily = styles.DefaultFontFamily ?? options.Fonts.DefaultFamily;
         if (options.Fonts.Families.IsEmpty && options.FontResolver is null)

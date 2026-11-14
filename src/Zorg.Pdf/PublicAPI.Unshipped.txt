@@ -1,4 +1,21 @@
 #nullable enable
+Zorg.Pdf.Bind
+override Zorg.Pdf.Bind.<Clone>$() -> Zorg.Pdf.Bind!
+Zorg.Pdf.Bind.Bind(string! Path) -> void
+Zorg.Pdf.Bind.Deconstruct(out string! Path) -> void
+Zorg.Pdf.Bind.Equals(Zorg.Pdf.Bind? other) -> bool
+override sealed Zorg.Pdf.Bind.Equals(Zorg.Pdf.Inline? other) -> bool
+override Zorg.Pdf.Bind.Equals(object? obj) -> bool
+Zorg.Pdf.Bind.Format.get -> string?
+Zorg.Pdf.Bind.Format.init -> void
+override Zorg.Pdf.Bind.GetHashCode() -> int
+Zorg.Pdf.Bind.Path.get -> string!
+Zorg.Pdf.Bind.Path.init -> void
+Zorg.Pdf.Bind.Style.get -> Zorg.Pdf.TextStyle?
+Zorg.Pdf.Bind.Style.init -> void
+override Zorg.Pdf.Bind.ToString() -> string!
+static Zorg.Pdf.Bind.operator !=(Zorg.Pdf.Bind? left, Zorg.Pdf.Bind? right) -> bool
+static Zorg.Pdf.Bind.operator ==(Zorg.Pdf.Bind? left, Zorg.Pdf.Bind? right) -> bool
 Zorg.Pdf.Block
 abstract Zorg.Pdf.Block.<Clone>$() -> Zorg.Pdf.Block!
 Zorg.Pdf.Block.Block() -> void
@@ -106,6 +123,22 @@ static Zorg.Pdf.ColumnWidth.Star(double share = 1) -> Zorg.Pdf.ColumnWidth
 Zorg.Pdf.ColumnWidth.Value.get -> double
 static Zorg.Pdf.ColumnWidth.operator !=(Zorg.Pdf.ColumnWidth left, Zorg.Pdf.ColumnWidth right) -> bool
 static Zorg.Pdf.ColumnWidth.operator ==(Zorg.Pdf.ColumnWidth left, Zorg.Pdf.ColumnWidth right) -> bool
+Zorg.Pdf.Conditional
+override Zorg.Pdf.Conditional.<Clone>$() -> Zorg.Pdf.Conditional!
+Zorg.Pdf.Conditional.Conditional(string! test, System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!> content) -> void
+Zorg.Pdf.Conditional.Content.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!>
+Zorg.Pdf.Conditional.Content.init -> void
+override sealed Zorg.Pdf.Conditional.Equals(Zorg.Pdf.Block? other) -> bool
+Zorg.Pdf.Conditional.Equals(Zorg.Pdf.Conditional? other) -> bool
+override Zorg.Pdf.Conditional.Equals(object? obj) -> bool
+override Zorg.Pdf.Conditional.GetHashCode() -> int
+Zorg.Pdf.Conditional.Not.get -> bool
+Zorg.Pdf.Conditional.Not.init -> void
+Zorg.Pdf.Conditional.Test.get -> string!
+Zorg.Pdf.Conditional.Test.init -> void
+override Zorg.Pdf.Conditional.ToString() -> string!
+static Zorg.Pdf.Conditional.operator !=(Zorg.Pdf.Conditional? left, Zorg.Pdf.Conditional? right) -> bool
+static Zorg.Pdf.Conditional.operator ==(Zorg.Pdf.Conditional? left, Zorg.Pdf.Conditional? right) -> bool
 Zorg.Pdf.DiagnosticSeverity
 Zorg.Pdf.DiagnosticSeverity.Error = 2 -> Zorg.Pdf.DiagnosticSeverity
 Zorg.Pdf.DiagnosticSeverity.Info = 0 -> Zorg.Pdf.DiagnosticSeverity
@@ -438,6 +471,7 @@ static Zorg.Pdf.PdfData.Empty.get -> Zorg.Pdf.PdfData!
 static Zorg.Pdf.PdfData.ParseJson(string! json) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithImage(string! slot, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.ReadOnlyMemory<byte>>>! load) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithImage(string! slot, System.ReadOnlyMemory<byte> bytes) -> Zorg.Pdf.PdfData!
+Zorg.Pdf.PdfData.WithModel(System.Text.Json.JsonElement model) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithRows(string! slot, System.Collections.Generic.IAsyncEnumerable<System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! rows) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithRows(string! slot, System.Collections.Generic.IEnumerable<System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! rows) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithRows<T>(string! slot, System.Collections.Generic.IAsyncEnumerable<T>! items, System.Func<T, System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! cells) -> Zorg.Pdf.PdfData!
@@ -586,6 +620,20 @@ Zorg.Pdf.RenderResult.BytesWritten.get -> long
 Zorg.Pdf.RenderResult.Diagnostics.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.PdfDiagnostic!>
 Zorg.Pdf.RenderResult.HasWarnings.get -> bool
 Zorg.Pdf.RenderResult.PageCount.get -> int
+Zorg.Pdf.Repeat
+override Zorg.Pdf.Repeat.<Clone>$() -> Zorg.Pdf.Repeat!
+Zorg.Pdf.Repeat.Content.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!>
+Zorg.Pdf.Repeat.Content.init -> void
+override sealed Zorg.Pdf.Repeat.Equals(Zorg.Pdf.Block? other) -> bool
+Zorg.Pdf.Repeat.Equals(Zorg.Pdf.Repeat? other) -> bool
+override Zorg.Pdf.Repeat.Equals(object? obj) -> bool
+override Zorg.Pdf.Repeat.GetHashCode() -> int
+Zorg.Pdf.Repeat.Items.get -> string!
+Zorg.Pdf.Repeat.Items.init -> void
+Zorg.Pdf.Repeat.Repeat(string! items, System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!> content) -> void
+override Zorg.Pdf.Repeat.ToString() -> string!
+static Zorg.Pdf.Repeat.operator !=(Zorg.Pdf.Repeat? left, Zorg.Pdf.Repeat? right) -> bool
+static Zorg.Pdf.Repeat.operator ==(Zorg.Pdf.Repeat? left, Zorg.Pdf.Repeat? right) -> bool
 Zorg.Pdf.SlotImageSource
 override Zorg.Pdf.SlotImageSource.<Clone>$() -> Zorg.Pdf.SlotImageSource!
 Zorg.Pdf.SlotImageSource.Deconstruct(out string! Slot) -> void

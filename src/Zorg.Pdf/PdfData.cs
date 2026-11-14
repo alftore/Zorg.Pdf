@@ -27,7 +27,7 @@ namespace Zorg.Pdf;
 /// </example>
 public sealed class PdfData
 {
-    private PdfData(ImmutableDictionary<string, RowSource> rows, ImmutableDictionary<string, ImageSlot> images) => (Rows, Images) = (rows, images);
+    private PdfData(ImmutableDictionary<string, RowSource> rows, ImmutableDictionary<string, ImageSlot> images, System.Text.Json.JsonElement? model = null) => (Rows, Images, Model) = (rows, images, model);
 
     /// <summary>No data.</summary>
     public static PdfData Empty { get; } = new(
@@ -38,9 +38,35 @@ public sealed class PdfData
 
     internal ImmutableDictionary<string, ImageSlot> Images { get; }
 
+    /// <summary>The model that <see cref="Bind"/>, <see cref="Repeat"/> and <see cref="Conditional"/> read; null when there is none.</summary>
+    internal System.Text.Json.JsonElement? Model { get; }
+
     /// <summary>
-    /// Reads data from JSON: an object whose properties are slots. An array is a table's rows, each an array of cells
-    /// written as in a document; an object with <c>"base64"</c> is an image.
+    /// The values a template's <see cref="Bind"/> inlines, <see cref="Repeat"/> and <see cref="Conditional"/> blocks
+    /// read: a JSON object. Large tables still stream through <see cref="WithRows(string, IAsyncEnumerable{IReadOnlyList{Cell}})"/>.
+    /// </summary>
+    /// <param name="model">A JSON object. It's cloned, so the caller's document can be disposed.</param>
+    /// <returns>The data with the model set; this instance is unchanged.</returns>
+    /// <example>
+    /// <code>
+    /// using JsonDocument json = JsonDocument.Parse("""{ "customer": { "name": "Blåbær AB" }, "overdue": true }""");
+    /// var data = PdfData.Empty.WithModel(json.RootElement);
+    /// </code>
+    /// </example>
+    public PdfData WithModel(System.Text.Json.JsonElement model)
+    {
+        if (model.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            throw new ArgumentException("The model is a JSON object.", nameof(model));
+        }
+
+        return new PdfData(Rows, Images, model.Clone());
+    }
+
+    /// <summary>
+    /// Reads data from JSON: an object whose properties are slots. An array of arrays is a table's rows, each an array
+    /// of cells written as in a document; an object with <c>"base64"</c> is an image. The whole object is also the
+    /// model that a template's bindings read (<see cref="WithModel(System.Text.Json.JsonElement)"/>).
     /// </summary>
     /// <param name="json">The JSON text.</param>
     /// <returns>The data.</returns>
@@ -70,7 +96,7 @@ public sealed class PdfData
     public PdfData WithImage(string slot, ReadOnlyMemory<byte> bytes)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(slot);
-        return new PdfData(Rows, Images.SetItem(slot, new ImageSlot(bytes, null)));
+        return new PdfData(Rows, Images.SetItem(slot, new ImageSlot(bytes, null)), Model);
     }
 
     /// <summary>A JPEG or PNG for a slot, loaded when the render starts, such as from blob storage.</summary>
@@ -86,7 +112,7 @@ public sealed class PdfData
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(slot);
         ArgumentNullException.ThrowIfNull(load);
-        return new PdfData(Rows, Images.SetItem(slot, new ImageSlot(null, load)));
+        return new PdfData(Rows, Images.SetItem(slot, new ImageSlot(null, load)), Model);
     }
 
     /// <summary>Rows for a slot, each a list of cells (strings convert to cells).</summary>
@@ -97,7 +123,7 @@ public sealed class PdfData
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(slot);
         ArgumentNullException.ThrowIfNull(rows);
-        return new PdfData(Rows.SetItem(slot, new RowSource(new SyncRows(rows), IsAsync: false)), Images);
+        return new PdfData(Rows.SetItem(slot, new RowSource(new SyncRows(rows), IsAsync: false)), Images, Model);
     }
 
     /// <summary>Rows for a slot from an asynchronous source, such as a database query.</summary>
@@ -108,7 +134,7 @@ public sealed class PdfData
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(slot);
         ArgumentNullException.ThrowIfNull(rows);
-        return new PdfData(Rows.SetItem(slot, new RowSource(rows, IsAsync: true)), Images);
+        return new PdfData(Rows.SetItem(slot, new RowSource(rows, IsAsync: true)), Images, Model);
     }
 
     /// <summary>Rows for a slot from items, with a function that makes each item's cells.</summary>

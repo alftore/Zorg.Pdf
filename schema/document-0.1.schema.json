@@ -89,7 +89,7 @@
       }
     },
     "inline": {
-      "description": "A piece of text: a plain string, a styled run, a line break, or a page number field.",
+      "description": "A piece of text: a plain string, a styled run, a value bound from the model, a line break, or a page number field.",
       "oneOf": [
         { "type": "string" },
         {
@@ -97,6 +97,16 @@
           "required": ["text"],
           "additionalProperties": false,
           "properties": { "text": { "type": "string" }, "style": { "$ref": "#/$defs/textStyle" } }
+        },
+        {
+          "type": "object",
+          "required": ["bind"],
+          "additionalProperties": false,
+          "properties": {
+            "bind": { "description": "A value from the model: a path such as customer.name or lines.0.amount; inside a repeat, @index and @number give the position.", "type": "string", "minLength": 1 },
+            "format": { "description": "A .NET format string for numbers and dates, such as N2 or yyyy-MM-dd, in the document's language.", "type": "string" },
+            "style": { "$ref": "#/$defs/textStyle" }
+          }
         },
         {
           "type": "object",
@@ -129,7 +139,7 @@
       "description": "Something that flows down the page. The \"type\" property says which.",
       "type": "object",
       "required": ["type"],
-      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak"] } },
+      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when"] } },
       "oneOf": [
         { "$ref": "#/$defs/heading" },
         { "$ref": "#/$defs/paragraph" },
@@ -137,7 +147,9 @@
         { "$ref": "#/$defs/table" },
         { "$ref": "#/$defs/image" },
         { "$ref": "#/$defs/spacer" },
-        { "$ref": "#/$defs/pageBreak" }
+        { "$ref": "#/$defs/pageBreak" },
+        { "$ref": "#/$defs/repeat" },
+        { "$ref": "#/$defs/when" }
       ]
     },
     "heading": {
@@ -182,6 +194,33 @@
         "layer": { "enum": ["over", "behind"], "default": "over" }
       },
       "oneOf": [{ "required": ["text"] }, { "required": ["image"] }]
+    },
+    "repeat": {
+      "description": "Content repeated for each item of an array in the model. Inside it, bindings look in the item first.",
+      "type": "object",
+      "required": ["type", "items", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "repeat" },
+        "style": { "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "items": { "description": "The path of an array in the model.", "type": "string", "minLength": 1 },
+        "content": { "type": "array", "items": { "$ref": "#/$defs/block" } }
+      }
+    },
+    "when": {
+      "description": "Content shown only when a model value is set (not missing, null, false, 0, empty text or an empty array), or with not: true only when it isn't.",
+      "type": "object",
+      "required": ["type", "test", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "when" },
+        "style": { "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "test": { "description": "The path of a value in the model.", "type": "string", "minLength": 1 },
+        "not": { "type": "boolean", "default": false },
+        "content": { "type": "array", "items": { "$ref": "#/$defs/block" } }
+      }
     },
     "list": {
       "description": "A bulleted or numbered list, tagged for screen readers. Items hold paragraphs and nested lists.",

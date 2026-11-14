@@ -1,0 +1,36 @@
+{
+ "date": "2026-11-14",
+ "currency": "NOK",
+ "total": 31250.0,
+ "interest": 187.5,
+ "company": {
+  "name": "Zorg Consulting AS",
+  "address": "Storgata 1, 0155 Oslo",
+  "account": "1234.56.78903",
+  "signatory": "Kari Nordmann"
+ },
+ "customer": {
+  "name": "Blåbær & Syltetøy AB",
+  "street": "Kungsgatan 12",
+  "city": "111 43 Stockholm",
+  "contact": "Sven Svensson"
+ },
+ "invoices": [
+  [
+   "2026-0031",
+   "2026-09-01",
+   "2026-10-01",
+   "12 500.00"
+  ],
+  [
+   "2026-0038",
+   "2026-09-15",
+   "2026-10-15",
+   "18 750.00"
+  ]
+ ],
+ "notes": [
+  "Invoice 2026-0031 was sent again on 20 October.",
+  "Questions about the hours: ask Kari Nordmann."
+ ]
+}

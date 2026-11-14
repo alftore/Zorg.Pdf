@@ -301,9 +301,10 @@ internal sealed class InlineJsonConverter : JsonConverter<Inline>
 
         if (reader.TokenType != JsonTokenType.StartObject)
         {
-            throw PdfJsonException.Invalid("Expected an inline: a string, { \"text\": ... }, { \"field\": \"pageNumber\" } or { \"lineBreak\": true }.");
+            throw PdfJsonException.Invalid("Expected an inline: a string, { \"text\": ... }, { \"bind\": \"path\" }, { \"field\": \"pageNumber\" } or { \"lineBreak\": true }.");
         }
 
+        string? bind = null, format = null;
         string? text = null;
         TextStyle? style = null;
         FieldKind? field = null;
@@ -326,23 +327,35 @@ internal sealed class InlineJsonConverter : JsonConverter<Inline>
                 case "lineBreak":
                     lineBreak = reader.TokenType == JsonTokenType.True ? true : throw PdfJsonException.Invalid("\"lineBreak\" must be true.");
                     break;
+                case "bind":
+                    bind = reader.TokenType == JsonTokenType.String ? reader.GetString() : throw PdfJsonException.Invalid("\"bind\" must be a path, such as \"customer.name\".");
+                    break;
+                case "format":
+                    format = reader.TokenType == JsonTokenType.String ? reader.GetString() : throw PdfJsonException.Invalid("\"format\" must be a format string, such as \"N2\".");
+                    break;
                 default:
-                    throw PdfJsonException.UnknownProperty(name, "text, style, field or lineBreak");
+                    throw PdfJsonException.UnknownProperty(name, "text, bind, format, style, field or lineBreak");
             }
         }
 
-        int kinds = (text is not null ? 1 : 0) + (field is not null ? 1 : 0) + (lineBreak ? 1 : 0);
+        int kinds = (text is not null ? 1 : 0) + (bind is not null ? 1 : 0) + (field is not null ? 1 : 0) + (lineBreak ? 1 : 0);
         if (kinds != 1)
         {
-            throw PdfJsonException.Invalid("An inline object needs exactly one of \"text\", \"field\" or \"lineBreak\".");
+            throw PdfJsonException.Invalid("An inline object needs exactly one of \"text\", \"bind\", \"field\" or \"lineBreak\".");
         }
 
-        if (style is not null && text is null)
+        if (style is not null && text is null && bind is null)
         {
-            throw PdfJsonException.Invalid("Only text inlines take a \"style\".");
+            throw PdfJsonException.Invalid("Only text and bind inlines take a \"style\".");
+        }
+
+        if (format is not null && bind is null)
+        {
+            throw PdfJsonException.Invalid("Only bind inlines take a \"format\".");
         }
 
         return text is not null ? new TextRun(text) { Style = style }
+            : bind is not null ? new Bind(bind) { Format = format, Style = style }
             : field is { } kind ? new Field(kind)
             : LineBreak.Value;
     }
@@ -359,6 +372,22 @@ internal sealed class InlineJsonConverter : JsonConverter<Inline>
                 writer.WriteString("text", run.Text);
                 writer.WritePropertyName("style");
                 JsonSerializer.Serialize(writer, run.Style, (JsonTypeInfo<TextStyle>)options.GetTypeInfo(typeof(TextStyle)));
+                writer.WriteEndObject();
+                break;
+            case Bind bind:
+                writer.WriteStartObject();
+                writer.WriteString("bind", bind.Path);
+                if (bind.Format is { } format)
+                {
+                    writer.WriteString("format", format);
+                }
+
+                if (bind.Style is { } style)
+                {
+                    writer.WritePropertyName("style");
+                    JsonSerializer.Serialize(writer, style, (JsonTypeInfo<TextStyle>)options.GetTypeInfo(typeof(TextStyle)));
+                }
+
                 writer.WriteEndObject();
                 break;
             case Field field:

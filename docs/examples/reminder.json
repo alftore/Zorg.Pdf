@@ -1,0 +1,216 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Payment reminder",
+  "language": "en-GB",
+  "footer": {
+    "content": [
+      {
+        "type": "paragraph",
+        "style": "footer",
+        "align": "center",
+        "inlines": [
+          {
+            "bind": "company.name"
+          },
+          " · ",
+          {
+            "bind": "company.address"
+          },
+          " · page ",
+          {
+            "field": "pageNumber"
+          },
+          " of ",
+          {
+            "field": "pageCount"
+          }
+        ]
+      }
+    ]
+  },
+  "content": [
+    {
+      "type": "paragraph",
+      "align": "right",
+      "inlines": [
+        {
+          "bind": "date",
+          "format": "d MMMM yyyy"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "bind": "customer.name"
+        },
+        {
+          "lineBreak": true
+        },
+        {
+          "bind": "customer.street"
+        },
+        {
+          "lineBreak": true
+        },
+        {
+          "bind": "customer.city"
+        }
+      ]
+    },
+    {
+      "type": "spacer",
+      "height": "1cm"
+    },
+    {
+      "type": "heading",
+      "inlines": [
+        "Payment reminder"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "Dear ",
+        {
+          "bind": "customer.contact"
+        },
+        ","
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "justify",
+      "inlines": [
+        "Our records show that the invoices below are still unpaid. The total due is ",
+        {
+          "bind": "total",
+          "format": "N2",
+          "style": {
+            "weight": "bold"
+          }
+        },
+        " ",
+        {
+          "bind": "currency"
+        },
+        "."
+      ]
+    },
+    {
+      "type": "table",
+      "columns": [
+        {
+          "header": "Invoice",
+          "width": "*"
+        },
+        {
+          "header": "Date",
+          "width": "*"
+        },
+        {
+          "header": "Due",
+          "width": "*"
+        },
+        {
+          "header": "Amount",
+          "width": "*",
+          "align": "right"
+        }
+      ],
+      "rows": {
+        "$data": "invoices"
+      }
+    },
+    {
+      "type": "when",
+      "test": "interest",
+      "content": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            "Interest of ",
+            {
+              "bind": "interest",
+              "format": "N2"
+            },
+            " ",
+            {
+              "bind": "currency"
+            },
+            " has been added under the late payment terms."
+          ]
+        }
+      ]
+    },
+    {
+      "type": "when",
+      "test": "notes",
+      "content": [
+        {
+          "type": "heading",
+          "level": 2,
+          "inlines": [
+            "Notes"
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "content": [
+                {
+                  "type": "repeat",
+                  "items": "notes",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "inlines": [
+                        {
+                          "bind": "this"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "If you have already paid, please disregard this letter. Otherwise, pay to account ",
+        {
+          "bind": "company.account"
+        },
+        " within 14 days."
+      ]
+    },
+    {
+      "type": "spacer",
+      "height": "0.5cm"
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "Kind regards,",
+        {
+          "lineBreak": true
+        },
+        {
+          "bind": "company.signatory"
+        },
+        {
+          "lineBreak": true
+        },
+        {
+          "bind": "company.name"
+        }
+      ]
+    }
+  ]
+}

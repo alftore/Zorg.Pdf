@@ -27,6 +27,9 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-J020 | Error | A list has no items, an item has no content, or `start` is negative. | Give every list items and every item text; number from 0 or more. |
 | ZPDF-J021 | Error | A list item holds something other than paragraphs and lists, or lists nest more than six deep. | Put headings, tables and images between lists; flatten deep nesting. |
 | ZPDF-J022 | Error | A watermark has neither text nor an image, or both; or its opacity isn't between 0 and 1, or its angle isn't a number. | Set `text` or `image`, and an opacity from 0 to 1. |
+| ZPDF-J023 | Error | A template part is incomplete: a `bind` without a path, a `repeat` without `items` or content, or a `when` without a `test` or content. | Give every binding a path such as `customer.name`, and every repeat and when their content. |
+| ZPDF-B001 | Warning | A binding found no value in the model (or the render has no model), or the value can't be shown as text, or its `format` doesn't fit it. The text is left empty or unformatted. | Add the value to the model, fix the path, or bind a value inside the object. |
+| ZPDF-B002 | Warning | A `repeat` names something in the model that isn't an array, so its content is left out. | Point `items` at an array. |
 | ZPDF-D001 | Error | A table or image names a data slot (`{"$data": ...}`) that the render has no rows or image for. | Supply them: `RenderOptions.Data = PdfData.Empty.WithRows("slot", rows)` or `.WithImage("slot", bytes)`. |
 | ZPDF-A001 | Error | The document has no title. Viewers show it in place of the file name; PDF/UA requires one. | Set `title`. |
 | ZPDF-A002 | Error | The language isn't a BCP 47 tag. Screen readers pick their voice from it. | Use a tag such as `en`, `nb-NO` or `de-CH`. |

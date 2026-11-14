@@ -30,6 +30,11 @@ internal static class DiagnosticCodes
     public const string ListShape = "ZPDF-J020";
     public const string ListContent = "ZPDF-J021";
     public const string BadWatermark = "ZPDF-J022";
+    public const string BadTemplate = "ZPDF-J023";
+
+    // B: binding a template to its model.
+    public const string BindingMissing = "ZPDF-B001";
+    public const string RepeatNotArray = "ZPDF-B002";
 
     // D: data slots.
     public const string MissingSlot = "ZPDF-D001";

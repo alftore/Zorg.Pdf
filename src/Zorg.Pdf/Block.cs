@@ -13,6 +13,8 @@ namespace Zorg.Pdf;
 [JsonDerivedType(typeof(Heading), "heading")]
 [JsonDerivedType(typeof(Paragraph), "paragraph")]
 [JsonDerivedType(typeof(List), "list")]
+[JsonDerivedType(typeof(Repeat), "repeat")]
+[JsonDerivedType(typeof(Conditional), "when")]
 [JsonDerivedType(typeof(Table), "table")]
 [JsonDerivedType(typeof(Image), "image")]
 [JsonDerivedType(typeof(Spacer), "spacer")]
