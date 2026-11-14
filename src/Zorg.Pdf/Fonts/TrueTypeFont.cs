@@ -117,8 +117,18 @@ internal sealed partial class TrueTypeFont
     /// <summary>The number of characters the font maps to a glyph.</summary>
     public int MappedCharacterCount => _cmap.Count;
 
-    public static TrueTypeFont Parse(ReadOnlyMemory<byte> file)
+    /// <summary>Parses a TrueType font, or one face of a TrueType collection (<c>.ttc</c>), copied out as a font of its own.</summary>
+    public static TrueTypeFont Parse(ReadOnlyMemory<byte> file, int face = 0)
     {
+        if (file.Length >= 12 && System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(file.Span) == 0x74746366)
+        {
+            file = ExtractFace(file.Span, face);
+        }
+        else if (face != 0)
+        {
+            throw new PdfException($"Face {face} was asked for, but the font isn't a collection (.ttc): it has one face, number 0.");
+        }
+
         var data = new FontData(file.Span, "table directory");
         if (data.Length < 12)
         {
@@ -133,8 +143,6 @@ internal sealed partial class TrueTypeFont
                 break;
             case 0x4F54544F: // 'OTTO'
                 throw new PdfException("The font has CFF (PostScript) outlines. Only TrueType outlines are supported so far; use a .ttf font.");
-            case 0x74746366: // 'ttcf'
-                throw new PdfException("The file is a font collection (.ttc). Collections aren't supported yet; use a single .ttf font.");
             default:
                 throw data.Damaged($"the signature 0x{version:X8} isn't a TrueType font");
         }
@@ -172,6 +180,84 @@ internal sealed partial class TrueTypeFont
         }
 
         return new TrueTypeFont(file, tables);
+    }
+
+    /// <summary>The number of faces: the collection's count for a <c>.ttc</c>, otherwise 1.</summary>
+    public static int FaceCount(ReadOnlySpan<byte> file) =>
+        file.Length >= 12 && System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(file) == 0x74746366
+            ? (int)Math.Min(System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(file[8..]), 4096)
+            : 1;
+
+    /// <summary>
+    /// One face of a collection as a standalone font: its table directory with the tables copied after it, 4-byte
+    /// aligned. Collections share tables between faces, with offsets from the start of the collection file.
+    /// </summary>
+    private static byte[] ExtractFace(ReadOnlySpan<byte> collection, int face)
+    {
+        var header = new FontData(collection, "collection header");
+        int faces = (int)Math.Min(header.U32(8), 4096);
+        if (face < 0 || face >= faces)
+        {
+            throw new PdfException($"The collection has {faces} faces, numbered from 0; face {face} doesn't exist.");
+        }
+
+        long start = header.U32(12 + (face * 4));
+        if (start + 12 > collection.Length)
+        {
+            throw header.Damaged($"face {face} starts past the end of the file");
+        }
+
+        var directory = new FontData(collection[(int)start..], "table directory");
+        uint version = directory.U32(0);
+        if (version == 0x4F54544F)
+        {
+            throw new PdfException($"Face {face} of the collection has CFF (PostScript) outlines. Only TrueType outlines are supported so far.");
+        }
+
+        int count = directory.U16(4);
+        if (count is 0 or > 512 || 12 + (count * 16) > directory.Length)
+        {
+            throw directory.Damaged($"face {face} lists {count} tables");
+        }
+
+        var tables = new List<(uint Tag, uint Checksum, uint Offset, uint Length)>(count);
+        long size = 12 + (count * 16);
+        for (int i = 0; i < count; i++)
+        {
+            int at = 12 + (i * 16);
+            (uint tag, uint checksum, uint offset, uint length) = (directory.U32(at), directory.U32(at + 4), directory.U32(at + 8), directory.U32(at + 12));
+            if ((ulong)offset + length > (ulong)collection.Length)
+            {
+                throw directory.Damaged($"table '{TagName(tag)}' runs past the end of the file");
+            }
+
+            tables.Add((tag, checksum, offset, length));
+            size += (length + 3) & ~3u;
+        }
+
+        if (size > int.MaxValue)
+        {
+            throw directory.Damaged("the face is too large");
+        }
+
+        byte[] font = new byte[size];
+        Span<byte> output = font;
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(output, version);
+        collection.Slice((int)start + 4, 8).CopyTo(output[4..]); // numTables, searchRange, entrySelector, rangeShift.
+        int next = 12 + (count * 16);
+        for (int i = 0; i < count; i++)
+        {
+            (uint tag, uint checksum, uint offset, uint length) = tables[i];
+            Span<byte> entry = output.Slice(12 + (i * 16), 16);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(entry, tag);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(entry[4..], checksum);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(entry[8..], (uint)next);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(entry[12..], length);
+            collection.Slice((int)offset, (int)length).CopyTo(output[next..]);
+            next += (int)((length + 3) & ~3u);
+        }
+
+        return font;
     }
 
     /// <summary>The glyph for a code point, or 0 (.notdef) when the font has none.</summary>

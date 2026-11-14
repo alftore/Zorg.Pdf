@@ -227,7 +227,9 @@ override Zorg.Pdf.Fonts.FontSource.Equals(object? obj) -> bool
 Zorg.Pdf.Fonts.FontSource.FontSource() -> void
 Zorg.Pdf.Fonts.FontSource.FontSource(Zorg.Pdf.Fonts.FontSource! original) -> void
 static Zorg.Pdf.Fonts.FontSource.FromBytes(System.ReadOnlyMemory<byte> bytes) -> Zorg.Pdf.Fonts.FontSource!
+static Zorg.Pdf.Fonts.FontSource.FromBytes(System.ReadOnlyMemory<byte> bytes, int face) -> Zorg.Pdf.Fonts.FontSource!
 static Zorg.Pdf.Fonts.FontSource.FromFile(string! path) -> Zorg.Pdf.Fonts.FontSource!
+static Zorg.Pdf.Fonts.FontSource.FromFile(string! path, int face) -> Zorg.Pdf.Fonts.FontSource!
 override Zorg.Pdf.Fonts.FontSource.GetHashCode() -> int
 virtual Zorg.Pdf.Fonts.FontSource.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override Zorg.Pdf.Fonts.FontSource.ToString() -> string!

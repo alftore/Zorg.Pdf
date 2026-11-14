@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -28,19 +29,20 @@ internal static class FontCache
     internal static int Count => ByContent.Count;
 
     /// <summary>The key a file is cached under: full path, last write time and length, so a changed file is read again.</summary>
-    public static (string Path, DateTime Written, long Length) FileKey(string path)
+    public static (string Path, DateTime Written, long Length) FileKey(string path, int face = 0)
     {
         var info = new FileInfo(path);
-        return (Path.GetFullPath(path), info.LastWriteTimeUtc, info.Exists ? info.Length : -1);
+        string full = Path.GetFullPath(path);
+        return (face == 0 ? full : $"{full}#{face}", info.LastWriteTimeUtc, info.Exists ? info.Length : -1);
     }
 
     /// <summary>The parsed font for an unchanged file, without reading it.</summary>
     public static bool TryGetFile((string Path, DateTime Written, long Length) key, out TrueTypeFont font) => ByFile.TryGetValue(key, out font!);
 
     /// <summary>Parses a file's bytes (or finds them by content) and remembers the result under the file's key.</summary>
-    public static TrueTypeFont AddFile((string Path, DateTime Written, long Length) key, ReadOnlyMemory<byte> bytes)
+    public static TrueTypeFont AddFile((string Path, DateTime Written, long Length) key, ReadOnlyMemory<byte> bytes, int face = 0)
     {
-        TrueTypeFont font = ByHash(bytes);
+        TrueTypeFont font = ByHash(bytes, face);
         if (ByFile.Count >= Capacity)
         {
             ByFile.Clear();
@@ -50,32 +52,40 @@ internal static class FontCache
     }
 
     /// <summary>The parsed font for some bytes: by array identity when the bytes are a whole array, else by content.</summary>
-    public static TrueTypeFont GetOrParse(ReadOnlyMemory<byte> file)
+    public static TrueTypeFont GetOrParse(ReadOnlyMemory<byte> file, int face = 0)
     {
         if (MemoryMarshal.TryGetArray(file, out ArraySegment<byte> segment) && segment.Array is { } array && segment.Offset == 0 && segment.Count == array.Length)
         {
-            if (ByArray.TryGetValue(array, out ArrayEntry? entry))
+            ArrayEntry entry = ByArray.GetValue(array, _ => new ArrayEntry());
+            lock (entry.Faces)
             {
-                return entry.Font;
+                if (entry.Faces.TryGetValue(face, out TrueTypeFont? known))
+                {
+                    return known;
+                }
             }
 
-            TrueTypeFont parsed = ByHash(file);
-            ByArray.AddOrUpdate(array, new ArrayEntry(parsed));
+            TrueTypeFont parsed = ByHash(file, face);
+            lock (entry.Faces)
+            {
+                entry.Faces[face] = parsed;
+            }
+
             return parsed;
         }
 
-        return ByHash(file);
+        return ByHash(file, face);
     }
 
-    private static TrueTypeFont ByHash(ReadOnlyMemory<byte> file)
+    private static TrueTypeFont ByHash(ReadOnlyMemory<byte> file, int face)
     {
-        string key = Convert.ToHexString(SHA256.HashData(file.Span));
+        string key = Convert.ToHexString(SHA256.HashData(file.Span)) + (face == 0 ? "" : $"#{face}");
         if (ByContent.TryGetValue(key, out TrueTypeFont? font))
         {
             return font;
         }
 
-        font = TrueTypeFont.Parse(file.ToArray()); // A copy: the caller's buffer may change after the render.
+        font = TrueTypeFont.Parse(file.ToArray(), face); // A copy: the caller's buffer may change after the render.
         if (ByContent.Count >= Capacity)
         {
             ByContent.Clear();
@@ -84,9 +94,9 @@ internal static class FontCache
         return ByContent.GetOrAdd(key, font);
     }
 
-    /// <summary>A parsed font kept alive as long as the array it came from.</summary>
-    private sealed class ArrayEntry(TrueTypeFont font)
+    /// <summary>Parsed faces kept alive as long as the array they came from.</summary>
+    private sealed class ArrayEntry
     {
-        public TrueTypeFont Font { get; } = font;
+        public Dictionary<int, TrueTypeFont> Faces { get; } = [];
     }
 }

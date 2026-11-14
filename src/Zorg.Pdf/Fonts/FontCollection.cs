@@ -64,18 +64,18 @@ public sealed class FontCollection
     public static FontCollection FromFiles(IEnumerable<string> paths)
     {
         ArgumentNullException.ThrowIfNull(paths);
-        var faces = new List<(string Family, bool Bold, bool Italic, int Weight, string Path)>();
+        var faces = new List<(string Family, bool Bold, bool Italic, int Weight, string Path, int Face)>();
         foreach (string path in paths)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(paths));
-            if (SystemFontResolver.Describe(path) is ({ } family, bool bold, bool italic, int weight))
+            foreach ((string family, bool bold, bool italic, int weight, int face) in SystemFontResolver.DescribeFaces(path))
             {
-                faces.Add((family, bold, italic, weight, Path.GetFullPath(path)));
+                faces.Add((family, bold, italic, weight, Path.GetFullPath(path), face));
             }
         }
 
         FontCollection collection = Empty;
-        foreach (IGrouping<string, (string Family, bool Bold, bool Italic, int Weight, string Path)> family in faces
+        foreach (IGrouping<string, (string Family, bool Bold, bool Italic, int Weight, string Path, int Face)> family in faces
             .GroupBy(f => f.Family, StringComparer.OrdinalIgnoreCase)
             .OrderBy(g => g.Key, StringComparer.Ordinal))
         {
@@ -83,7 +83,8 @@ public sealed class FontCollection
                 .Where(f => f.Bold == bold && f.Italic == italic)
                 .OrderBy(f => Math.Abs(f.Weight - (bold ? 700 : 400)))
                 .ThenBy(f => f.Path, StringComparer.Ordinal)
-                .Select(f => FontSource.FromFile(f.Path))
+                .ThenBy(f => f.Face)
+                .Select(f => FontSource.FromFile(f.Path, f.Face))
                 .FirstOrDefault();
 
             FontSource? regular = Pick(false, false);
@@ -116,7 +117,7 @@ public sealed class FontCollection
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(folder);
         return FromFiles(Directory.EnumerateFiles(folder, "*.*", SearchOption.AllDirectories)
-            .Where(f => f.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))
+            .Where(f => f.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
             .Order(StringComparer.Ordinal));
     }
 
@@ -193,15 +194,42 @@ public abstract record FontSource
     /// <summary>A font from its file's bytes (TrueType outlines, <c>.ttf</c>).</summary>
     /// <param name="bytes">The file.</param>
     /// <returns>The source.</returns>
-    public static FontSource FromBytes(ReadOnlyMemory<byte> bytes) => new BytesFontSource(bytes);
+    public static FontSource FromBytes(ReadOnlyMemory<byte> bytes) => new BytesFontSource(bytes, 0);
+
+    /// <summary>One face of a TrueType collection (<c>.ttc</c>) from its bytes.</summary>
+    /// <param name="bytes">The file.</param>
+    /// <param name="face">The face, from 0. A single font has only face 0.</param>
+    /// <returns>The source.</returns>
+    /// <example>
+    /// <code>
+    /// FontSource cambria = FontSource.FromBytes(File.ReadAllBytes("cambria.ttc"), face: 0);
+    /// </code>
+    /// </example>
+    public static FontSource FromBytes(ReadOnlyMemory<byte> bytes, int face)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(face);
+        return new BytesFontSource(bytes, face);
+    }
 
     /// <summary>A font file, read when a render that uses it starts.</summary>
     /// <param name="path">The file path.</param>
     /// <returns>The source.</returns>
-    public static FontSource FromFile(string path)
+    public static FontSource FromFile(string path) => FromFile(path, 0);
+
+    /// <summary>One face of a TrueType collection file (<c>.ttc</c>), read when a render that uses it starts.</summary>
+    /// <param name="path">The file path.</param>
+    /// <param name="face">The face, from 0. A single font has only face 0.</param>
+    /// <returns>The source.</returns>
+    /// <example>
+    /// <code>
+    /// FontSource yuGothic = FontSource.FromFile(@"C:\Windows\Fonts\YuGothR.ttc", face: 1);
+    /// </code>
+    /// </example>
+    public static FontSource FromFile(string path, int face)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return new FileFontSource(path);
+        ArgumentOutOfRangeException.ThrowIfNegative(face);
+        return new FileFontSource(path, face);
     }
 
     /// <summary>A short description for messages, such as the file name.</summary>
@@ -213,35 +241,37 @@ public abstract record FontSource
 
 /// <summary>A font from bytes in memory.</summary>
 /// <param name="Bytes">The font file.</param>
-internal sealed record BytesFontSource(ReadOnlyMemory<byte> Bytes) : FontSource
+/// <param name="Face">The face of a collection, or 0.</param>
+internal sealed record BytesFontSource(ReadOnlyMemory<byte> Bytes, int Face) : FontSource
 {
-    internal override string Describe() => $"{Bytes.Length:N0} bytes";
+    internal override string Describe() => Face == 0 ? $"{Bytes.Length:N0} bytes" : $"{Bytes.Length:N0} bytes, face {Face}";
 
-    internal override ValueTask<TrueTypeFont> LoadAsync(bool synchronous, CancellationToken cancellationToken) => ValueTask.FromResult(FontCache.GetOrParse(Bytes));
+    internal override ValueTask<TrueTypeFont> LoadAsync(bool synchronous, CancellationToken cancellationToken) => ValueTask.FromResult(FontCache.GetOrParse(Bytes, Face));
 }
 
 /// <summary>A font read from a file.</summary>
 /// <param name="Path">The file path.</param>
-internal sealed record FileFontSource(string Path) : FontSource
+/// <param name="Face">The face of a collection, or 0.</param>
+internal sealed record FileFontSource(string Path, int Face) : FontSource
 {
-    internal override string Describe() => System.IO.Path.GetFileName(Path);
+    internal override string Describe() => Face == 0 ? System.IO.Path.GetFileName(Path) : $"{System.IO.Path.GetFileName(Path)}, face {Face}";
 
     internal override ValueTask<TrueTypeFont> LoadAsync(bool synchronous, CancellationToken cancellationToken)
     {
         // An unchanged file is neither read nor hashed again.
-        (string, DateTime, long) key = FontCache.FileKey(Path);
+        (string, DateTime, long) key = FontCache.FileKey(Path, Face);
         if (FontCache.TryGetFile(key, out TrueTypeFont font))
         {
             return ValueTask.FromResult(font);
         }
 
-        return synchronous ? ValueTask.FromResult(FontCache.AddFile(key, ReadSync())) : ReadCoreAsync(key, cancellationToken);
+        return synchronous ? ValueTask.FromResult(FontCache.AddFile(key, ReadSync(), Face)) : ReadCoreAsync(key, cancellationToken);
     }
 
     private byte[] ReadSync() => File.ReadAllBytes(Path);
 
     private async ValueTask<TrueTypeFont> ReadCoreAsync((string, DateTime, long) key, CancellationToken cancellationToken) =>
-        FontCache.AddFile(key, await File.ReadAllBytesAsync(Path, cancellationToken).ConfigureAwait(false));
+        FontCache.AddFile(key, await File.ReadAllBytesAsync(Path, cancellationToken).ConfigureAwait(false), Face);
 }
 
 /// <summary>A request for one face of a family.</summary>

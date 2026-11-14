@@ -29,5 +29,5 @@ Fonts come from the caller, never from a document; a damaged font is ZPDF-F005.
 - **No widow and orphan control** yet: a paragraph can leave one line at the foot or top of a page. Headings and blocks with `KeepWithNext` stay with the next block's first line.
 - **Lengths come back from JSON in points.** `"2cm"` is read as 56.6929 points, and `ToJson` writes 56.6929.
 - **Page previews read only Zorg.Pdf's own PDFs** (`PdfPreview` refuses others), draw DeviceCMYK images with a plain conversion rather than a colour profile, and depend on Zorg.Imaging's experimental canvas.
-- **Fonts:** TrueType outlines only (`.ttf`); no CFF (`.otf` with PostScript outlines), no font collections (`.ttc`), no symbol fonts.
+- **Fonts:** TrueType outlines only (`.ttf`, and the TrueType faces of collections, `.ttc`); no CFF (`.otf` with PostScript outlines), no symbol fonts.
 - **Text:** pair kerning only. No ligatures, no Arabic joining or Indic shaping, no right-to-left text, no hyphenation dictionary (soft hyphens work).

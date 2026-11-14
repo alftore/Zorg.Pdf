@@ -14,20 +14,20 @@ namespace Zorg.Pdf.Fonts;
 /// Finds installed TrueType fonts by family name. The index is built once per process from each file's table
 /// directory, <c>name</c> (IDs 1, 2, 16), <c>OS/2</c> (weight, fsSelection) and <c>head</c> (macStyle), read with
 /// positional reads so a folder of large fonts costs a few kilobytes per file. Files that aren't plain TrueType
-/// (CFF outlines, collections) are skipped, because the renderer can't embed them.
+/// (CFF outlines) are skipped, because the renderer can't embed them; each TrueType face of a collection (.ttc) is indexed.
 /// </summary>
 internal sealed class SystemFontResolver : IFontResolver
 {
     public static readonly SystemFontResolver Instance = new();
 
-    private readonly Lazy<Dictionary<string, List<(string Path, bool Bold, bool Italic)>>> _index = new(Build);
+    private readonly Lazy<Dictionary<string, List<(string Path, bool Bold, bool Italic, int Face)>>> _index = new(Build);
 
     public ValueTask<FontSource?> ResolveAsync(FontRequest request, CancellationToken cancellationToken = default) =>
         ValueTask.FromResult(Find(request));
 
     internal FontSource? Find(FontRequest request)
     {
-        if (!_index.Value.TryGetValue(request.Family, out List<(string Path, bool Bold, bool Italic)>? faces))
+        if (!_index.Value.TryGetValue(request.Family, out List<(string Path, bool Bold, bool Italic, int Face)>? faces))
         {
             return null;
         }
@@ -36,11 +36,12 @@ internal sealed class SystemFontResolver : IFontResolver
         bool italic = request.Style == FontStyle.Italic;
 
         // Exact face first, then same weight, then the regular face, then anything; ties go to the path in ordinal order.
-        (string Path, bool Bold, bool Italic) best = faces
+        (string Path, bool Bold, bool Italic, int Face) best = faces
             .OrderBy(f => (f.Bold == bold ? 0 : 2) + (f.Italic == italic ? 0 : 1))
             .ThenBy(f => f.Path, StringComparer.Ordinal)
+            .ThenBy(f => f.Face)
             .First();
-        return FontSource.FromFile(best.Path);
+        return FontSource.FromFile(best.Path, best.Face);
     }
 
     internal static IEnumerable<string> Folders()
@@ -66,16 +67,16 @@ internal sealed class SystemFontResolver : IFontResolver
         }
     }
 
-    private static Dictionary<string, List<(string Path, bool Bold, bool Italic)>> Build()
+    private static Dictionary<string, List<(string Path, bool Bold, bool Italic, int Face)>> Build()
     {
-        var index = new Dictionary<string, List<(string, bool, bool)>>(StringComparer.OrdinalIgnoreCase);
+        var index = new Dictionary<string, List<(string, bool, bool, int)>>(StringComparer.OrdinalIgnoreCase);
         foreach (string folder in Folders().Where(Directory.Exists))
         {
             IEnumerable<string> files;
             try
             {
                 files = Directory.EnumerateFiles(folder, "*.*", SearchOption.AllDirectories)
-                    .Where(f => f.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))
+                    .Where(f => f.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -85,14 +86,14 @@ internal sealed class SystemFontResolver : IFontResolver
 
             foreach (string file in files)
             {
-                if (Describe(file) is ({ } family, bool bold, bool italic, _))
+                foreach ((string family, bool bold, bool italic, _, int face) in DescribeFaces(file))
                 {
-                    if (!index.TryGetValue(family, out List<(string, bool, bool)>? faces))
+                    if (!index.TryGetValue(family, out List<(string, bool, bool, int)>? faces))
                     {
                         index[family] = faces = [];
                     }
 
-                    faces.Add((file, bold, italic));
+                    faces.Add((file, bold, italic, face));
                 }
             }
         }
@@ -100,70 +101,122 @@ internal sealed class SystemFontResolver : IFontResolver
         return index;
     }
 
-    /// <summary>The family, face and weight class of a font file; a null family when it isn't a TrueType font this library can embed.</summary>
+    /// <summary>The family, face and weight class of a font file's first face; a null family when it isn't a TrueType font this library can embed.</summary>
     internal static (string? Family, bool Bold, bool Italic, int Weight) Describe(string path)
     {
+        foreach ((string family, bool bold, bool italic, int weight, int face) in DescribeFaces(path))
+        {
+            if (face == 0)
+            {
+                return (family, bold, italic, weight);
+            }
+        }
+
+        return default;
+    }
+
+    /// <summary>
+    /// Every TrueType face in a file: one for a <c>.ttf</c>, each face of a <c>.ttc</c> collection with its index.
+    /// Faces with CFF outlines, and files that aren't fonts, give nothing.
+    /// </summary>
+    internal static List<(string Family, bool Bold, bool Italic, int Weight, int Face)> DescribeFaces(string path)
+    {
+        var found = new List<(string, bool, bool, int, int)>();
         try
         {
             using SafeFileHandle file = File.OpenHandle(path);
             long length = RandomAccess.GetLength(file);
             Span<byte> header = stackalloc byte[12];
-            if (length < 12 || RandomAccess.Read(file, header, 0) != 12 || BinaryPrimitives.ReadUInt32BigEndian(header) is not (0x00010000 or 0x74727565))
+            if (length < 12 || RandomAccess.Read(file, header, 0) != 12)
             {
-                return default;
+                return found;
             }
 
-            int count = BinaryPrimitives.ReadUInt16BigEndian(header[4..]);
-            byte[] directory = new byte[count * 16];
-            if (count is 0 or > 512 || RandomAccess.Read(file, directory, 12) != directory.Length)
+            if (BinaryPrimitives.ReadUInt32BigEndian(header) == 0x74746366) // 'ttcf'
             {
-                return default;
-            }
-
-            byte[]? name = null;
-            byte[]? os2 = null;
-            byte[]? head = null;
-            for (int i = 0; i < count; i++)
-            {
-                ReadOnlySpan<byte> entry = directory.AsSpan(i * 16, 16);
-                uint tag = BinaryPrimitives.ReadUInt32BigEndian(entry);
-                long offset = BinaryPrimitives.ReadUInt32BigEndian(entry[8..]);
-                int size = (int)Math.Min(BinaryPrimitives.ReadUInt32BigEndian(entry[12..]), 1 << 20);
-                if (offset + size > length || tag is not (0x6E616D65 or 0x4F532F32 or 0x68656164))
+                int faces = (int)Math.Min(BinaryPrimitives.ReadUInt32BigEndian(header[8..]), 256);
+                byte[] offsets = new byte[faces * 4];
+                if (RandomAccess.Read(file, offsets, 12) != offsets.Length)
                 {
-                    continue;
+                    return found;
                 }
 
-                byte[] table = new byte[size];
-                if (RandomAccess.Read(file, table, offset) != size)
+                for (int face = 0; face < faces; face++)
                 {
-                    return default;
-                }
-
-                switch (tag)
-                {
-                    case 0x6E616D65: // name
-                        name = table;
-                        break;
-                    case 0x4F532F32: // OS/2
-                        os2 = table;
-                        break;
-                    case 0x68656164: // head
-                        head = table;
-                        break;
+                    if (DescribeAt(file, length, BinaryPrimitives.ReadUInt32BigEndian(offsets.AsSpan(face * 4))) is ({ } family, bool bold, bool italic, int weight))
+                    {
+                        found.Add((family, bold, italic, weight, face));
+                    }
                 }
             }
-
-            string? family = name is null ? null : FamilyName(name);
-            ushort macStyle = head is { Length: >= 46 } ? BinaryPrimitives.ReadUInt16BigEndian(head.AsSpan(44)) : (ushort)0;
-            int weight = os2 is { Length: >= 6 } ? BinaryPrimitives.ReadUInt16BigEndian(os2.AsSpan(4)) : 400;
-            ushort selection = os2 is { Length: >= 64 } ? BinaryPrimitives.ReadUInt16BigEndian(os2.AsSpan(62)) : (ushort)0;
-            return (family, weight >= 600 || (macStyle & 1) != 0, (selection & 1) != 0 || (macStyle & 2) != 0, weight);
+            else if (DescribeAt(file, length, 0) is ({ } family, bool bold, bool italic, int weight))
+            {
+                found.Add((family, bold, italic, weight, 0));
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
+            // Not readable: no faces.
+        }
+
+        return found;
+    }
+
+    /// <summary>One face's family, style and weight, from the table directory at <paramref name="start"/>.</summary>
+    private static (string? Family, bool Bold, bool Italic, int Weight) DescribeAt(SafeFileHandle file, long length, long start)
+    {
+        Span<byte> header = stackalloc byte[12];
+        if (start + 12 > length || RandomAccess.Read(file, header, start) != 12 || BinaryPrimitives.ReadUInt32BigEndian(header) is not (0x00010000 or 0x74727565))
+        {
             return default;
         }
+
+        int count = BinaryPrimitives.ReadUInt16BigEndian(header[4..]);
+        byte[] directory = new byte[count * 16];
+        if (count is 0 or > 512 || RandomAccess.Read(file, directory, start + 12) != directory.Length)
+        {
+            return default;
+        }
+
+        byte[]? name = null;
+        byte[]? os2 = null;
+        byte[]? head = null;
+        for (int i = 0; i < count; i++)
+        {
+            ReadOnlySpan<byte> entry = directory.AsSpan(i * 16, 16);
+            uint tag = BinaryPrimitives.ReadUInt32BigEndian(entry);
+            long offset = BinaryPrimitives.ReadUInt32BigEndian(entry[8..]);
+            int size = (int)Math.Min(BinaryPrimitives.ReadUInt32BigEndian(entry[12..]), 1 << 20);
+            if (offset + size > length || tag is not (0x6E616D65 or 0x4F532F32 or 0x68656164))
+            {
+                continue;
+            }
+
+            byte[] table = new byte[size];
+            if (RandomAccess.Read(file, table, offset) != size)
+            {
+                return default;
+            }
+
+            switch (tag)
+            {
+                case 0x6E616D65: // name
+                    name = table;
+                    break;
+                case 0x4F532F32: // OS/2
+                    os2 = table;
+                    break;
+                case 0x68656164: // head
+                    head = table;
+                    break;
+            }
+        }
+
+        string? family = name is null ? null : FamilyName(name);
+        ushort macStyle = head is { Length: >= 46 } ? BinaryPrimitives.ReadUInt16BigEndian(head.AsSpan(44)) : (ushort)0;
+        int weight = os2 is { Length: >= 6 } ? BinaryPrimitives.ReadUInt16BigEndian(os2.AsSpan(4)) : 400;
+        ushort selection = os2 is { Length: >= 64 } ? BinaryPrimitives.ReadUInt16BigEndian(os2.AsSpan(62)) : (ushort)0;
+        return (family, weight >= 600 || (macStyle & 1) != 0, (selection & 1) != 0 || (macStyle & 2) != 0, weight);
     }
 
     /// <summary>The typographic family (name ID 16), else the family (ID 1), preferring Windows English.</summary>

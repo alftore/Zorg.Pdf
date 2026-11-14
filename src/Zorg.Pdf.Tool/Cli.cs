@@ -358,7 +358,7 @@ internal static class Cli
             if (one.Families.IsEmpty)
             {
                 report.Fail(Usage, File.Exists(file)
-                    ? $"Can't use {file}: it isn't a TrueType font with a regular face (CFF fonts and .ttc collections aren't supported yet)."
+                    ? $"Can't use {file}: it isn't a TrueType font or collection with a regular face (CFF fonts aren't supported yet)."
                     : $"Can't read {file}: the file doesn't exist.");
             }
 
