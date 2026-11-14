@@ -125,16 +125,14 @@ jobs:
 
   # The same document, data and font give the same bytes on every OS. Liberation Sans 2.1.5 (OFL 1.1) is fetched and
   # checked against a SHA-256 published independently of its upstream (Homebrew's font-liberation cask); the smoke
-  # documents (text, tables, bands, images) are rendered and hashed on each OS, and the compare job fails on any
-  # difference.
-  determinism:
-    name: Byte-identical output (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  # documents (text, tables, bands, images) are rendered and hashed on Windows and Ubuntu, and the compare job fails
+  # on any difference. The hashes travel as job outputs: artifact uploads fail to start in this private repository.
+  determinism-windows:
+    name: Byte-identical output (Windows)
+    runs-on: windows-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, ubuntu-latest]
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -152,19 +150,64 @@ jobs:
           tar -xzf "$RUNNER_TEMP/liberation.tar.gz" -C "$RUNNER_TEMP"
 
       - name: Render and hash
+        id: hash
         shell: bash
         env:
           ZORG_REQUIRE_FONTS: '1'
-          HASHES: hashes-${{ matrix.os }}.txt
         run: |
           export ZORG_PDF_TEST_FONT="$RUNNER_TEMP/liberation-fonts-ttf-2.1.5/LiberationSans-Regular.ttf"
           mkdir -p "$RUNNER_TEMP/out"
           dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release -- "$RUNNER_TEMP/out"
-          (cd "$RUNNER_TEMP/out" && sha256sum --binary *.pdf) | tee "$HASHES"
+          cd "$RUNNER_TEMP/out"
+          sha256sum --binary *.pdf
+          echo "hashes=$(sha256sum --binary *.pdf | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
-      - name: Upload the hashes
-        uses: actions/upload-artifact@v7.0.2
+  determinism-ubuntu:
+    name: Byte-identical output (Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+    steps:
+      - uses: actions/checkout@v7.0.1
         with:
-          name: hashes-${{ matrix.os }}
-          path: hashes-${{ matrix.os }}.txt
-          if-no-files-found: error
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Fetch the pinned font
+        shell: bash
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/liberation.tar.gz" https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz
+          echo "7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0  $RUNNER_TEMP/liberation.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/liberation.tar.gz" -C "$RUNNER_TEMP"
+
+      - name: Render and hash
+        id: hash
+        shell: bash
+        env:
+          ZORG_REQUIRE_FONTS: '1'
+        run: |
+          export ZORG_PDF_TEST_FONT="$RUNNER_TEMP/liberation-fonts-ttf-2.1.5/LiberationSans-Regular.ttf"
+          mkdir -p "$RUNNER_TEMP/out"
+          dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release -- "$RUNNER_TEMP/out"
+          cd "$RUNNER_TEMP/out"
+          sha256sum --binary *.pdf
+          echo "hashes=$(sha256sum --binary *.pdf | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+
+  determinism:
+    name: Byte-identical output (compare)
+    needs: [determinism-windows, determinism-ubuntu]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Compare
+        env:
+          WINDOWS: ${{ needs.determinism-windows.outputs.hashes }}
+          UBUNTU: ${{ needs.determinism-ubuntu.outputs.hashes }}
+        run: |
+          echo "Windows: $WINDOWS"
+          echo "Ubuntu:  $UBUNTU"
+          test -n "$WINDOWS" && test "$WINDOWS" = "$UBUNTU"
