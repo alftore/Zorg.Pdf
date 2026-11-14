@@ -115,6 +115,23 @@ public sealed class PdfData
         return new PdfData(Rows, Images.SetItem(slot, new ImageSlot(null, load)), Model);
     }
 
+    /// <summary>A PDF file for a slot, such as letterhead for <see cref="PageBackground"/>. Files share one set of slots with images.</summary>
+    /// <param name="slot">The slot name a background's source names.</param>
+    /// <param name="bytes">The file's bytes.</param>
+    /// <returns>The data with the slot set; this instance is unchanged.</returns>
+    /// <example>
+    /// <code>
+    /// var data = PdfData.Empty.WithPdf("letterhead", await File.ReadAllBytesAsync("letterhead.pdf", cancellationToken));
+    /// </code>
+    /// </example>
+    public PdfData WithPdf(string slot, ReadOnlyMemory<byte> bytes) => WithImage(slot, bytes);
+
+    /// <summary>A PDF file for a slot, loaded when the render starts, such as from blob storage.</summary>
+    /// <param name="slot">The slot name a background's source names.</param>
+    /// <param name="load">Loads the bytes, once per render, before the first page.</param>
+    /// <returns>The data with the slot set; this instance is unchanged.</returns>
+    public PdfData WithPdf(string slot, Func<CancellationToken, ValueTask<ReadOnlyMemory<byte>>> load) => WithImage(slot, load);
+
     /// <summary>Rows for a slot, each a list of cells (strings convert to cells).</summary>
     /// <param name="slot">The slot name a table's rows are bound to.</param>
     /// <param name="rows">The rows.</param>

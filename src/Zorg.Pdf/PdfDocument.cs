@@ -46,8 +46,8 @@ public sealed record PdfDocument
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, Watermark? watermark = null, StyleSheet? styles = null, ImmutableArray<Block> content = default, int outlineLevels = 3, PageNumberStyle numbering = PageNumberStyle.Number) =>
-        (Title, Schema, Language, Page, Header, Footer, Watermark, Styles, Content, OutlineLevels, Numbering) = (title, schema, language, page ?? PageSettings.A4, header, footer, watermark, styles, content.IsDefault ? [] : content, outlineLevels, numbering);
+    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, Watermark? watermark = null, StyleSheet? styles = null, ImmutableArray<Block> content = default, int outlineLevels = 3, PageNumberStyle numbering = PageNumberStyle.Number, PageBackground? background = null) =>
+        (Title, Schema, Language, Page, Header, Footer, Watermark, Styles, Content, OutlineLevels, Numbering, Background) = (title, schema, language, page ?? PageSettings.A4, header, footer, watermark, styles, content.IsDefault ? [] : content, outlineLevels, numbering, background);
 
     /// <summary>A document with a title.</summary>
     /// <param name="title">The title, shown by viewers in place of the file name and required for accessibility.</param>
@@ -100,6 +100,9 @@ public sealed record PdfDocument
     /// </example>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public PageNumberStyle Numbering { get; init; }
+
+    /// <summary>A page of an existing PDF behind the pages, such as letterhead. Null: none.</summary>
+    public PageBackground? Background { get; init; }
 
     /// <summary>Named styles, on top of <see cref="StyleSheet.Default"/>. Null: the defaults only.</summary>
     public StyleSheet? Styles { get; init; }

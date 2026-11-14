@@ -9,7 +9,7 @@ namespace Zorg.Pdf.Imaging.Preview;
 
 /// <summary>
 /// Draws one page's content streams onto a canvas: the operators <c>ContentStreamBuilder</c> writes (graphics state,
-/// rectangles and lines, colours, opacity, text with Type0 fonts, images). Anything else is refused, naming it.
+/// rectangles and lines, colours, opacity, text with Type0 fonts, images, forms). Anything else is refused, naming it.
 /// </summary>
 internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, Canvas canvas, PdfPreviewLimits limits)
 {
@@ -28,6 +28,7 @@ internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, 
     private Matrix3x2 _textMatrix = Matrix3x2.Identity;
     private Matrix3x2 _lineMatrix = Matrix3x2.Identity;
     private int _operators;
+    private int _depth;
 
     public void Draw(byte[] content)
     {
@@ -279,9 +280,15 @@ internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, 
     {
         PdfValue? reference = file.Dictionary(resources["XObject"])?[name];
         PdfStream stream = file.Stream(reference) ?? throw PdfPreviewException.Malformed($"The XObject {name} isn't in the page's resources.");
+        if (file.Resolve(stream.Dictionary["Subtype"]) is PdfName { Value: "Form" })
+        {
+            DrawForm(stream);
+            return;
+        }
+
         if (file.Resolve(stream.Dictionary["Subtype"]) is not PdfName { Value: "Image" })
         {
-            throw new PdfPreviewException("The page draws a form XObject, which Zorg.Pdf never writes: previews read only files Zorg.Pdf wrote.");
+            throw PdfPreviewException.Malformed($"The XObject {name} is neither an image nor a form.");
         }
 
         if (!_images.TryGetValue(name, out Bitmap? image))
@@ -293,6 +300,36 @@ internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, 
         // Image space: the unit square, its first row at the top.
         Matrix3x2 place = Matrix3x2.CreateScale(1f / image.Width, -1f / image.Height) * Matrix3x2.CreateTranslation(0, 1) * _state.Ctm;
         canvas.DrawImage(image, place, opacity: _state.FillAlpha);
+    }
+
+    /// <summary>A form XObject, such as a letterhead background: its content drawn with its own resources, through its matrix.</summary>
+    private void DrawForm(PdfStream stream)
+    {
+        if (_depth >= 4)
+        {
+            throw PdfPreviewException.Malformed("Forms are nested too deeply.");
+        }
+
+        Matrix3x2 matrix = Matrix3x2.Identity;
+        if (file.Resolve(stream.Dictionary["Matrix"]) is PdfArray { Items.Count: 6 } m)
+        {
+            float V(int i) => (float)file.Resolve(m.Items[i]).Number;
+            matrix = new Matrix3x2(V(0), V(1), V(2), V(3), V(4), V(5));
+        }
+
+        var inner = new PageRasterizer(file, file.Dictionary(stream.Dictionary["Resources"]) ?? resources, canvas, limits)
+        {
+            _depth = _depth + 1,
+            _state = _state with { Ctm = matrix * _state.Ctm },
+        };
+        try
+        {
+            inner.Draw(file.Decode(stream));
+        }
+        finally
+        {
+            inner.Dispose();
+        }
     }
 
     private static Rgba32 Gray(float g) => Rgb(g, g, g);

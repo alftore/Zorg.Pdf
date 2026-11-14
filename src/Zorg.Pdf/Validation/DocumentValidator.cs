@@ -74,6 +74,19 @@ internal sealed partial class DocumentValidator
             }
         }
 
+        if (document.Background is { } background)
+        {
+            if (background.Source is null)
+            {
+                Error(DiagnosticCodes.BadBackground, "A background needs a source: the PDF's bytes or a data slot.", "/background/source");
+            }
+
+            if (background.FirstPage < 0 || background.OtherPages < 0)
+            {
+                Error(DiagnosticCodes.BadBackground, "A background's pages are numbered from 1, or 0 for none.", background.FirstPage < 0 ? "/background/firstPage" : "/background/otherPages");
+            }
+        }
+
         if (document.Watermark is { } watermark)
         {
             if ((watermark.Text is null) == (watermark.Image is null) || watermark.Text is { Length: 0 })

@@ -76,6 +76,12 @@ internal static class DiagnosticCodes
     public const string ReadStreamLength = "ZPDF-P002";
     public const string ReadDamagedStream = "ZPDF-P003";
     public const string ReadPageTree = "ZPDF-P004";
+    public const string BadBackground = "ZPDF-J030";
+    public const string BackgroundUnreadable = "ZPDF-G001";   // Backgrounds from existing PDFs.
+    public const string BackgroundPageMissing = "ZPDF-G002";
+    public const string BackgroundScaled = "ZPDF-G003";
+    public const string BackgroundFontNotEmbedded = "ZPDF-G004";
+    public const string BackgroundColour = "ZPDF-G005";
     public const string TextShrunk = "ZPDF-L005";
     public const string TextOverflow = "ZPDF-L006";
     public const string TextBoxOffPage = "ZPDF-L007";

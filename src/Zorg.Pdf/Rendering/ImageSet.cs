@@ -186,7 +186,7 @@ internal sealed class ImageSet
         return (entry.Name, entry.Reference);
     }
 
-    private static async ValueTask<ReadOnlyMemory<byte>?> BytesAsync(ImageSource source, RenderOptions options, DiagnosticSink sink, bool synchronous, string path, CancellationToken cancellationToken)
+    internal static async ValueTask<ReadOnlyMemory<byte>?> BytesAsync(ImageSource source, RenderOptions options, DiagnosticSink sink, bool synchronous, string path, CancellationToken cancellationToken)
     {
         switch (source)
         {

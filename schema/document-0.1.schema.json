@@ -14,6 +14,7 @@
     "header": { "description": "Content at the top of every page.", "$ref": "#/$defs/pageBand" },
     "footer": { "description": "Content at the bottom of every page.", "$ref": "#/$defs/pageBand" },
     "watermark": { "description": "Text or an image across every page, such as DRAFT.", "$ref": "#/$defs/watermark" },
+    "background": { "description": "A page of an existing PDF behind the pages, such as letterhead.", "$ref": "#/$defs/background" },
     "numbering": { "description": "How pages are numbered until the first section break.", "$ref": "#/$defs/pageNumberStyle" },
     "outlineLevels": { "description": "Headings of level 1 to this one become the viewer's bookmarks; 0 for none.", "type": "integer", "minimum": 0, "maximum": 6, "default": 3 },
     "styles": { "$ref": "#/$defs/styleSheet" },
@@ -271,6 +272,17 @@
         "layer": { "enum": ["over", "behind"], "default": "over" }
       },
       "oneOf": [{ "required": ["text"] }, { "required": ["image"] }]
+    },
+    "background": {
+      "description": "A page of an existing PDF (letterhead, stationery) drawn behind the pages, scaled to fit if its size differs. Screen readers skip it.",
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "description": "The PDF file: { \"$data\": \"slot\" } or { \"base64\": \"...\" }.", "$ref": "#/$defs/imageSource" },
+        "firstPage": { "description": "The file's page (from 1) behind the first page; 0 for none.", "type": "integer", "minimum": 0, "default": 1 },
+        "otherPages": { "description": "The file's page (from 1) behind every other page; 0 for none.", "type": "integer", "minimum": 0, "default": 1 }
+      }
     },
     "repeat": {
       "description": "Content repeated for each item of an array in the model. Inside it, bindings look in the item first.",

@@ -36,6 +36,7 @@ internal sealed partial class RenderEngine : IDisposable
     private readonly StyleResolver _styles;
     private readonly FontSet _fonts;
     private readonly ImageSet _images;
+    private readonly BackgroundSet? _background;
     private readonly HashSet<ImageSet.Entry> _pageImages = [];
     private readonly string? _defaultFamily;
     private readonly DiagnosticSink _sink;
@@ -68,9 +69,10 @@ internal sealed partial class RenderEngine : IDisposable
     private EmbeddedFont? _textFont;
     private double _textSize;
 
-    private RenderEngine(PdfDocument document, RenderOptions options, StyleResolver styles, FontSet fonts, ImageSet images, string? defaultFamily, DiagnosticSink sink, Stream output, bool synchronous)
+    private RenderEngine(PdfDocument document, RenderOptions options, StyleResolver styles, FontSet fonts, ImageSet images, BackgroundSet? background, string? defaultFamily, DiagnosticSink sink, Stream output, bool synchronous)
     {
         _images = images;
+        _background = background;
         _document = document;
         _options = options;
         _styles = styles;
@@ -117,13 +119,14 @@ internal sealed partial class RenderEngine : IDisposable
         Dictionary<FaceKey, string> needed = sink.HasErrors ? [] : Preflight.NeededFaces(document, styles, defaultFamily, sink);
         FontSet fonts = await FontSet.LoadAsync(options, needed, sink, synchronous, cancellationToken).ConfigureAwait(false);
         ImageSet images = await ImageSet.LoadAsync(document, options, sink, synchronous, cancellationToken).ConfigureAwait(false);
+        BackgroundSet? background = sink.HasErrors ? null : await BackgroundSet.PrepareAsync(document, options, sink, synchronous, cancellationToken).ConfigureAwait(false);
         Preflight.Check(document, styles, fonts, defaultFamily, options, synchronous, sink);
         if (sink.HasErrors)
         {
             throw new PdfDocumentException(sink.ToImmutable());
         }
 
-        using var engine = new RenderEngine(document, options, styles, fonts, images, defaultFamily, sink, output, synchronous);
+        using var engine = new RenderEngine(document, options, styles, fonts, images, background, defaultFamily, sink, output, synchronous);
         if (sink.HasErrors)
         {
             throw new PdfDocumentException(sink.ToImmutable()); // The bands leave no room; nothing has been written yet.
@@ -682,11 +685,18 @@ internal sealed partial class RenderEngine : IDisposable
             }
         }
 
+        PdfReference[] under = WatermarkUnder();
+        if (_background?.For(_page, _writer, _pageGeometry) is { } background)
+        {
+            images.Add((background.Name, background.Form));
+            under = [background.Stream, .. under]; // Under everything, the watermark too.
+        }
+
         images.Sort((a, b) => a.Image.Number.CompareTo(b.Image.Number));
         PdfReference? toc = TocStream();
         PdfReference? band = BandStream();
         PdfReference[] annotations = WriteLinkAnnotations();
-        _documentWriter.WritePage(_page, _tagger.PageKey(_page), _content.WrittenSpan, fonts, images, WatermarkUnder(), [.. toc is { } t ? [t] : Array.Empty<PdfReference>(), .. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState(), annotations);
+        _documentWriter.WritePage(_page, _tagger.PageKey(_page), _content.WrittenSpan, fonts, images, under, [.. toc is { } t ? [t] : Array.Empty<PdfReference>(), .. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState(), annotations);
         await _writer.FlushIfNeededAsync(cancellationToken).ConfigureAwait(false);
         _options.Progress?.Report(new RenderProgress(_page + 1, _writer.Position));
     }

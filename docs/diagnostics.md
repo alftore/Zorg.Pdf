@@ -33,6 +33,7 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-J027 | Error | A link's target isn't `https://`, `http://`, `mailto:` or `#` and an id some block has; it has no text, an empty description, another link or a field inside; or it's in a table cell, text box, header or footer, where links aren't supported yet. | Fix the target, or move the link into a paragraph. |
 | ZPDF-J028 | Error | A table of contents has a `maxLevel` outside 1 to 6 or an empty title, isn't at the top level, or is the second in the document. | One table of contents, at the top level, listing levels 1 to 6. |
 | ZPDF-J029 | Error | A section break has a `startAt` below 1, a prefix that's long or has control characters, or isn't at the top level. | Start at 1 or more, keep the prefix short, and put section breaks at the top level. |
+| ZPDF-J030 | Error | A background has no source, or a page number below 0. | Give `source` (a data slot or base64) and pages from 1, or 0 for none. |
 | ZPDF-J023 | Error | A template part is incomplete: a `bind` without a path, a `repeat` without `items` or content, or a `when` without a `test` or content. | Give every binding a path such as `customer.name`, and every repeat and when their content. |
 | ZPDF-B001 | Warning | A binding found no value in the model (or the render has no model), or the value can't be shown as text, or its `format` doesn't fit it. The text is left empty or unformatted. | Add the value to the model, fix the path, or bind a value inside the object. |
 | ZPDF-B002 | Warning | A `repeat` names something in the model that isn't an array, so its content is left out. | Point `items` at an array. |
@@ -57,6 +58,11 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-P002 | Info | Reading an existing PDF: a stream's `/Length` is wrong, so its end was found by searching for `endstream`. | Nothing, usually; the writer that made the file has a bug. |
 | ZPDF-P003 | Warning | Reading an existing PDF: a compressed stream is damaged, and only what could be decompressed was used. | Check the result; the page may be incomplete. |
 | ZPDF-P004 | Warning | Reading an existing PDF: its page tree has loops, missing pages or nodes that aren't pages, which were skipped. | Check the page count. |
+| ZPDF-G001 | Error | The background's PDF can't be used: it isn't a PDF, it's damaged beyond reading, it's encrypted, or its page's content uses a filter that can't be read. The message says which. | Save the letterhead again as a plain PDF (Print to PDF, or "Save as" without a password). |
+| ZPDF-G002 | Error | The background asks for a page the PDF doesn't have. | Use a page number from 1 to the file's page count, or 0 for none. |
+| ZPDF-G003 | Info | The background's page is a different size from the document's: it's scaled to fit and centred. | Make the letterhead the same paper size, or accept the scaling. |
+| ZPDF-G004 | Error under PDF/UA or PDF/A, else Warning | The background uses a font that isn't embedded, so it looks different on other computers, and PDF/UA and PDF/A forbid it. | Export the letterhead with fonts embedded, or convert its text to outlines. |
+| ZPDF-G005 | Error under PDF/A | The background uses CMYK colour, which PDF/A with Zorg.Pdf's sRGB output intent doesn't allow. | Export the letterhead in RGB. |
 | ZPDF-L001 | Warning | Rows joined by a `rowSpan` are taller together than a page, so they run past the bottom margin. A single row that tall splits across pages instead; rows joined by a span don't. | Shorten the spanned rows' text, or drop the span. |
 | ZPDF-L002 | Warning | A row from a data slot doesn't fill the columns it has (counting spans); it's padded with empty cells or cut. | Give every row one cell per free column. |
 | ZPDF-L003 | Warning | The fixed-width columns are wider than the page, so all columns are scaled to fit. | Make the fixed columns narrower, or use shares (`"2*"`). |

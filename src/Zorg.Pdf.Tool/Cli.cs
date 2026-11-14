@@ -59,7 +59,7 @@ internal static class Cli
         Options:
           -o, --output <file.pdf>    Where the PDF goes; "-" for standard output. Default: the document's name with .pdf
           -d, --data <data.json>     Table rows, images and the template model
-              --image <slot=file>    An image file for a data slot; repeatable
+              --image <slot=file>    An image, or a PDF for a background, for a data slot; repeatable
               --fonts <folder>       Use the TrueType fonts in a folder; repeatable
               --font <file.ttf>      Use a font file; repeatable
               --default-font <name>  The family for text whose style names none

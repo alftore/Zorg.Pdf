@@ -327,6 +327,39 @@ else
     }
 }
 
+// 0.4 slice 2: letterhead from an existing PDF (here one Zorg.Pdf wrote, tagged) behind a letter's pages. The gate
+// checks the letter against PDF/UA-1 and PDF/A-2a like the examples, and reads it back.
+{
+    var bodyFonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) });
+    var letterhead = new PdfDocument("ACME letterhead")
+    {
+        Content = [new Heading("ACME AS"), new Paragraph("Storgata 1 · 0155 Oslo · acme.example"), new PageBreak(), new Paragraph("ACME AS")],
+    };
+    using var head = new MemoryStream();
+    letterhead.RenderAsync(head, new RenderOptions { Fonts = bodyFonts, Conformance = PdfConformance.PdfUA1 }).AsTask().GetAwaiter().GetResult();
+    var letter = new PdfDocument("Letter on letterhead")
+    {
+        Page = new PageSettings { Margin = Thickness.All(Length.Cm(5)) },
+        Background = new PageBackground(ImageSource.FromSlot("letterhead")) { OtherPages = 2 },
+        Content = [new Paragraph("Dear Kari,"), .. Enumerable.Repeat(new Paragraph("Thank you for your order. The goods leave our warehouse on Monday."), 60)],
+    };
+    using var written = new MemoryStream();
+    RenderResult onLetterhead = letter.RenderAsync(written, new RenderOptions
+    {
+        Fonts = bodyFonts,
+        Conformance = PdfConformance.PdfUA1,
+        Archive = PdfArchive.PdfA2a,
+        Data = PdfData.Empty.WithPdf("letterhead", head.ToArray()),
+    }).AsTask().GetAwaiter().GetResult();
+    PdfFileInfo back = PdfFileInfo.Read(written.ToArray());
+    Check("letterhead", !onLetterhead.HasWarnings && onLetterhead.PageCount >= 2 && back.PageCount == onLetterhead.PageCount && back.IsTagged);
+    if (saveTo is not null)
+    {
+        File.WriteAllBytes(Path.Combine(saveTo, "example-letterhead.pdf"), written.ToArray());
+        File.WriteAllBytes(Path.Combine(saveTo, "example-letterhead.png"), Zorg.Pdf.Imaging.PdfPreview.RenderPagePngAsync(written.ToArray(), 0).AsTask().GetAwaiter().GetResult());
+    }
+}
+
 return failures == 0 ? 0 : 1;
 
 // The file as text with every Flate stream inflated after it: objects sit in compressed object streams.
