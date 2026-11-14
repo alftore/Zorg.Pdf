@@ -61,4 +61,5 @@ internal static class DiagnosticCodes
     // R: rendering and limits.
     public const string NotDrawnYet = "ZPDF-R001";
     public const string AsyncRowsInSyncRender = "ZPDF-R002";
+    public const string LimitReached = "ZPDF-R003";
 }

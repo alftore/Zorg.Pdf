@@ -10,6 +10,12 @@ Rules:
 - Check the licence in the `.nuspec` of the exact version. Don't rely on memory.
 - Fonts and hyphenation patterns used in tests or shipped with the library need their licence recorded here too.
 
+## Add-on packages (shipped)
+
+| Package | Licence | Why | Risk |
+|---|---|---|---|
+| Microsoft.Extensions.AI.Abstractions 10.11.0 | MIT (checked in the `.nuspec`, 2026-11-14); no dependencies on `net10.0` | `Zorg.Pdf.Extensions.AI` only: the `AIFunction` type its tools are | Low. Microsoft's abstraction for AI tools, used by every .NET AI client. 11.0.0 was four days old when this was added, so it waits. |
+
 ## Build only (not shipped)
 
 | Package | Licence | Why | Risk |

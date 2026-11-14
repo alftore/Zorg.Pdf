@@ -21,11 +21,11 @@ await document.RenderAsync(output, options, cancellationToken);
 
 ## Roadmap
 
-0.1 is built in nine slices; eight are done.
+0.1 is built in nine slices; all nine are done, and it is being reviewed before its first preview release.
 
 | Version | Scope | State |
 |---|---|---|
-| 0.1 | The document model and its JSON Schema; rendering headings, paragraphs, tables, images, headers and footers with page numbers; bold and italic; tagged output with PDF/UA-1; object streams for small files; agent tools as a stretch goal | In progress: the library is complete for 0.1; the agent tools are next |
+| 0.1 | The document model and its JSON Schema; rendering headings, paragraphs, tables, images, headers and footers with page numbers; bold and italic; tagged output with PDF/UA-1; object streams for small files; agent tools as a stretch goal | Complete, in review: the library and `Zorg.Pdf.Extensions.AI` |
 | 0.2 | Templates and data binding, lists, cell spans, PNG page previews, a `zorg-pdf` command-line tool | Planned |
 | 0.3 | Markdown, tables of contents and links, hyphenation, right-to-left and Arabic text, PDF/A | Planned |
 | 0.4 | Reading and merging PDFs, page groups, attachments, ZUGFeRD/Factur-X invoices | Planned |

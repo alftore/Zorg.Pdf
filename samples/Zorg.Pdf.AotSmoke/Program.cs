@@ -212,6 +212,22 @@ byte[] font = File.ReadAllBytes(fontPath);
     }
 }
 
+// 0.1 slice 9: the agent tools, called as a chat client calls them, with JSON arguments.
+{
+    var tools = Zorg.Pdf.Extensions.AI.PdfTools.Create(new Zorg.Pdf.Extensions.AI.PdfToolOptions
+    {
+        Render = new RenderOptions { Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }) },
+    });
+    using var draft = System.Text.Json.JsonDocument.Parse("""{ "title": "Agent draft", "content": [{ "type": "heading", "inlines": ["Hello"] }, { "type": "paragraph", "inlines": ["From a tool call."] }] }""");
+    var arguments = new Microsoft.Extensions.AI.AIFunctionArguments { ["document"] = draft.RootElement };
+    object? schema = tools[0].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments()).AsTask().GetAwaiter().GetResult();
+    object? validated = tools[1].InvokeAsync(arguments).AsTask().GetAwaiter().GetResult();
+    object? rendered = tools[2].InvokeAsync(arguments).AsTask().GetAwaiter().GetResult();
+    Check("agent tools", schema is System.Text.Json.JsonElement s && s.TryGetProperty("schema", out _)
+        && validated is System.Text.Json.JsonElement v && v.GetProperty("valid").GetBoolean()
+        && rendered is System.Text.Json.JsonElement r && r.GetProperty("rendered").GetBoolean() && r.GetProperty("pages").GetInt32() == 1);
+}
+
 // 0.1 slice 8: every example in docs/examples, with its data, under PDF/UA-1. Found by walking up from the current
 // folder, so it runs from the repository (CI, the Linux gate) and is skipped elsewhere.
 string? examples = null;

@@ -44,3 +44,4 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-I002 | Error | An image is over `RenderOptions.Limits.MaxImageBytes` or `MaxImagePixels`. | Make the image smaller, or raise the limit if the input is trusted. |
 | ZPDF-R001 | Warning | This version doesn't draw that part yet (page number fields outside headers and footers), so it's left out. | Wait for the release that draws it, or leave it out. |
 | ZPDF-R002 | Error | A synchronous `Render` was given rows from an `IAsyncEnumerable`, or an image that loads asynchronously, which it can't wait for. | Use `RenderAsync`, or give the rows as an `IEnumerable` and the image as bytes. |
+| ZPDF-R003 | Error | A render stopped at a `RenderOptions.Limits` limit (pages or table rows) partway through. Reported by the agent tools; a direct render throws `PdfLimitException`. | Shorten the document or its data, or raise the limit if the input is trusted. |
