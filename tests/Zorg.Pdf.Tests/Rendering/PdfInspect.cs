@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Zorg.Pdf.Fonts;
 using Zorg.Pdf.Tests.Fonts;
@@ -44,6 +45,19 @@ internal static partial class PdfInspect
         return overlays;
     }
 
+    /// <summary>Each page's content streams in drawing order, as object numbers and decoded content.</summary>
+    public static List<(int Number, string Content)[]> PageStreams(byte[] file)
+    {
+        var objects = PdfReader.Read(file);
+        var pages = new List<(int, string)[]>();
+        foreach (Match page in AllContents().Matches(Text(file)))
+        {
+            pages.Add([.. Reference().Matches(page.Groups[1].Value).Select(r => int.Parse(r.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)).Select(n => (n, objects[n].DecodedText))]);
+        }
+
+        return pages;
+    }
+
     private static int Number(Group group) => int.Parse(group.Value, System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>For each page, the structure element object numbers its MCIDs belong to (the parent tree).</summary>
@@ -79,6 +93,9 @@ internal static partial class PdfInspect
 
     [GeneratedRegex(@"/Type /Page /Parent .*?/Contents (?:(\d+) 0 R|\[(\d+) 0 R (\d+) 0 R\])")]
     private static partial Regex PageContentsRef();
+
+    [GeneratedRegex(@"/Type /Page /Parent .*?/Contents (\[[^\]]*\]|\d+ 0 R)")]
+    private static partial Regex AllContents();
 
     [GeneratedRegex(@"/Nums \[(.*?)\]>>", RegexOptions.Singleline)]
     private static partial Regex NumsArray();

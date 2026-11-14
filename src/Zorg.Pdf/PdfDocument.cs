@@ -46,8 +46,8 @@ public sealed record PdfDocument
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, StyleSheet? styles = null, ImmutableArray<Block> content = default) =>
-        (Title, Schema, Language, Page, Header, Footer, Styles, Content) = (title, schema, language, page ?? PageSettings.A4, header, footer, styles, content.IsDefault ? [] : content);
+    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, Watermark? watermark = null, StyleSheet? styles = null, ImmutableArray<Block> content = default) =>
+        (Title, Schema, Language, Page, Header, Footer, Watermark, Styles, Content) = (title, schema, language, page ?? PageSettings.A4, header, footer, watermark, styles, content.IsDefault ? [] : content);
 
     /// <summary>A document with a title.</summary>
     /// <param name="title">The title, shown by viewers in place of the file name and required for accessibility.</param>
@@ -74,6 +74,9 @@ public sealed record PdfDocument
 
     /// <summary>Content at the bottom of every page, below the content area.</summary>
     public PageBand? Footer { get; init; }
+
+    /// <summary>Text or an image across every page, such as DRAFT; an artifact screen readers skip.</summary>
+    public Watermark? Watermark { get; init; }
 
     /// <summary>Named styles, on top of <see cref="StyleSheet.Default"/>. Null: the defaults only.</summary>
     public StyleSheet? Styles { get; init; }

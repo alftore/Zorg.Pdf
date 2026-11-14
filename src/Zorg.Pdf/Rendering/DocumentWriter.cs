@@ -60,11 +60,19 @@ internal sealed class DocumentWriter
     }
 
     /// <summary>
-    /// Writes a finished page: its content stream, then the page object with its font resources. A second content
-    /// stream, <paramref name="overlay"/>, is drawn after the first and may be written later (the header and footer,
-    /// which need the page count).
+    /// Writes a finished page: its content stream, then the page object with its resources. Streams in
+    /// <paramref name="under"/> are drawn before it and those in <paramref name="over"/> after it; they may be written
+    /// later (the header and footer need the page count). <paramref name="state"/> is a graphics state the page uses
+    /// (a watermark's opacity).
     /// </summary>
-    public void WritePage(int index, ReadOnlySpan<byte> content, IEnumerable<(byte[] Name, PdfReference Font)> fonts, IReadOnlyCollection<(byte[] Name, PdfReference Image)> images, PdfReference? overlay = null)
+    public void WritePage(
+        int index,
+        ReadOnlySpan<byte> content,
+        IEnumerable<(byte[] Name, PdfReference Font)> fonts,
+        IReadOnlyCollection<(byte[] Name, PdfReference Image)> images,
+        IReadOnlyList<PdfReference> under,
+        IReadOnlyList<PdfReference> over,
+        (byte[] Name, PdfReference State)? state = null)
     {
         PdfReference stream = _writer.Allocate();
         _writer.BeginStreamObject(stream);
@@ -107,13 +115,31 @@ internal sealed class DocumentWriter
             _writer.EndDictionary();
         }
 
+        if (state is { } graphics)
+        {
+            _writer.Name("ExtGState"u8);
+            _writer.BeginDictionary();
+            _writer.Name(graphics.Name);
+            _writer.Reference(graphics.State);
+            _writer.EndDictionary();
+        }
+
         _writer.EndDictionary();
         _writer.Name("Contents"u8);
-        if (overlay is { } second)
+        if (under.Count + over.Count > 0)
         {
             _writer.BeginArray();
+            foreach (PdfReference before in under)
+            {
+                _writer.Reference(before);
+            }
+
             _writer.Reference(stream);
-            _writer.Reference(second);
+            foreach (PdfReference after in over)
+            {
+                _writer.Reference(after);
+            }
+
             _writer.EndArray();
         }
         else

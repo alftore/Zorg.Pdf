@@ -80,6 +80,11 @@ internal static class Preflight
 
         Band(document.Header, "/header", "header");
         Band(document.Footer, "/footer", "footer");
+        if (document.Watermark?.Text is not null)
+        {
+            Need(styles.Named("watermark"), "/watermark/text");
+        }
+
         return needed;
 
         void Band(PageBand? band, string path, string name)
@@ -124,6 +129,11 @@ internal static class Preflight
     {
         Band(document.Header, "/header", "header");
         Band(document.Footer, "/footer", "footer");
+        if (document.Watermark?.Text is { } watermark)
+        {
+            Characters(watermark, Chain(styles.Named("watermark")), "/watermark/text");
+        }
+
         for (int i = 0; i < document.Content.Length; i++)
         {
             string path = $"/content/{i}";

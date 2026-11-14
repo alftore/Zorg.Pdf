@@ -139,6 +139,12 @@ internal sealed class ImageSet
             }
         }
 
+        if (document.Watermark?.Image is { } watermark)
+        {
+            // Sized like the watermark: its size, or half the page width.
+            yield return (new Image(watermark) { Decorative = true, Width = document.Watermark.Size ?? Length.Pt(PageGeometry.From(document.Page).Width / 2) }, "/watermark/image");
+        }
+
         foreach ((PageBand? band, string path) in new[] { (document.Header, "/header"), (document.Footer, "/footer") })
         {
             for (int i = 0; i < (band?.Content.Length ?? 0); i++)

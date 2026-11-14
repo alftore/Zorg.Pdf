@@ -167,7 +167,7 @@ internal sealed class SchemaTool() : PdfTool(
     """{ "type": "object", "properties": {} }""")
 {
     internal const string Guide = """
-        A document is JSON: { "title": "...", "language": "en", "content": [blocks] }, with optional "page", "header", "footer" and "styles".
+        A document is JSON: { "title": "...", "language": "en", "content": [blocks] }, with optional "page", "header", "footer", "watermark" ({ "text": "DRAFT" }) and "styles".
         Blocks have a "type": "heading" (with "level" 1 to 6, never skipping a level), "paragraph", "list", "table", "image", "spacer" or "pageBreak".
         Lists: { "type": "list", "marker": "bullet" or "number", "items": ["text", { "content": [paragraphs and nested lists] }] }.
         Text is "inlines": an array of strings, { "text": "...", "style": { "weight": "bold" } }, { "lineBreak": true } and, in headers and footers, { "field": "pageNumber" } or { "field": "pageCount" }.

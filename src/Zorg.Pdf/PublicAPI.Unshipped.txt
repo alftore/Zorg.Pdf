@@ -493,6 +493,8 @@ override Zorg.Pdf.PdfDocument.ToString() -> string!
 static Zorg.Pdf.PdfDocument.TryParseJson(System.ReadOnlySpan<byte> utf8Json) -> Zorg.Pdf.DocumentParseResult!
 static Zorg.Pdf.PdfDocument.TryParseJson(string! json) -> Zorg.Pdf.DocumentParseResult!
 Zorg.Pdf.PdfDocument.Validate() -> Zorg.Pdf.ValidationResult!
+Zorg.Pdf.PdfDocument.Watermark.get -> Zorg.Pdf.Watermark?
+Zorg.Pdf.PdfDocument.Watermark.init -> void
 static Zorg.Pdf.PdfDocument.operator !=(Zorg.Pdf.PdfDocument? left, Zorg.Pdf.PdfDocument? right) -> bool
 static Zorg.Pdf.PdfDocument.operator ==(Zorg.Pdf.PdfDocument? left, Zorg.Pdf.PdfDocument? right) -> bool
 Zorg.Pdf.PdfDocumentException
@@ -739,6 +741,33 @@ static Zorg.Pdf.Thickness.operator ==(Zorg.Pdf.Thickness left, Zorg.Pdf.Thicknes
 Zorg.Pdf.ValidationResult
 Zorg.Pdf.ValidationResult.Diagnostics.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.PdfDiagnostic!>
 Zorg.Pdf.ValidationResult.IsValid.get -> bool
+Zorg.Pdf.Watermark
+Zorg.Pdf.Watermark.<Clone>$() -> Zorg.Pdf.Watermark!
+Zorg.Pdf.Watermark.Angle.get -> double
+Zorg.Pdf.Watermark.Angle.init -> void
+Zorg.Pdf.Watermark.Color.get -> Zorg.Pdf.Color?
+Zorg.Pdf.Watermark.Color.init -> void
+Zorg.Pdf.Watermark.Equals(Zorg.Pdf.Watermark? other) -> bool
+override Zorg.Pdf.Watermark.Equals(object? obj) -> bool
+override Zorg.Pdf.Watermark.GetHashCode() -> int
+Zorg.Pdf.Watermark.Image.get -> Zorg.Pdf.ImageSource?
+Zorg.Pdf.Watermark.Image.init -> void
+Zorg.Pdf.Watermark.Layer.get -> Zorg.Pdf.WatermarkLayer
+Zorg.Pdf.Watermark.Layer.init -> void
+Zorg.Pdf.Watermark.Opacity.get -> double
+Zorg.Pdf.Watermark.Opacity.init -> void
+Zorg.Pdf.Watermark.Size.get -> Zorg.Pdf.Length?
+Zorg.Pdf.Watermark.Size.init -> void
+Zorg.Pdf.Watermark.Text.get -> string?
+Zorg.Pdf.Watermark.Text.init -> void
+override Zorg.Pdf.Watermark.ToString() -> string!
+Zorg.Pdf.Watermark.Watermark(Zorg.Pdf.ImageSource! image) -> void
+Zorg.Pdf.Watermark.Watermark(string! text) -> void
+static Zorg.Pdf.Watermark.operator !=(Zorg.Pdf.Watermark? left, Zorg.Pdf.Watermark? right) -> bool
+static Zorg.Pdf.Watermark.operator ==(Zorg.Pdf.Watermark? left, Zorg.Pdf.Watermark? right) -> bool
+Zorg.Pdf.WatermarkLayer
+Zorg.Pdf.WatermarkLayer.Behind = 1 -> Zorg.Pdf.WatermarkLayer
+Zorg.Pdf.WatermarkLayer.Over = 0 -> Zorg.Pdf.WatermarkLayer
 ~override Zorg.Pdf.Color.Equals(object obj) -> bool
 ~override Zorg.Pdf.ColumnWidth.Equals(object obj) -> bool
 ~override Zorg.Pdf.ColumnWidth.ToString() -> string

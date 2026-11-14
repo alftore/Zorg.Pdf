@@ -50,6 +50,34 @@ internal sealed partial class DocumentValidator
             }
         }
 
+        if (document.Watermark is { } watermark)
+        {
+            if ((watermark.Text is null) == (watermark.Image is null) || watermark.Text is { Length: 0 })
+            {
+                Error(DiagnosticCodes.BadWatermark, "A watermark has text or an image: one of them, not both.", "/watermark");
+            }
+
+            if (watermark.Opacity is < 0 or > 1 || double.IsNaN(watermark.Opacity))
+            {
+                Error(DiagnosticCodes.BadWatermark, Invariant($"Opacity is 0 (invisible) to 1 (solid); {watermark.Opacity} isn't."), "/watermark/opacity");
+            }
+
+            if (!double.IsFinite(watermark.Angle))
+            {
+                Error(DiagnosticCodes.BadWatermark, "The angle is a number of degrees.", "/watermark/angle");
+            }
+
+            if (watermark.Size is { } size)
+            {
+                Positive(size, "/watermark/size");
+            }
+
+            if (watermark.Image is SlotImageSource slot && string.IsNullOrWhiteSpace(slot.Slot))
+            {
+                Error(DiagnosticCodes.EmptySlot, "A data slot needs a name.", "/watermark/image/$data");
+            }
+        }
+
         Band(document.Header, "/header");
         Band(document.Footer, "/footer");
         if (document.Content.IsDefault)

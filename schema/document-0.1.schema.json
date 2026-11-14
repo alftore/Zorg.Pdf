@@ -13,6 +13,7 @@
     "page": { "$ref": "#/$defs/pageSettings" },
     "header": { "description": "Content at the top of every page.", "$ref": "#/$defs/pageBand" },
     "footer": { "description": "Content at the bottom of every page.", "$ref": "#/$defs/pageBand" },
+    "watermark": { "description": "Text or an image across every page, such as DRAFT.", "$ref": "#/$defs/watermark" },
     "styles": { "$ref": "#/$defs/styleSheet" },
     "content": { "description": "The blocks, in reading order.", "type": "array", "items": { "$ref": "#/$defs/block" } }
   },
@@ -79,7 +80,7 @@
       }
     },
     "styleSheet": {
-      "description": "Named styles, added to and overriding the built-in ones: body, heading1 to heading6, tableHeader, tableCell, header, footer.",
+      "description": "Named styles, added to and overriding the built-in ones: body, heading1 to heading6, tableHeader, tableCell, header, footer, watermark.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -166,6 +167,21 @@
         "align": { "$ref": "#/$defs/textAlign" },
         "spaceAfter": { "$ref": "#/$defs/length" }
       }
+    },
+    "watermark": {
+      "description": "Text or an image across every page, turned and see-through. Screen readers skip it. Set text or image.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": { "description": "One line of text, in the watermark style.", "type": "string", "minLength": 1 },
+        "image": { "$ref": "#/$defs/imageSource" },
+        "angle": { "description": "Counterclockwise turn in degrees.", "type": "number", "default": 45 },
+        "opacity": { "description": "0 (invisible) to 1 (solid).", "type": "number", "minimum": 0, "maximum": 1, "default": 0.15 },
+        "size": { "description": "Font size of text, or width of an image. Default: text spans most of the page diagonally, an image half the page width.", "$ref": "#/$defs/length" },
+        "color": { "description": "Colour of text. Default mid grey.", "$ref": "#/$defs/color" },
+        "layer": { "enum": ["over", "behind"], "default": "over" }
+      },
+      "oneOf": [{ "required": ["text"] }, { "required": ["image"] }]
     },
     "list": {
       "description": "A bulleted or numbered list, tagged for screen readers. Items hold paragraphs and nested lists.",

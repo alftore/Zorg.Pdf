@@ -37,6 +37,26 @@ internal sealed class ContentStreamBuilder
         return Operator("cm"u8);
     }
 
+    /// <summary><c>cm</c>: concatenates a matrix (a b c d e f) to the current transform.</summary>
+    public ContentStreamBuilder Transform(double a, double b, double c, double d, double e, double f)
+    {
+        Number(a);
+        Number(b);
+        Number(c);
+        Number(d);
+        Number(e);
+        Number(f);
+        return Operator("cm"u8);
+    }
+
+    /// <summary><c>gs</c>: applies a graphics state from the page resources, such as an opacity.</summary>
+    public ContentStreamBuilder SetGraphicsState(ReadOnlySpan<byte> resourceName)
+    {
+        PdfFormat.WriteName(_buffer, resourceName);
+        Space();
+        return Operator("gs"u8);
+    }
+
     /// <summary><c>cm</c>: scales the unit square to <paramref name="width"/> × <paramref name="height"/> at (x, y), to draw an image.</summary>
     public ContentStreamBuilder Place(double x, double y, double width, double height)
     {

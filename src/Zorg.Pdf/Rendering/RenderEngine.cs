@@ -74,6 +74,7 @@ internal sealed partial class RenderEngine : IDisposable
         _documentWriter = new DocumentWriter(_writer, _pageGeometry);
         _tagger = new Tagger(_writer);
         _geometry = MeasureBands();
+        PrepareWatermark();
     }
 
     public static async ValueTask<RenderResult> RenderAsync(PdfDocument document, Stream output, RenderOptions? options, bool synchronous, CancellationToken cancellationToken)
@@ -157,6 +158,7 @@ internal sealed partial class RenderEngine : IDisposable
 
         await FinishPageAsync(cancellationToken).ConfigureAwait(false);
         WriteBands();
+        WriteWatermark();
         foreach ((EmbeddedFont font, _, PdfReference reference) in _fonts.Used)
         {
             font.Write(_writer, reference);
@@ -493,7 +495,8 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         images.Sort((a, b) => a.Image.Number.CompareTo(b.Image.Number));
-        _documentWriter.WritePage(_page, _content.WrittenSpan, fonts, images, BandStream());
+        PdfReference? band = BandStream();
+        _documentWriter.WritePage(_page, _content.WrittenSpan, fonts, images, WatermarkUnder(), [.. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState());
         await _writer.FlushIfNeededAsync(cancellationToken).ConfigureAwait(false);
         _options.Progress?.Report(new RenderProgress(_page + 1, _writer.Position));
     }
