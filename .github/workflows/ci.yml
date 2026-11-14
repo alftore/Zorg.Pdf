@@ -168,12 +168,3 @@ jobs:
           name: hashes-${{ matrix.os }}
           path: hashes-${{ matrix.os }}.txt
           if-no-files-found: error
-
-  determinism-compare:
-    name: Byte-identical output (compare)
-    needs: [determinism]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Compare
-        run: echo compare
