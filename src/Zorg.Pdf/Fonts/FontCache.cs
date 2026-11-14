@@ -1,38 +1,92 @@
 using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 namespace Zorg.Pdf.Fonts;
 
 /// <summary>
-/// Parsed fonts shared by every render in the process, keyed by a SHA-256 of the file. Parsing a large font takes
-/// milliseconds; hashing it takes a fraction of that. A <see cref="TrueTypeFont"/> is immutable once parsed, so
+/// Parsed fonts shared by every render in the process. A <see cref="TrueTypeFont"/> is immutable once parsed, so
 /// concurrent renders can share it; what a render changes (the glyphs it uses, a kerning cache) lives in its own
 /// <see cref="EmbeddedFont"/>.
 /// </summary>
+/// <remarks>
+/// Three ways in, cheapest first: the same byte array as before (by identity, no hashing); the same file, unchanged
+/// (by path, last write time and length, no reading); anything else by a SHA-256 of the bytes.
+/// </remarks>
 internal static class FontCache
 {
-    /// <summary>The most fonts kept. Past it the cache starts over: simple, and rare in practice.</summary>
+    /// <summary>The most fonts kept by content and by file. Past it a cache starts over: simple, and rare in practice.</summary>
     internal const int Capacity = 64;
 
-    private static readonly ConcurrentDictionary<string, TrueTypeFont> Fonts = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, TrueTypeFont> ByContent = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<(string Path, DateTime Written, long Length), TrueTypeFont> ByFile = new();
+    private static readonly ConditionalWeakTable<byte[], ArrayEntry> ByArray = [];
 
+    internal static int Count => ByContent.Count;
+
+    /// <summary>The key a file is cached under: full path, last write time and length, so a changed file is read again.</summary>
+    public static (string Path, DateTime Written, long Length) FileKey(string path)
+    {
+        var info = new FileInfo(path);
+        return (Path.GetFullPath(path), info.LastWriteTimeUtc, info.Exists ? info.Length : -1);
+    }
+
+    /// <summary>The parsed font for an unchanged file, without reading it.</summary>
+    public static bool TryGetFile((string Path, DateTime Written, long Length) key, out TrueTypeFont font) => ByFile.TryGetValue(key, out font!);
+
+    /// <summary>Parses a file's bytes (or finds them by content) and remembers the result under the file's key.</summary>
+    public static TrueTypeFont AddFile((string Path, DateTime Written, long Length) key, ReadOnlyMemory<byte> bytes)
+    {
+        TrueTypeFont font = ByHash(bytes);
+        if (ByFile.Count >= Capacity)
+        {
+            ByFile.Clear();
+        }
+
+        return ByFile.GetOrAdd(key, font);
+    }
+
+    /// <summary>The parsed font for some bytes: by array identity when the bytes are a whole array, else by content.</summary>
     public static TrueTypeFont GetOrParse(ReadOnlyMemory<byte> file)
     {
+        if (MemoryMarshal.TryGetArray(file, out ArraySegment<byte> segment) && segment.Array is { } array && segment.Offset == 0 && segment.Count == array.Length)
+        {
+            if (ByArray.TryGetValue(array, out ArrayEntry? entry))
+            {
+                return entry.Font;
+            }
+
+            TrueTypeFont parsed = ByHash(file);
+            ByArray.AddOrUpdate(array, new ArrayEntry(parsed));
+            return parsed;
+        }
+
+        return ByHash(file);
+    }
+
+    private static TrueTypeFont ByHash(ReadOnlyMemory<byte> file)
+    {
         string key = Convert.ToHexString(SHA256.HashData(file.Span));
-        if (Fonts.TryGetValue(key, out TrueTypeFont? font))
+        if (ByContent.TryGetValue(key, out TrueTypeFont? font))
         {
             return font;
         }
 
         font = TrueTypeFont.Parse(file.ToArray()); // A copy: the caller's buffer may change after the render.
-        if (Fonts.Count >= Capacity)
+        if (ByContent.Count >= Capacity)
         {
-            Fonts.Clear();
+            ByContent.Clear();
         }
 
-        return Fonts.GetOrAdd(key, font);
+        return ByContent.GetOrAdd(key, font);
     }
 
-    internal static int Count => Fonts.Count;
+    /// <summary>A parsed font kept alive as long as the array it came from.</summary>
+    private sealed class ArrayEntry(TrueTypeFont font)
+    {
+        public TrueTypeFont Font { get; } = font;
+    }
 }

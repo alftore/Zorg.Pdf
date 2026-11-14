@@ -1,13 +1,13 @@
 # Working on Zorg.Pdf
 
-Async-first PDF generation for .NET 10, in C# only. Early 0.1: the public API is the document model (`PdfDocument`, blocks, inlines, styles, units), its JSON form, validation, and rendering of headings, paragraphs, spacers and page breaks (`RenderAsync`, `Render`). Tables, images and page bands are in the model but not drawn yet (ZPDF-R001). Don't call types from the design notes that don't exist yet.
+Async-first PDF generation for .NET 10, in C# only. Early 0.1: the public API is the document model (`PdfDocument`, blocks, inlines, styles, units), its JSON form, validation, and rendering of headings, paragraphs, spacers, page breaks and tables (`RenderAsync`, `Render`). Images and page bands are in the model but not drawn yet (ZPDF-R001). Don't call types from the design notes that don't exist yet.
 
 ## Writing code that uses Zorg.Pdf
 
 - A document is an immutable record tree: `new PdfDocument("Title") { Content = [new Heading("..."), new Paragraph("..."), new Table([new Column("A")]) { Rows = ... }] }`. Change it with `with`.
 - Blocks with a required part take it in the constructor: `new Heading(text)`, `new Paragraph(text or inlines)`, `new Table(columns)`, `new Image(source)`, `new Spacer(height)`, `new PageBand(content)`. Inlines are strings, `TextRun`, `LineBreak.Value` and `Field.PageNumber`/`Field.PageCount`.
 - Lengths: `Length.Pt/Mm/Cm/In`, or strings like `"2cm"` in JSON. Column widths: `ColumnWidth.Star(2)` / `"2*"`, `ColumnWidth.Fixed(...)`.
-- Data that changes per render is a slot: `TableRows.Bound("lines")` / `{"$data": "lines"}`, `ImageSource.FromSlot("logo")`. Documents never name files.
+- Data that changes per render is a slot: `TableRows.Bound("lines")` / `{"$data": "lines"}`, `ImageSource.FromSlot("logo")`. Documents never name files. Rows are filled at render time: `Data = PdfData.Empty.WithRows("lines", items, item => [item.Name, item.Amount.ToString("N2")])`, from `IEnumerable<T>` or `IAsyncEnumerable<T>`.
 - `PdfDocument.TryParseJson` never throws; `Validate()` never throws for a bad document. Both return diagnostics with a code (`docs/diagnostics.md`) and a JSON pointer.
 - The JSON Schema is `PdfJsonSchema.Current`; `PdfDocument.ToJson()` writes `$schema`. Unknown JSON properties are errors.
 - Rendering needs fonts: `new RenderOptions { Fonts = FontCollection.Empty.Add(new FontFamily("Inter") { Regular = FontSource.FromFile("Inter-Regular.ttf"), Bold = ..., Italic = ..., Fallbacks = ["Noto Sans Symbols"] }) }`. No system fonts unless `FontResolver = FontResolvers.System()`. `await document.RenderAsync(stream, options, ct)`; `Render(stream, options)` for sync callers.

@@ -23,7 +23,7 @@ namespace Zorg.Pdf.Rendering;
 /// <see cref="PdfObjectWriter"/>. With <c>synchronous</c> set, every step completes without a pending task, so the
 /// sync API never blocks on one.
 /// </remarks>
-internal sealed class RenderEngine : IDisposable
+internal sealed partial class RenderEngine : IDisposable
 {
     /// <summary>Stroke width of a synthetic bold face, as a share of the font size: about the weight step from regular to bold.</summary>
     private const double SyntheticBoldStroke = 0.03;
@@ -43,6 +43,7 @@ internal sealed class RenderEngine : IDisposable
     private readonly PageGeometry _geometry;
     private readonly Dictionary<int, PreparedText> _prepared = [];
     private readonly HashSet<EmbeddedFont> _pageFonts = [];
+    private readonly HashSet<int> _missingInData = []; // Characters already reported for rows from data slots.
 
     private ContentStreamBuilder _content = new();
     private int _page = -1;
@@ -52,6 +53,8 @@ internal sealed class RenderEngine : IDisposable
     private Color? _stroke;
     private double _strokeWidth = 1;
     private int _renderingMode; // Text state outlives BT/ET too.
+    private EmbeddedFont? _textFont;
+    private double _textSize;
 
     private RenderEngine(PdfDocument document, RenderOptions options, StyleResolver styles, FontSet fonts, string? defaultFamily, DiagnosticSink sink, Stream output, bool synchronous)
     {
@@ -87,7 +90,7 @@ internal sealed class RenderEngine : IDisposable
 
         Dictionary<FaceKey, string> needed = sink.HasErrors ? [] : Preflight.NeededFaces(document, styles, defaultFamily, sink);
         FontSet fonts = await FontSet.LoadAsync(options, needed, sink, synchronous, cancellationToken).ConfigureAwait(false);
-        Preflight.Check(document, styles, fonts, defaultFamily, options.Conformance, sink);
+        Preflight.Check(document, styles, fonts, defaultFamily, options, synchronous, sink);
         if (sink.HasErrors)
         {
             throw new PdfDocumentException(sink.ToImmutable());
@@ -121,6 +124,9 @@ internal sealed class RenderEngine : IDisposable
                     break;
                 case PageBreak when !_pageEmpty:
                     await NewPageAsync(cancellationToken).ConfigureAwait(false);
+                    break;
+                case Table table:
+                    await PlaceTableAsync(i, table, cancellationToken).ConfigureAwait(false);
                     break;
             }
 
@@ -162,8 +168,6 @@ internal sealed class RenderEngine : IDisposable
 
         Tagger.Element? element = null;
         bool open = false;
-        EmbeddedFont? font = null;
-        double size = 0;
         foreach (LayoutLine line in text.Lines)
         {
             if (_y - line.Height < _geometry.Bottom && !_pageEmpty)
@@ -182,54 +186,12 @@ internal sealed class RenderEngine : IDisposable
                 if (!open)
                 {
                     element ??= _tagger.Begin(text.Role);
-                    _content.BeginMarkedContent(Tagger.Name(text.Role), _tagger.Mark(element, _page)).BeginText();
-                    (font, size) = (null, 0); // A new text object: set the font again.
+                    _content.BeginMarkedContent(Tagger.Name(text.Role), _tagger.Mark(element, _page));
+                    BeginText();
                     open = true;
                 }
 
-                foreach (LineRun run in line.Runs)
-                {
-                    if (!ReferenceEquals(run.Font, font) || run.Size != size)
-                    {
-                        _content.SetFont(_fonts.Use(run.Font, _writer), run.Size);
-                        (font, size) = (run.Font, run.Size);
-                        _pageFonts.Add(run.Font);
-                    }
-
-                    Color color = run.Color ?? Color.Black;
-                    if (color != _fill)
-                    {
-                        _content.SetFillRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0);
-                        _fill = color;
-                    }
-
-                    // A synthetic bold face fills and strokes the outline in the text colour; mode 0 is plain fill.
-                    int mode = run.SyntheticBold ? 2 : 0;
-                    if (run.SyntheticBold && (_stroke != color || _strokeWidth != run.Size * SyntheticBoldStroke))
-                    {
-                        _content.SetStrokeRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0).SetLineWidth(run.Size * SyntheticBoldStroke);
-                        (_stroke, _strokeWidth) = (color, run.Size * SyntheticBoldStroke);
-                    }
-
-                    if (mode != _renderingMode)
-                    {
-                        _content.SetTextRenderingMode(mode);
-                        _renderingMode = mode;
-                    }
-
-                    double x = _geometry.Left + line.Offset + run.X;
-                    double baseline = _y - line.Ascent;
-                    if (run.SyntheticItalic)
-                    {
-                        _content.SetTextMatrix(SyntheticItalicShear, x, baseline);
-                    }
-                    else
-                    {
-                        _content.SetTextPosition(x, baseline);
-                    }
-
-                    _content.ShowGlyphs(run.Glyphs, run.ExtraAfter);
-                }
+                DrawRuns(line, _geometry.Left + line.Offset, _y - line.Ascent);
             }
 
             _y -= line.Height;
@@ -247,6 +209,62 @@ internal sealed class RenderEngine : IDisposable
         }
 
         _y -= text.SpaceAfter;
+    }
+
+    /// <summary>Starts a text object; the font is set again by the first run in it.</summary>
+    private void BeginText()
+    {
+        _content.BeginText();
+        (_textFont, _textSize) = (null, 0);
+    }
+
+    /// <summary>
+    /// Draws a line's runs in an open text object, starting at <paramref name="x"/> on <paramref name="baseline"/>:
+    /// font and size, fill colour, and synthetic bold (fill and stroke) and italic (a slanted text matrix).
+    /// </summary>
+    private void DrawRuns(LayoutLine line, double x, double baseline)
+    {
+        foreach (LineRun run in line.Runs)
+        {
+            if (!ReferenceEquals(run.Font, _textFont) || run.Size != _textSize)
+            {
+                _content.SetFont(_fonts.Use(run.Font, _writer), run.Size);
+                (_textFont, _textSize) = (run.Font, run.Size);
+                _pageFonts.Add(run.Font);
+            }
+
+            Color color = run.Color ?? Color.Black;
+            if (color != _fill)
+            {
+                _content.SetFillRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0);
+                _fill = color;
+            }
+
+            // A synthetic bold face fills and strokes the outline in the text colour; mode 0 is plain fill.
+            int mode = run.SyntheticBold ? 2 : 0;
+            if (run.SyntheticBold && (_stroke != color || _strokeWidth != run.Size * SyntheticBoldStroke))
+            {
+                _content.SetStrokeRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0).SetLineWidth(run.Size * SyntheticBoldStroke);
+                (_stroke, _strokeWidth) = (color, run.Size * SyntheticBoldStroke);
+            }
+
+            if (mode != _renderingMode)
+            {
+                _content.SetTextRenderingMode(mode);
+                _renderingMode = mode;
+            }
+
+            if (run.SyntheticItalic)
+            {
+                _content.SetTextMatrix(SyntheticItalicShear, x + run.X, baseline);
+            }
+            else
+            {
+                _content.SetTextPosition(x + run.X, baseline);
+            }
+
+            _content.ShowGlyphs(run.Glyphs, run.ExtraAfter);
+        }
     }
 
     /// <summary>Ends a text object and its marked content, back in fill mode.</summary>
@@ -300,9 +318,32 @@ internal sealed class RenderEngine : IDisposable
             _ => throw new InvalidOperationException($"Block {block.GetType().Name} isn't text."),
         };
 
-        // One segment per run, in its own face, size and colour. Offsets map layout diagnostics back to their run.
+        List<TextSegment> segments = Segments(inlines, style, out List<(int Offset, int Inline)> starts);
+        ParagraphLayout layout = ParagraphLayout.Create(segments, _geometry.ContentWidth, align, style.LineHeight ?? 1.2);
+        foreach (TextDiagnostic diagnostic in layout.Diagnostics)
+        {
+            (int start, int inline) = starts.FindLast(s => s.Offset <= diagnostic.Index);
+            _sink.Warning(
+                diagnostic.Code,
+                string.Create(CultureInfo.InvariantCulture, $"The word at index {diagnostic.Index - start} is wider than the page's {_geometry.ContentWidth:0.##} pt text width, so it was broken between characters."),
+                $"{path}/inlines/{inline}");
+        }
+
+        var prepared = new PreparedText(role, layout.Lines, before, after, block is Heading || block.KeepWithNext);
+        _prepared[index] = prepared;
+        return prepared;
+    }
+
+    /// <summary>
+    /// One segment per run, in its own face, size and colour; line breaks become line feeds. <paramref name="starts"/>
+    /// maps text offsets back to inlines for diagnostics. A run whose face wasn't loaded (styled text in bound rows
+    /// isn't known before the render) uses the block's face.
+    /// </summary>
+    private List<TextSegment> Segments(ImmutableArray<Inline> inlines, TextStyle style, out List<(int Offset, int Inline)> starts)
+    {
+        double size = style.Size?.Points ?? 10;
         var segments = new List<TextSegment>();
-        var starts = new List<(int Offset, int Inline)>();
+        starts = [];
         int offset = 0;
         for (int j = 0; j < inlines.Length; j++)
         {
@@ -322,27 +363,18 @@ internal sealed class RenderEngine : IDisposable
 
         if (segments.Count == 0)
         {
-            segments.Add(Segment("", style)); // An empty paragraph still has a line height.
+            segments.Add(Segment("", style)); // An empty paragraph or cell still has a line height.
         }
 
-        ParagraphLayout layout = ParagraphLayout.Create(segments, _geometry.ContentWidth, align, style.LineHeight ?? 1.2);
-        foreach (TextDiagnostic diagnostic in layout.Diagnostics)
-        {
-            (int start, int inline) = starts.FindLast(s => s.Offset <= diagnostic.Index);
-            _sink.Warning(
-                diagnostic.Code,
-                string.Create(CultureInfo.InvariantCulture, $"The word at index {diagnostic.Index - start} is wider than the page's {_geometry.ContentWidth:0.##} pt text width, so it was broken between characters."),
-                $"{path}/inlines/{inline}");
-        }
-
-        var prepared = new PreparedText(role, layout.Lines, before, after, block is Heading || block.KeepWithNext);
-        _prepared[index] = prepared;
-        return prepared;
+        return segments;
 
         TextSegment Segment(string text, TextStyle runStyle)
         {
-            FaceKey face = Preflight.Face(runStyle, _styles, _defaultFamily)!.Value;
-            _fonts.TryGet(face, out FontChain chain); // Preflight made sure every face loaded.
+            if (!(Preflight.Face(runStyle, _styles, _defaultFamily) is { } face && _fonts.TryGet(face, out FontChain chain)))
+            {
+                _fonts.TryGet(Preflight.Face(style, _styles, _defaultFamily)!.Value, out chain);
+            }
+
             return new TextSegment(text, chain, runStyle.Size?.Points ?? size, runStyle.Color);
         }
     }

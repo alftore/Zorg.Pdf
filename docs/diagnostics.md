@@ -24,6 +24,7 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-J017 | Error | A data slot has no name. | Give `$data` a name. |
 | ZPDF-J018 | Error | A header or footer holds a block other than a paragraph, image or spacer. | Move tables and headings into the content. |
 | ZPDF-J019 | Error | A line height isn't between 0 and 10. | Use a multiple of the font size, such as `1.2`. |
+| ZPDF-D001 | Error | A table is bound to a data slot (`{"$data": ...}`) that the render has no rows for. | Supply the rows: `RenderOptions.Data = PdfData.Empty.WithRows("slot", rows)`. |
 | ZPDF-A001 | Error | The document has no title. Viewers show it in place of the file name; PDF/UA requires one. | Set `title`. |
 | ZPDF-A002 | Error | The language isn't a BCP 47 tag. Screen readers pick their voice from it. | Use a tag such as `en`, `nb-NO` or `de-CH`. |
 | ZPDF-A003 | Error | An image has no alt text and isn't marked decorative. | Add `alt` saying what the image shows, or set `decorative: true`. |
@@ -34,4 +35,8 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-F005 | Error | A font file can't be read or used: damaged, not TrueType, or its licence forbids embedding. | Use another font file; the message says why. |
 | ZPDF-T001 | Warning | A word was wider than its column and was broken between characters. | Widen the column, make the text smaller, or add break points (spaces, soft hyphens). |
 | ZPDF-T002 | Error | The text has a control character that can't be drawn. | Remove it; use a line feed (`\n`) to break a line. |
-| ZPDF-R001 | Warning | This version doesn't draw that part yet (tables, images, headers, footers, page number fields), so it's left out. | Wait for the release that draws it, or leave it out. |
+| ZPDF-L001 | Warning | A table row is taller than a whole page, so it runs past the bottom margin. Rows don't split across pages yet. | Shorten the cell text, or make the columns wider. |
+| ZPDF-L002 | Warning | A row from a data slot has a different number of cells from the table's columns; it's padded with empty cells or cut. | Give every row one cell per column. |
+| ZPDF-L003 | Warning | The fixed-width columns are wider than the page, so all columns are scaled to fit. | Make the fixed columns narrower, or use shares (`"2*"`). |
+| ZPDF-R001 | Warning | This version doesn't draw that part yet (images, headers, footers, page number fields), so it's left out. |
+| ZPDF-R002 | Error | A synchronous `Render` was given rows from an `IAsyncEnumerable`, which it can't wait for. | Use `RenderAsync`, or give the rows as an `IEnumerable`. | Wait for the release that draws it, or leave it out. |

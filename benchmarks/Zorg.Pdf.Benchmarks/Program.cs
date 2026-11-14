@@ -4,27 +4,26 @@ using BenchmarkDotNet.Running;
 using MigraDoc.Rendering;
 using PdfSharp.Fonts;
 using Zorg.Pdf.Benchmarks;
-using Zorg.Pdf.Spike;
 
 if (args.Length > 0 && args[0] == "--write")
 {
     // Writes both invoices next to each other, to compare them by eye and by size.
     string folder = args.Length > 1 ? args[1] : ".";
-    byte[] font = await File.ReadAllBytesAsync(@"C:\Windows\Fonts\arial.ttf");
     GlobalFontSettings.UseWindowsFontsUnderWindows = true;
     foreach (int rows in new[] { 90, 1000 })
     {
-        using (FileStream zorg = File.Create(Path.Combine(folder, $"zorg-{rows}.pdf")))
+        string zorgPath = Path.Combine(folder, $"zorg-{rows}.pdf");
+        using (FileStream zorg = File.Create(zorgPath))
         {
-            await FlowDocument.RenderAsync(zorg, font, SpikeInvoice.Options, SpikeInvoice.Blocks(rows));
+            await BenchInvoice.Document.RenderAsync(zorg, InvoiceBenchmarks.Options(rows));
         }
 
-        var renderer = new PdfDocumentRenderer { Document = await InvoiceBenchmarks.BuildMigraDocAsync(rows) };
+        var renderer = new PdfDocumentRenderer { Document = InvoiceBenchmarks.BuildMigraDoc(rows) };
         renderer.RenderDocument();
         int pages = renderer.PdfDocument.PageCount; // Before saving: a saved PdfDocument can't be read any more.
-        await renderer.PdfDocument.SaveAsync(Path.Combine(folder, $"migradoc-{rows}.pdf"));
-        Console.WriteLine($"{rows} rows: Zorg.Pdf {new FileInfo(Path.Combine(folder, $"zorg-{rows}.pdf")).Length:N0} bytes, " +
-            $"MigraDoc {new FileInfo(Path.Combine(folder, $"migradoc-{rows}.pdf")).Length:N0} bytes, {pages} MigraDoc pages");
+        string migraPath = Path.Combine(folder, $"migradoc-{rows}.pdf");
+        await renderer.PdfDocument.SaveAsync(migraPath);
+        Console.WriteLine($"{rows} rows: Zorg.Pdf {new FileInfo(zorgPath).Length:N0} bytes, MigraDoc {new FileInfo(migraPath).Length:N0} bytes, {pages} MigraDoc pages");
     }
 
     return;

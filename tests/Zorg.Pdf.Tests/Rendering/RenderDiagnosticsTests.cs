@@ -126,7 +126,6 @@ public sealed class RenderDiagnosticsTests
                 "Info ZPDF-F003 /content/0/inlines/1/style",
                 "Warning ZPDF-R001 /footer",
                 "Warning ZPDF-R001 /content/0/inlines/3",
-                "Warning ZPDF-R001 /content/1",
                 "Warning ZPDF-R001 /content/2",
             ],
             result.Diagnostics.Select(d => $"{d.Severity} {d.Code} {d.Path}"));

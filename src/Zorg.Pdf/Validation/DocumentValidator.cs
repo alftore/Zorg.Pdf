@@ -175,6 +175,19 @@ internal sealed partial class DocumentValidator
             }
         }
 
+        if (table.TableStyle is { } look)
+        {
+            if (look.RuleWidth is { } rule)
+            {
+                NotNegative(rule, $"{path}/tableStyle/ruleWidth");
+            }
+
+            if (look.CellPadding is { } padding)
+            {
+                NotNegative(padding, $"{path}/tableStyle/cellPadding");
+            }
+        }
+
         switch (table.Rows)
         {
             case InlineTableRows inline when !inline.Rows.IsDefault:

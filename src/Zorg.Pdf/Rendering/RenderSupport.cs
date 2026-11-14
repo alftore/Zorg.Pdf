@@ -68,6 +68,13 @@ internal sealed class StyleResolver
     }
 
     public TextStyle Named(string name) => _styles.TryGetValue(name, out TextStyle? style) ? _styles["body"].Merge(style) : _styles["body"];
+
+    /// <summary>A table's header cells: <c>body</c>, then <c>tableHeader</c>.</summary>
+    public TextStyle TableHeader() => Named("tableHeader");
+
+    /// <summary>A table's body cells: <c>body</c>, then <c>tableCell</c>, then the table's own <see cref="Block.Style"/>.</summary>
+    public TextStyle TableCell(Table table) =>
+        table.Style is { } name && _styles.TryGetValue(name, out TextStyle? own) ? Named("tableCell").Merge(own) : Named("tableCell");
 }
 
 /// <summary>A face of a family: what a run of text asks for.</summary>
@@ -171,8 +178,7 @@ internal sealed class FontSet
         {
             try
             {
-                ReadOnlyMemory<byte> bytes = await source.ReadAsync(_synchronous, cancellationToken).ConfigureAwait(false);
-                TrueTypeFont parsed = FontCache.GetOrParse(bytes);
+                TrueTypeFont parsed = await source.LoadAsync(_synchronous, cancellationToken).ConfigureAwait(false);
                 if (!_embedded.TryGetValue(parsed, out font))
                 {
                     font = new EmbeddedFont(parsed);

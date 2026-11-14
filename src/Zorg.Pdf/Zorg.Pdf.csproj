@@ -21,8 +21,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Zorg.Pdf.Tests" />
-    <InternalsVisibleTo Include="Zorg.Pdf.AotSmoke" />
-    <InternalsVisibleTo Include="Zorg.Pdf.Benchmarks" />
   </ItemGroup>
 
 </Project>

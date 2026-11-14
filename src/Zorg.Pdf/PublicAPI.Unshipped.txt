@@ -381,6 +381,12 @@ static Zorg.Pdf.Paragraph.operator ==(Zorg.Pdf.Paragraph? left, Zorg.Pdf.Paragra
 Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfConformance.None = 0 -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfConformance.PdfUA1 = 1 -> Zorg.Pdf.PdfConformance
+Zorg.Pdf.PdfData
+static Zorg.Pdf.PdfData.Empty.get -> Zorg.Pdf.PdfData!
+Zorg.Pdf.PdfData.WithRows(string! slot, System.Collections.Generic.IAsyncEnumerable<System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! rows) -> Zorg.Pdf.PdfData!
+Zorg.Pdf.PdfData.WithRows(string! slot, System.Collections.Generic.IEnumerable<System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! rows) -> Zorg.Pdf.PdfData!
+Zorg.Pdf.PdfData.WithRows<T>(string! slot, System.Collections.Generic.IAsyncEnumerable<T>! items, System.Func<T, System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! cells) -> Zorg.Pdf.PdfData!
+Zorg.Pdf.PdfData.WithRows<T>(string! slot, System.Collections.Generic.IEnumerable<T>! items, System.Func<T, System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! cells) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfDiagnostic
 Zorg.Pdf.PdfDiagnostic.<Clone>$() -> Zorg.Pdf.PdfDiagnostic!
 Zorg.Pdf.PdfDiagnostic.Code.get -> string!
@@ -459,6 +465,8 @@ override Zorg.Pdf.PdfLimits.Equals(object? obj) -> bool
 override Zorg.Pdf.PdfLimits.GetHashCode() -> int
 Zorg.Pdf.PdfLimits.MaxPages.get -> int
 Zorg.Pdf.PdfLimits.MaxPages.init -> void
+Zorg.Pdf.PdfLimits.MaxTableRows.get -> int
+Zorg.Pdf.PdfLimits.MaxTableRows.init -> void
 Zorg.Pdf.PdfLimits.PdfLimits() -> void
 override Zorg.Pdf.PdfLimits.ToString() -> string!
 static Zorg.Pdf.PdfLimits.operator !=(Zorg.Pdf.PdfLimits? left, Zorg.Pdf.PdfLimits? right) -> bool
@@ -468,6 +476,8 @@ Zorg.Pdf.RenderOptions.Conformance.get -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.RenderOptions.Conformance.init -> void
 Zorg.Pdf.RenderOptions.CreationDate.get -> System.DateTimeOffset?
 Zorg.Pdf.RenderOptions.CreationDate.init -> void
+Zorg.Pdf.RenderOptions.Data.get -> Zorg.Pdf.PdfData!
+Zorg.Pdf.RenderOptions.Data.init -> void
 static Zorg.Pdf.RenderOptions.Default.get -> Zorg.Pdf.RenderOptions!
 Zorg.Pdf.RenderOptions.FontResolver.get -> Zorg.Pdf.Fonts.IFontResolver?
 Zorg.Pdf.RenderOptions.FontResolver.init -> void
@@ -547,6 +557,8 @@ Zorg.Pdf.Table.RepeatHeader.init -> void
 Zorg.Pdf.Table.Rows.get -> Zorg.Pdf.TableRows!
 Zorg.Pdf.Table.Rows.init -> void
 Zorg.Pdf.Table.Table(System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Column!> columns) -> void
+Zorg.Pdf.Table.TableStyle.get -> Zorg.Pdf.TableStyle?
+Zorg.Pdf.Table.TableStyle.init -> void
 override Zorg.Pdf.Table.ToString() -> string!
 static Zorg.Pdf.Table.operator !=(Zorg.Pdf.Table? left, Zorg.Pdf.Table? right) -> bool
 static Zorg.Pdf.Table.operator ==(Zorg.Pdf.Table? left, Zorg.Pdf.Table? right) -> bool
@@ -565,6 +577,25 @@ Zorg.Pdf.TableRows.TableRows(Zorg.Pdf.TableRows! original) -> void
 override Zorg.Pdf.TableRows.ToString() -> string!
 static Zorg.Pdf.TableRows.operator !=(Zorg.Pdf.TableRows? left, Zorg.Pdf.TableRows? right) -> bool
 static Zorg.Pdf.TableRows.operator ==(Zorg.Pdf.TableRows? left, Zorg.Pdf.TableRows? right) -> bool
+Zorg.Pdf.TableStyle
+Zorg.Pdf.TableStyle.<Clone>$() -> Zorg.Pdf.TableStyle!
+Zorg.Pdf.TableStyle.CellPadding.get -> Zorg.Pdf.Length?
+Zorg.Pdf.TableStyle.CellPadding.init -> void
+static Zorg.Pdf.TableStyle.Default.get -> Zorg.Pdf.TableStyle!
+Zorg.Pdf.TableStyle.Equals(Zorg.Pdf.TableStyle? other) -> bool
+override Zorg.Pdf.TableStyle.Equals(object? obj) -> bool
+override Zorg.Pdf.TableStyle.GetHashCode() -> int
+Zorg.Pdf.TableStyle.HeaderFill.get -> Zorg.Pdf.Color?
+Zorg.Pdf.TableStyle.HeaderFill.init -> void
+Zorg.Pdf.TableStyle.Merge(Zorg.Pdf.TableStyle? over) -> Zorg.Pdf.TableStyle!
+Zorg.Pdf.TableStyle.RuleColor.get -> Zorg.Pdf.Color?
+Zorg.Pdf.TableStyle.RuleColor.init -> void
+Zorg.Pdf.TableStyle.RuleWidth.get -> Zorg.Pdf.Length?
+Zorg.Pdf.TableStyle.RuleWidth.init -> void
+Zorg.Pdf.TableStyle.TableStyle() -> void
+override Zorg.Pdf.TableStyle.ToString() -> string!
+static Zorg.Pdf.TableStyle.operator !=(Zorg.Pdf.TableStyle? left, Zorg.Pdf.TableStyle? right) -> bool
+static Zorg.Pdf.TableStyle.operator ==(Zorg.Pdf.TableStyle? left, Zorg.Pdf.TableStyle? right) -> bool
 Zorg.Pdf.TextAlign
 Zorg.Pdf.TextAlign.Center = 1 -> Zorg.Pdf.TextAlign
 Zorg.Pdf.TextAlign.Justify = 3 -> Zorg.Pdf.TextAlign

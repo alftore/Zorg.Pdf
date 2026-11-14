@@ -26,8 +26,8 @@ public sealed record Table : Block
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal Table(ImmutableArray<Column> columns, TableRows? rows = null, bool repeatHeader = true, string? style = null, bool keepWithNext = false) =>
-        (Columns, Rows, RepeatHeader, Style, KeepWithNext) = (columns, rows ?? TableRows.Empty, repeatHeader, style, keepWithNext);
+    internal Table(ImmutableArray<Column> columns, TableRows? rows = null, bool repeatHeader = true, TableStyle? tableStyle = null, string? style = null, bool keepWithNext = false) =>
+        (Columns, Rows, RepeatHeader, TableStyle, Style, KeepWithNext) = (columns, rows ?? TableRows.Empty, repeatHeader, tableStyle, style, keepWithNext);
 
     /// <summary>A table with the given columns.</summary>
     /// <param name="columns">The columns, left to right.</param>
@@ -43,6 +43,53 @@ public sealed record Table : Block
 
     /// <summary>Repeats the header row at the top of every page the table continues on. On by default.</summary>
     public bool RepeatHeader { get; init; } = true;
+
+    /// <summary>Header fill, rules and cell padding. Null: a light grey header and thin grey rules.</summary>
+    public TableStyle? TableStyle { get; init; }
+}
+
+/// <summary>
+/// How a table is drawn. Text styles come from the named styles <c>tableHeader</c> and <c>tableCell</c> (and the
+/// table's own <see cref="Block.Style"/> for body cells); this is everything else. Unset properties keep the default.
+/// </summary>
+/// <example>
+/// <code>
+/// var plain = new TableStyle { HeaderFill = Color.White, RuleColor = Color.Black, CellPadding = Length.Pt(4) };
+/// </code>
+/// </example>
+public sealed record TableStyle
+{
+    /// <summary>The default: header fill #E6E6E6, rules #666666, 0.3 pt rules (0.8 pt under the header), 3 pt padding.</summary>
+    public static TableStyle Default { get; } = new()
+    {
+        HeaderFill = Color.Gray(0xE6),
+        RuleColor = Color.Gray(0x66),
+        RuleWidth = Length.Pt(0.3),
+        CellPadding = Length.Pt(3),
+    };
+
+    /// <summary>The header row's background.</summary>
+    public Color? HeaderFill { get; init; }
+
+    /// <summary>The colour of the rule under each row.</summary>
+    public Color? RuleColor { get; init; }
+
+    /// <summary>The width of the rule under each row; the rule under the header is a little heavier. 0 draws none.</summary>
+    public Length? RuleWidth { get; init; }
+
+    /// <summary>Space between a cell's edge and its text, on every side.</summary>
+    public Length? CellPadding { get; init; }
+
+    /// <summary>This style with every property <paramref name="over"/> sets taking its place.</summary>
+    /// <param name="over">The style on top, or null.</param>
+    /// <returns>The merged style.</returns>
+    public TableStyle Merge(TableStyle? over) => over is null ? this : new TableStyle
+    {
+        HeaderFill = over.HeaderFill ?? HeaderFill,
+        RuleColor = over.RuleColor ?? RuleColor,
+        RuleWidth = over.RuleWidth ?? RuleWidth,
+        CellPadding = over.CellPadding ?? CellPadding,
+    };
 }
 
 /// <summary>A table column.</summary>

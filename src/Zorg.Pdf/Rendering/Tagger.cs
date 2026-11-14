@@ -15,6 +15,10 @@ internal enum StructureRole
     H5,
     H6,
     P,
+    Table,
+    TR,
+    TH,
+    TD,
 }
 
 /// <summary>
@@ -25,7 +29,7 @@ internal enum StructureRole
 internal sealed class Tagger
 {
     private static readonly byte[][] RoleNames =
-        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
+        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
 
     private readonly PdfObjectWriter _writer;
     private readonly List<List<PdfReference>> _parentTree = []; // Per page, the element that owns each MCID.
@@ -47,11 +51,12 @@ internal sealed class Tagger
     /// <summary>Starts a page: its marked content gets MCIDs from 0.</summary>
     public void StartPage() => _parentTree.Add([]);
 
-    /// <summary>A new element under the document element, in reading order.</summary>
-    public Element Begin(StructureRole role)
+    /// <summary>A new element under <paramref name="parent"/> (the document element when null), in reading order.</summary>
+    public Element Begin(StructureRole role, Element? parent = null)
     {
-        var element = new Element(role, _writer.Allocate(), _root.Reference);
-        _root.Kids.Add(element.Reference);
+        parent ??= _root;
+        var element = new Element(role, _writer.Allocate(), parent.Reference) { ColumnHeader = role == StructureRole.TH };
+        parent.Kids.Add(element.Reference);
         return element;
     }
 
@@ -117,6 +122,17 @@ internal sealed class Tagger
         _writer.Name(Name(element.Role));
         _writer.Name("P"u8);
         _writer.Reference(element.Parent);
+        if (element.ColumnHeader)
+        {
+            // Header cells say what they head (PDF/UA-1 7.5): every header here heads its column.
+            _writer.Name("A"u8);
+            _writer.BeginDictionary();
+            _writer.Name("O"u8);
+            _writer.Name("Table"u8);
+            _writer.Name("Scope"u8);
+            _writer.Name("Column"u8);
+            _writer.EndDictionary();
+        }
 
         // Marked content on one page names the page once (/Pg); content on several pages needs MCR dictionaries.
         int firstPage = -1;
@@ -177,6 +193,9 @@ internal sealed class Tagger
         public PdfReference Reference { get; } = reference;
 
         public PdfReference Parent { get; } = parent;
+
+        /// <summary>A TH that heads its column.</summary>
+        public bool ColumnHeader { get; init; }
 
         public List<object> Kids { get; } = [];
     }

@@ -38,6 +38,9 @@ public sealed class RenderOptions
     /// </summary>
     public PdfConformance Conformance { get; init; }
 
+    /// <summary>Rows for tables bound to data slots, read as the tables are laid out.</summary>
+    public PdfData Data { get; init; } = PdfData.Empty;
+
     /// <summary>Limits that stop a runaway render.</summary>
     public PdfLimits Limits { get; init; } = PdfLimits.Default;
 
@@ -67,6 +70,9 @@ public sealed record PdfLimits
 
     /// <summary>The most pages a render may produce.</summary>
     public int MaxPages { get; init; } = 10_000;
+
+    /// <summary>The most body rows one table may have.</summary>
+    public int MaxTableRows { get; init; } = 1_000_000;
 }
 
 /// <summary>Progress of a render: pages and bytes written so far.</summary>

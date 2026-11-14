@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using Zorg.Pdf;
 using Zorg.Pdf.Fonts;
-using Zorg.Pdf.Spike;
 
 // Published with Native AOT and executed in CI. Trimming keeps only what's used, so every
 // feature has to be exercised here: a clean publish alone proves little. Add each new one.
@@ -134,12 +133,43 @@ byte[] font = File.ReadAllBytes(fontPath);
     }
 }
 
-// Spike S5 and S6 (tables move to the public engine in slice 4): a tagged invoice, rows arriving asynchronously.
+// 0.1 slice 4: a tagged invoice with a table whose rows arrive asynchronously, over several pages.
 {
+    var invoiceDocument = new PdfDocument("Invoice 2026-0042")
+    {
+        Content =
+        [
+            new Heading("Invoice 2026-0042"),
+            new Paragraph("Bill to: Blåbær & Syltetøy AB, Kungsgatan 12, 111 43 Stockholm") { Align = TextAlign.Right },
+            new Table(
+            [
+                new Column("#") { Width = ColumnWidth.Star(0.6), Align = TextAlign.Right },
+                new Column("Description") { Width = ColumnWidth.Star(5) },
+                new Column("Hours") { Width = ColumnWidth.Star(1.1), Align = TextAlign.Right },
+                new Column("Amount") { Width = ColumnWidth.Fixed(Length.Cm(2.5)), Align = TextAlign.Right },
+            ])
+            {
+                Rows = TableRows.Bound("lines"),
+            },
+            new Paragraph([new TextRun("Total: 54 375,00 NOK") { Style = TextStyle.Bold }]) { Align = TextAlign.Right },
+        ],
+    };
+    var invoiceOptions = new RenderOptions
+    {
+        Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }),
+        Conformance = PdfConformance.PdfUA1,
+        Data = PdfData.Empty.WithRows("lines", InvoiceLines(90), i =>
+        [
+            i.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            i % 3 == 0 ? "Blåbærsyltetøy-integrasjon (Norwegian characters æ ø å)" : "Architecture review of the reporting pipeline, with written recommendations and a follow-up workshop",
+            (0.5 + (i * 37 % 16 / 2.0)).ToString("N1", System.Globalization.CultureInfo.InvariantCulture),
+            ((0.5 + (i * 37 % 16 / 2.0)) * 1250).ToString("N2", System.Globalization.CultureInfo.InvariantCulture),
+        ]),
+    };
     using var invoice = new MemoryStream();
-    FlowResult flow = FlowDocument.RenderAsync(invoice, font, SpikeInvoice.Options, SpikeInvoice.Blocks(90)).AsTask().GetAwaiter().GetResult();
+    RenderResult flow = invoiceDocument.RenderAsync(invoice, invoiceOptions).AsTask().GetAwaiter().GetResult();
     string invoiceText = Encoding.Latin1.GetString(invoice.ToArray());
-    Check("tagged invoice", flow.Pages >= 2 && invoiceText.Contains("/StructTreeRoot", StringComparison.Ordinal) && invoiceText.Contains("/S /TH", StringComparison.Ordinal));
+    Check("tagged invoice", flow.PageCount >= 2 && invoiceText.Contains("/StructTreeRoot", StringComparison.Ordinal) && invoiceText.Contains("/S /TH", StringComparison.Ordinal) && !flow.HasWarnings);
     if (saveTo is not null)
     {
         File.WriteAllBytes(Path.Combine(saveTo, "invoice.pdf"), invoice.ToArray());
@@ -147,3 +177,16 @@ byte[] font = File.ReadAllBytes(fontPath);
 }
 
 return failures == 0 ? 0 : 1;
+
+static async System.Collections.Generic.IAsyncEnumerable<int> InvoiceLines(int count)
+{
+    for (int i = 1; i <= count; i++)
+    {
+        if (i % 25 == 0)
+        {
+            await System.Threading.Tasks.Task.Yield();
+        }
+
+        yield return i;
+    }
+}

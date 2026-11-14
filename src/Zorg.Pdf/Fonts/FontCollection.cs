@@ -120,7 +120,8 @@ public abstract record FontSource
     /// <summary>A short description for messages, such as the file name.</summary>
     internal abstract string Describe();
 
-    internal abstract ValueTask<ReadOnlyMemory<byte>> ReadAsync(bool synchronous, CancellationToken cancellationToken);
+    /// <summary>The parsed font, through the process-wide <see cref="FontCache"/>.</summary>
+    internal abstract ValueTask<TrueTypeFont> LoadAsync(bool synchronous, CancellationToken cancellationToken);
 }
 
 /// <summary>A font from bytes in memory.</summary>
@@ -129,7 +130,7 @@ internal sealed record BytesFontSource(ReadOnlyMemory<byte> Bytes) : FontSource
 {
     internal override string Describe() => $"{Bytes.Length:N0} bytes";
 
-    internal override ValueTask<ReadOnlyMemory<byte>> ReadAsync(bool synchronous, CancellationToken cancellationToken) => ValueTask.FromResult(Bytes);
+    internal override ValueTask<TrueTypeFont> LoadAsync(bool synchronous, CancellationToken cancellationToken) => ValueTask.FromResult(FontCache.GetOrParse(Bytes));
 }
 
 /// <summary>A font read from a file.</summary>
@@ -138,13 +139,22 @@ internal sealed record FileFontSource(string Path) : FontSource
 {
     internal override string Describe() => System.IO.Path.GetFileName(Path);
 
-    internal override ValueTask<ReadOnlyMemory<byte>> ReadAsync(bool synchronous, CancellationToken cancellationToken) =>
-        synchronous ? ValueTask.FromResult<ReadOnlyMemory<byte>>(ReadSync()) : ReadCoreAsync(cancellationToken);
+    internal override ValueTask<TrueTypeFont> LoadAsync(bool synchronous, CancellationToken cancellationToken)
+    {
+        // An unchanged file is neither read nor hashed again.
+        (string, DateTime, long) key = FontCache.FileKey(Path);
+        if (FontCache.TryGetFile(key, out TrueTypeFont font))
+        {
+            return ValueTask.FromResult(font);
+        }
+
+        return synchronous ? ValueTask.FromResult(FontCache.AddFile(key, ReadSync())) : ReadCoreAsync(key, cancellationToken);
+    }
 
     private byte[] ReadSync() => File.ReadAllBytes(Path);
 
-    private async ValueTask<ReadOnlyMemory<byte>> ReadCoreAsync(CancellationToken cancellationToken) =>
-        await File.ReadAllBytesAsync(Path, cancellationToken).ConfigureAwait(false);
+    private async ValueTask<TrueTypeFont> ReadCoreAsync((string, DateTime, long) key, CancellationToken cancellationToken) =>
+        FontCache.AddFile(key, await File.ReadAllBytesAsync(Path, cancellationToken).ConfigureAwait(false));
 }
 
 /// <summary>A request for one face of a family.</summary>

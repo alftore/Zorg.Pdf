@@ -28,6 +28,9 @@ internal static class DiagnosticCodes
     public const string BandContent = "ZPDF-J018";
     public const string BadLineHeight = "ZPDF-J019";
 
+    // D: data slots.
+    public const string MissingSlot = "ZPDF-D001";
+
     // A: accessibility.
     public const string NoTitle = "ZPDF-A001";
     public const string BadLanguage = "ZPDF-A002";
@@ -44,6 +47,12 @@ internal static class DiagnosticCodes
     public const string WordTooWide = "ZPDF-T001";
     public const string ControlCharacter = "ZPDF-T002";
 
+    // L: layout and pagination.
+    public const string RowTooTall = "ZPDF-L001";
+    public const string RowCellCount = "ZPDF-L002";
+    public const string ColumnsTooWide = "ZPDF-L003";
+
     // R: rendering and limits.
     public const string NotDrawnYet = "ZPDF-R001";
+    public const string AsyncRowsInSyncRender = "ZPDF-R002";
 }

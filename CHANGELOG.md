@@ -23,9 +23,13 @@ All notable changes to this project are documented here. The format follows [Kee
 - Fonts: bold, italic and bold-italic faces on `FontFamily`, synthesised (thickened or slanted, ZPDF-F003 Info) when missing; styled text runs (face, size, colour) within a line; fallback families for missing characters; `IFontResolver` and `FontResolvers.System()` as an opt-in; parsed fonts shared across renders.
 - A character no font has is now drawn as an empty box with warning ZPDF-F002 (an error under `PdfUA1`), not a failed render.
 
+- Tables: star and fixed columns, a header row that repeats on each page (as an artifact, so it is read once), header fill, rules and cell padding through `TableStyle`, cell alignment, tagged as Table, TR, TH (with column scope) and TD.
+- Table rows from data: `RenderOptions.Data = PdfData.Empty.WithRows("lines", rows)`, from `IEnumerable` or `IAsyncEnumerable`, read as the table is laid out. `PdfLimits.MaxTableRows` bounds them.
+- Table warnings: a row taller than a page (ZPDF-L001), a data row with the wrong number of cells (L002), fixed columns wider than the page (L003).
+
 ### Removed
 
-- The spike's single-page documents (`HelloDocument`, `FontDocument`, `ParagraphDocument`), replaced by the public render API. The spike's table renderer stays until tables move to the engine.
+- The spike (`Spike/`), replaced by the public render API.
 
 ### Fixed
 

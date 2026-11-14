@@ -213,7 +213,19 @@
             { "$ref": "#/$defs/slot" }
           ]
         },
-        "repeatHeader": { "type": "boolean", "default": true }
+        "repeatHeader": { "type": "boolean", "default": true },
+        "tableStyle": { "$ref": "#/$defs/tableStyle" }
+      }
+    },
+    "tableStyle": {
+      "description": "How a table is drawn, beyond its text styles (tableHeader, tableCell). Unset properties keep the default: header fill #E6E6E6, rules #666666 at 0.3 pt, 3 pt padding.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "headerFill": { "$ref": "#/$defs/color" },
+        "ruleColor": { "$ref": "#/$defs/color" },
+        "ruleWidth": { "description": "Width of the rule under each row; 0 draws none.", "$ref": "#/$defs/length" },
+        "cellPadding": { "$ref": "#/$defs/length" }
       }
     },
     "imageSource": {
