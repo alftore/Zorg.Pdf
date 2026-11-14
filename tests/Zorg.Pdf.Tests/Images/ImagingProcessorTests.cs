@@ -45,6 +45,21 @@ public sealed class ImagingProcessorTests
     }
 
     [Fact]
+    public async Task ACmykJpegWithoutAProfileBecomesSrgbToo()
+    {
+        // Zorg.Pdf alone embeds it as DeviceCMYK, which PDF/A with an sRGB output intent rejects; the processor converts it.
+        byte[] cmyk = TestImages.Jpeg(40, 20, components: 4);
+
+        (byte[] file, _) = await RenderAsync(cmyk, width: null);
+        (_, RenderResult archived) = await RenderTests.RenderAsync(
+            new PdfDocument("x") { Content = [new Image(ImageSource.FromBytes(cmyk)) { Alt = "A swatch" }] },
+            new RenderOptions { Fonts = PdfInspect.Options().Fonts, Archive = PdfArchive.PdfA2b, ImageProcessor = new ImagingProcessor() });
+
+        Assert.Contains("/ColorSpace /DeviceRGB", PdfInspect.Text(file), StringComparison.Ordinal);
+        Assert.Empty(archived.Diagnostics);
+    }
+
+    [Fact]
     public async Task ACameraJpegIsTurnedTheRightWayUp()
     {
         byte[] sideways = WithOrientation(TestImages.Jpeg(40, 24), 6); // Stored landscape, shown portrait.

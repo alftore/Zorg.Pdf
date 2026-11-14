@@ -72,7 +72,8 @@ public sealed class ImagingProcessor : IImageProcessor
         int targetWidth = Pixels(request.MaxWidth), targetHeight = Pixels(request.MaxHeight);
         bool tooLarge = info.DisplayWidth > targetWidth || info.DisplayHeight > targetHeight;
         bool turned = info.Orientation > 1;
-        bool plainColour = !info.HasIccProfile && info.ColorSpace is null or { IsSrgb: true };
+        bool cmyk = info.Format == ImageFormat.Jpeg && JpegComponents(bytes.Span) == 4;
+        bool plainColour = !cmyk && !info.HasIccProfile && info.ColorSpace is null or { IsSrgb: true };
         bool readByCore = info.Format == ImageFormat.Jpeg || info.Format == ImageFormat.Png;
         if (readByCore && !tooLarge && !turned && plainColour)
         {
@@ -118,6 +119,34 @@ public sealed class ImagingProcessor : IImageProcessor
                 image.Dispose();
             }
         }
+    }
+
+    /// <summary>The number of colour components in a JPEG's frame header, or 0 when there's none.</summary>
+    private static int JpegComponents(ReadOnlySpan<byte> jpeg)
+    {
+        for (int at = 2; at + 9 < jpeg.Length;)
+        {
+            if (jpeg[at] != 0xFF)
+            {
+                return 0;
+            }
+
+            byte marker = jpeg[at + 1];
+            if (marker is >= 0xC0 and <= 0xCF and not 0xC4 and not 0xC8 and not 0xCC)
+            {
+                return jpeg[at + 9]; // SOFn: length, precision, height, width, then the component count.
+            }
+
+            if (marker is 0xD8 or 0x01 or (>= 0xD0 and <= 0xD7))
+            {
+                at += 2;
+                continue;
+            }
+
+            at += 2 + ((jpeg[at + 2] << 8) | jpeg[at + 3]);
+        }
+
+        return 0;
     }
 
     private static ZorgImage Replace(ZorgImage old, ZorgImage replacement)
