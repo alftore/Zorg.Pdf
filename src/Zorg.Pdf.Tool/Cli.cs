@@ -76,6 +76,7 @@ internal static class Cli
               --preview              With render and watch: also draw pages as PNG beside the PDF
               --page <n|all>             The page to draw, from 1 (default 1), or all
               --pages <1-3,5>        extract: the pages to take; merge takes file.pdf:1-3
+              --facturx <invoice.xml>  render: embed a Factur-X/ZUGFeRD CII XML (and claim PDF/A-3)
               --title, --author, --subject, --keywords, --lang <text>
                                      merge and extract: new metadata (default: the first file's)
               --dpi <n>                  The PNG's resolution, 18 to 600 (default 96)
@@ -436,6 +437,26 @@ internal static class Cli
             ImageProcessor = new ImagingProcessor(),
             Hyphenator = Zorg.Pdf.Hyphenation.PatternHyphenator.Default, // Used where a style says hyphens: auto.
         };
+        if (args.FacturX is { } xmlPath)
+        {
+            // Factur-X/ZUGFeRD: the XML embedded, the fx: metadata, and PDF/A-3 at the level asked for (3b at least).
+            byte[]? xml = await ReadAsync(xmlPath, console, report, cancellationToken).ConfigureAwait(false);
+            if (xml is null)
+            {
+                return report;
+            }
+
+            try
+            {
+                Zorg.Pdf.Invoicing.FacturXInvoice facturX = Zorg.Pdf.Invoicing.FacturX.Read(xml);
+                (document, options) = (facturX.ApplyTo(document), facturX.ApplyTo(options));
+            }
+            catch (PdfDocumentException ex)
+            {
+                report.Add(xmlPath, ex.Diagnostics);
+                return report;
+            }
+        }
 
         string output = memory is not null ? "memory" : args.Output ?? Path.ChangeExtension(args.Input, ".pdf");
         string? temporary = null;

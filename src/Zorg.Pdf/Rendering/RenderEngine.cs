@@ -121,6 +121,15 @@ internal sealed partial class RenderEngine : IDisposable
         FontSet fonts = await FontSet.LoadAsync(options, needed, sink, synchronous, cancellationToken).ConfigureAwait(false);
         ImageSet images = await ImageSet.LoadAsync(document, options, sink, synchronous, cancellationToken).ConfigureAwait(false);
         BackgroundSet? background = sink.HasErrors ? null : await BackgroundSet.PrepareAsync(document, options, sink, synchronous, cancellationToken).ConfigureAwait(false);
+        foreach (XmpSchema schema in options.MetadataSchemas)
+        {
+            static bool XmlName(string? s) => s is { Length: > 0 and <= 64 } && char.IsAsciiLetter(s[0]) && s.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
+            if (!XmlName(schema.Prefix) || schema.Prefix.StartsWith("xml", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(schema.Namespace) || schema.Properties.Any(p => !XmlName(p.Name) || p.Value is null || p.Category is not ("external" or "internal")))
+            {
+                sink.Error(DiagnosticCodes.BadMetadataSchema, $"The metadata schema \"{schema.Name}\" needs a prefix and property names that are XML names (letters, digits, '-', '_', '.'), a namespace, values, and categories \"external\" or \"internal\".", "RenderOptions.MetadataSchemas");
+            }
+        }
+
         var attachments = new List<(Attachment, ReadOnlyMemory<byte>)>();
         if (!document.Attachments.IsEmpty && options.Archive.Part() == 2)
         {

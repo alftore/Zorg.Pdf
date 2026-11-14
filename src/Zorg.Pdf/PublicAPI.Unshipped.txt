@@ -801,6 +801,7 @@ override Zorg.Pdf.PdfReadLimits.ToString() -> string!
 static Zorg.Pdf.PdfReadLimits.operator !=(Zorg.Pdf.PdfReadLimits? left, Zorg.Pdf.PdfReadLimits? right) -> bool
 static Zorg.Pdf.PdfReadLimits.operator ==(Zorg.Pdf.PdfReadLimits? left, Zorg.Pdf.PdfReadLimits? right) -> bool
 Zorg.Pdf.RenderOptions
+Zorg.Pdf.RenderOptions.<Clone>$() -> Zorg.Pdf.RenderOptions!
 Zorg.Pdf.RenderOptions.Archive.get -> Zorg.Pdf.PdfArchive
 Zorg.Pdf.RenderOptions.Archive.init -> void
 Zorg.Pdf.RenderOptions.Conformance.get -> Zorg.Pdf.PdfConformance
@@ -810,19 +811,27 @@ Zorg.Pdf.RenderOptions.CreationDate.init -> void
 Zorg.Pdf.RenderOptions.Data.get -> Zorg.Pdf.PdfData!
 Zorg.Pdf.RenderOptions.Data.init -> void
 static Zorg.Pdf.RenderOptions.Default.get -> Zorg.Pdf.RenderOptions!
+Zorg.Pdf.RenderOptions.Equals(Zorg.Pdf.RenderOptions? other) -> bool
+override Zorg.Pdf.RenderOptions.Equals(object? obj) -> bool
 Zorg.Pdf.RenderOptions.FontResolver.get -> Zorg.Pdf.Fonts.IFontResolver?
 Zorg.Pdf.RenderOptions.FontResolver.init -> void
 Zorg.Pdf.RenderOptions.Fonts.get -> Zorg.Pdf.Fonts.FontCollection!
 Zorg.Pdf.RenderOptions.Fonts.init -> void
+override Zorg.Pdf.RenderOptions.GetHashCode() -> int
 Zorg.Pdf.RenderOptions.Hyphenator.get -> Zorg.Pdf.IHyphenator?
 Zorg.Pdf.RenderOptions.Hyphenator.init -> void
 Zorg.Pdf.RenderOptions.ImageProcessor.get -> Zorg.Pdf.IImageProcessor?
 Zorg.Pdf.RenderOptions.ImageProcessor.init -> void
 Zorg.Pdf.RenderOptions.Limits.get -> Zorg.Pdf.PdfLimits!
 Zorg.Pdf.RenderOptions.Limits.init -> void
+Zorg.Pdf.RenderOptions.MetadataSchemas.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.XmpSchema!>
+Zorg.Pdf.RenderOptions.MetadataSchemas.init -> void
 Zorg.Pdf.RenderOptions.Progress.get -> System.IProgress<Zorg.Pdf.RenderProgress>?
 Zorg.Pdf.RenderOptions.Progress.init -> void
 Zorg.Pdf.RenderOptions.RenderOptions() -> void
+override Zorg.Pdf.RenderOptions.ToString() -> string!
+static Zorg.Pdf.RenderOptions.operator !=(Zorg.Pdf.RenderOptions? left, Zorg.Pdf.RenderOptions? right) -> bool
+static Zorg.Pdf.RenderOptions.operator ==(Zorg.Pdf.RenderOptions? left, Zorg.Pdf.RenderOptions? right) -> bool
 Zorg.Pdf.RenderProgress
 Zorg.Pdf.RenderProgress.BytesWritten.get -> long
 Zorg.Pdf.RenderProgress.BytesWritten.init -> void
@@ -1132,6 +1141,42 @@ static Zorg.Pdf.Watermark.operator ==(Zorg.Pdf.Watermark? left, Zorg.Pdf.Waterma
 Zorg.Pdf.WatermarkLayer
 Zorg.Pdf.WatermarkLayer.Behind = 1 -> Zorg.Pdf.WatermarkLayer
 Zorg.Pdf.WatermarkLayer.Over = 0 -> Zorg.Pdf.WatermarkLayer
+Zorg.Pdf.XmpProperty
+Zorg.Pdf.XmpProperty.<Clone>$() -> Zorg.Pdf.XmpProperty!
+Zorg.Pdf.XmpProperty.Category.get -> string!
+Zorg.Pdf.XmpProperty.Category.init -> void
+Zorg.Pdf.XmpProperty.Deconstruct(out string! Name, out string! Value) -> void
+Zorg.Pdf.XmpProperty.Description.get -> string!
+Zorg.Pdf.XmpProperty.Description.init -> void
+Zorg.Pdf.XmpProperty.Equals(Zorg.Pdf.XmpProperty? other) -> bool
+override Zorg.Pdf.XmpProperty.Equals(object? obj) -> bool
+override Zorg.Pdf.XmpProperty.GetHashCode() -> int
+Zorg.Pdf.XmpProperty.Name.get -> string!
+Zorg.Pdf.XmpProperty.Name.init -> void
+override Zorg.Pdf.XmpProperty.ToString() -> string!
+Zorg.Pdf.XmpProperty.Value.get -> string!
+Zorg.Pdf.XmpProperty.Value.init -> void
+Zorg.Pdf.XmpProperty.XmpProperty(string! Name, string! Value) -> void
+static Zorg.Pdf.XmpProperty.operator !=(Zorg.Pdf.XmpProperty? left, Zorg.Pdf.XmpProperty? right) -> bool
+static Zorg.Pdf.XmpProperty.operator ==(Zorg.Pdf.XmpProperty? left, Zorg.Pdf.XmpProperty? right) -> bool
+Zorg.Pdf.XmpSchema
+Zorg.Pdf.XmpSchema.<Clone>$() -> Zorg.Pdf.XmpSchema!
+Zorg.Pdf.XmpSchema.Deconstruct(out string! Name, out string! Namespace, out string! Prefix) -> void
+Zorg.Pdf.XmpSchema.Equals(Zorg.Pdf.XmpSchema? other) -> bool
+override Zorg.Pdf.XmpSchema.Equals(object? obj) -> bool
+override Zorg.Pdf.XmpSchema.GetHashCode() -> int
+Zorg.Pdf.XmpSchema.Name.get -> string!
+Zorg.Pdf.XmpSchema.Name.init -> void
+Zorg.Pdf.XmpSchema.Namespace.get -> string!
+Zorg.Pdf.XmpSchema.Namespace.init -> void
+Zorg.Pdf.XmpSchema.Prefix.get -> string!
+Zorg.Pdf.XmpSchema.Prefix.init -> void
+Zorg.Pdf.XmpSchema.Properties.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.XmpProperty!>
+Zorg.Pdf.XmpSchema.Properties.init -> void
+override Zorg.Pdf.XmpSchema.ToString() -> string!
+Zorg.Pdf.XmpSchema.XmpSchema(string! Name, string! Namespace, string! Prefix) -> void
+static Zorg.Pdf.XmpSchema.operator !=(Zorg.Pdf.XmpSchema? left, Zorg.Pdf.XmpSchema? right) -> bool
+static Zorg.Pdf.XmpSchema.operator ==(Zorg.Pdf.XmpSchema? left, Zorg.Pdf.XmpSchema? right) -> bool
 ~override Zorg.Pdf.Color.Equals(object obj) -> bool
 ~override Zorg.Pdf.ColumnWidth.Equals(object obj) -> bool
 ~override Zorg.Pdf.ColumnWidth.ToString() -> string

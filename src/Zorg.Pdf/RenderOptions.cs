@@ -18,7 +18,7 @@ namespace Zorg.Pdf;
 /// RenderResult result = await document.RenderAsync(response.Body, options, cancellationToken);
 /// </code>
 /// </example>
-public sealed class RenderOptions
+public sealed record RenderOptions
 {
     /// <summary>No fonts, no conformance claim, default limits. Rendering with it fails until fonts are added.</summary>
     public static RenderOptions Default { get; } = new();
@@ -70,6 +70,9 @@ public sealed class RenderOptions
 
     /// <summary>The creation date to write. Null (the default) writes none, so the same input gives the same bytes.</summary>
     public DateTimeOffset? CreationDate { get; init; }
+
+    /// <summary>Extra XMP metadata, such as Factur-X's <c>fx:</c> properties. Described in the PDF/A extension schema under PDF/A.</summary>
+    public ImmutableArray<XmpSchema> MetadataSchemas { get; init; } = [];
 
     /// <summary>Told after each page reaches the output.</summary>
     public IProgress<RenderProgress>? Progress { get; init; }

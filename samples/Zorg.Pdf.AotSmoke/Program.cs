@@ -382,6 +382,24 @@ else
     }
 }
 
+// 0.4 slice 5: a Factur-X invoice (EN 16931) from the invoice example and the sample CII XML, PDF/A-3a and PDF/UA-1.
+if (examples is not null && saveTo is not null)
+{
+    var facturX = Zorg.Pdf.Invoicing.FacturX.Read(File.ReadAllBytes(Path.Combine(examples, "facturx", "invoice-en16931.xml")));
+    PdfDocument invoiceExample = facturX.ApplyTo(PdfDocument.ParseJson(File.ReadAllText(Path.Combine(examples, "invoice.json"))));
+    RenderOptions fxOptions = facturX.ApplyTo(new RenderOptions
+    {
+        Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }),
+        Conformance = PdfConformance.PdfUA1,
+        Archive = PdfArchive.PdfA3a,
+        Data = PdfData.ParseJson(File.ReadAllText(Path.Combine(examples, "data", "invoice.json"))),
+    });
+    using var fx = new MemoryStream();
+    RenderResult fxResult = invoiceExample.RenderAsync(fx, fxOptions).AsTask().GetAwaiter().GetResult();
+    Check("factur-x", !fxResult.HasWarnings && facturX.Profile == Zorg.Pdf.Invoicing.FacturXProfile.EN16931);
+    File.WriteAllBytes(Path.Combine(saveTo, "pdfa3-facturx.pdf"), fx.ToArray());
+}
+
 // 0.4 slice 3: every example, merged into one file, then its even pages taken out again. Not tagged (tags aren't
 // kept), so the gate checks these with qpdf, MuPDF and pdffonts but not veraPDF.
 if (saveTo is not null)

@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\src\Zorg.Pdf.Extensions.AI\Zorg.Pdf.Extensions.AI.csproj" />
     <ProjectReference Include="..\..\src\Zorg.Pdf.Imaging\Zorg.Pdf.Imaging.csproj" />
     <ProjectReference Include="..\..\src\Zorg.Pdf.Hyphenation\Zorg.Pdf.Hyphenation.csproj" />
+    <ProjectReference Include="..\..\src\Zorg.Pdf.Invoicing\Zorg.Pdf.Invoicing.csproj" />
   </ItemGroup>
 
 </Project>

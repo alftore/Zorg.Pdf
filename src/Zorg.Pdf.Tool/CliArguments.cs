@@ -50,6 +50,9 @@ internal sealed class CliArguments
     /// <summary>merge: the files, each with the pages to take ("a.pdf:1-3"), null for all.</summary>
     public List<(string File, string? Pages)> Inputs { get; } = [];
 
+    /// <summary>render and watch: a Factur-X/ZUGFeRD CII XML to embed.</summary>
+    public string? FacturX { get; private set; }
+
     /// <summary>extract: the pages to take.</summary>
     public string? Pages { get; private set; }
 
@@ -89,7 +92,7 @@ internal sealed class CliArguments
                 inline = arg[(equals + 1)..];
             }
 
-            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--file" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi" or "--pdfa" or "--pages" or "--title" or "--author" or "--subject" or "--keywords" or "--lang";
+            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--file" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi" or "--pdfa" or "--pages" or "--facturx" or "--title" or "--author" or "--subject" or "--keywords" or "--lang";
             string? value = inline;
             if (takesValue && value is null)
             {
@@ -173,6 +176,9 @@ internal sealed class CliArguments
                     break;
                 case "--pages":
                     result.Pages = value;
+                    break;
+                case "--facturx":
+                    result.FacturX = value;
                     break;
                 case "--title":
                     result.Title = value;

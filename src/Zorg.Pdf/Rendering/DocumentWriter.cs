@@ -488,6 +488,25 @@ internal sealed class DocumentWriter
     /// XMP with the same title, producer and dates as the Info dictionary, the PDF/UA identifier when claimed, and the
     /// PDF/A identifier when claimed. With both, PDF/A requires the pdfuaid schema to be declared as an extension.
     /// </summary>
+    /// <summary>One schema in the PDF/A extension schema: its name, namespace, prefix and properties.</summary>
+    private static void ExtensionSchema(StringBuilder xmp, string name, string namespaceUri, string prefix, (string Name, string ValueType, string Category, string Description)[] properties)
+    {
+        xmp.Append("<rdf:li rdf:parseType=\"Resource\">\n")
+            .Append(CultureInfo.InvariantCulture, $"<pdfaSchema:schema>{SecurityElement.Escape(name)}</pdfaSchema:schema>\n")
+            .Append(CultureInfo.InvariantCulture, $"<pdfaSchema:namespaceURI>{SecurityElement.Escape(namespaceUri)}</pdfaSchema:namespaceURI>\n")
+            .Append(CultureInfo.InvariantCulture, $"<pdfaSchema:prefix>{prefix}</pdfaSchema:prefix>\n")
+            .Append("<pdfaSchema:property><rdf:Seq>\n");
+        foreach ((string property, string valueType, string category, string description) in properties)
+        {
+            xmp.Append("<rdf:li rdf:parseType=\"Resource\">\n")
+                .Append(CultureInfo.InvariantCulture, $"<pdfaProperty:name>{property}</pdfaProperty:name><pdfaProperty:valueType>{valueType}</pdfaProperty:valueType><pdfaProperty:category>{category}</pdfaProperty:category>\n")
+                .Append(CultureInfo.InvariantCulture, $"<pdfaProperty:description>{SecurityElement.Escape(description)}</pdfaProperty:description>\n")
+                .Append("</rdf:li>\n");
+        }
+
+        xmp.Append("</rdf:Seq></pdfaSchema:property>\n</rdf:li>\n");
+    }
+
     private static byte[] Xmp(PdfDocument document, RenderOptions options)
     {
         var xmp = new StringBuilder();
@@ -525,19 +544,34 @@ internal sealed class DocumentWriter
         }
 
         xmp.Append("</rdf:Description>\n");
-        if (options.Archive != PdfArchive.None && options.Conformance == PdfConformance.PdfUA1)
+        foreach (XmpSchema schema in options.MetadataSchemas)
+        {
+            xmp.Append(CultureInfo.InvariantCulture, $"<rdf:Description rdf:about=\"\" xmlns:{schema.Prefix}=\"{SecurityElement.Escape(schema.Namespace)}\">\n");
+            foreach (XmpProperty property in schema.Properties)
+            {
+                xmp.Append(CultureInfo.InvariantCulture, $"<{schema.Prefix}:{property.Name}>{SecurityElement.Escape(property.Value)}</{schema.Prefix}:{property.Name}>\n");
+            }
+
+            xmp.Append("</rdf:Description>\n");
+        }
+
+        bool uaSchema = options.Conformance == PdfConformance.PdfUA1;
+        if (options.Archive != PdfArchive.None && (uaSchema || !options.MetadataSchemas.IsEmpty))
         {
             // PDF/A accepts only predefined XMP schemas unless an extension schema describes the others (ISO 19005-2, 6.6.2.3).
             xmp.Append("<rdf:Description rdf:about=\"\" xmlns:pdfaExtension=\"http://www.aiim.org/pdfa/ns/extension/\" xmlns:pdfaSchema=\"http://www.aiim.org/pdfa/ns/schema#\" xmlns:pdfaProperty=\"http://www.aiim.org/pdfa/ns/property#\">\n")
-                .Append("<pdfaExtension:schemas><rdf:Bag><rdf:li rdf:parseType=\"Resource\">\n")
-                .Append("<pdfaSchema:schema>PDF/UA Universal Accessibility Schema</pdfaSchema:schema>\n")
-                .Append("<pdfaSchema:namespaceURI>http://www.aiim.org/pdfua/ns/id/</pdfaSchema:namespaceURI>\n")
-                .Append("<pdfaSchema:prefix>pdfuaid</pdfaSchema:prefix>\n")
-                .Append("<pdfaSchema:property><rdf:Seq><rdf:li rdf:parseType=\"Resource\">\n")
-                .Append("<pdfaProperty:name>part</pdfaProperty:name><pdfaProperty:valueType>Integer</pdfaProperty:valueType><pdfaProperty:category>internal</pdfaProperty:category>\n")
-                .Append("<pdfaProperty:description>Indicates, which part of ISO 14289 standard is followed</pdfaProperty:description>\n")
-                .Append("</rdf:li></rdf:Seq></pdfaSchema:property>\n")
-                .Append("</rdf:li></rdf:Bag></pdfaExtension:schemas>\n</rdf:Description>\n");
+                .Append("<pdfaExtension:schemas><rdf:Bag>\n");
+            if (uaSchema)
+            {
+                ExtensionSchema(xmp, "PDF/UA Universal Accessibility Schema", "http://www.aiim.org/pdfua/ns/id/", "pdfuaid", [("part", "Integer", "internal", "Indicates, which part of ISO 14289 standard is followed")]);
+            }
+
+            foreach (XmpSchema schema in options.MetadataSchemas)
+            {
+                ExtensionSchema(xmp, schema.Name, schema.Namespace, schema.Prefix, [.. schema.Properties.Select(p => (p.Name, "Text", p.Category, p.Description))]);
+            }
+
+            xmp.Append("</rdf:Bag></pdfaExtension:schemas>\n</rdf:Description>\n");
         }
 
         xmp.Append("</rdf:RDF>\n</x:xmpmeta>\n<?xpacket end=\"w\"?>");

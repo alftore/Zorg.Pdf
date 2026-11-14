@@ -342,19 +342,7 @@ internal sealed class RenderTool(PdfToolOptions options) : PdfTool(
         RenderResult result;
         try
         {
-            RenderOptions host = options.Render;
-            var render = new RenderOptions
-            {
-                Fonts = host.Fonts,
-                FontResolver = host.FontResolver,
-                Conformance = host.Conformance,
-                Archive = host.Archive,
-                Limits = host.Limits,
-                ImageProcessor = host.ImageProcessor,
-                CreationDate = host.CreationDate,
-                Progress = host.Progress,
-                Data = data,
-            };
+            RenderOptions render = options.Render with { Data = data }; // Everything the host set, the model's data.
             result = await document.RenderAsync(output, render, cancellationToken).ConfigureAwait(false);
         }
         catch (PdfDocumentException ex)
