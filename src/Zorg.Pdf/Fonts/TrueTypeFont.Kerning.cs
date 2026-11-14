@@ -171,7 +171,13 @@ internal sealed partial class TrueTypeFont
                 if (type == GposExtension)
                 {
                     subtableType = gpos.U16(subtable + 2);
-                    subtable += checked((int)gpos.U32(subtable + 4));
+                    uint extension = gpos.U32(subtable + 4);
+                    if (extension > (uint)(gpos.Length - subtable))
+                    {
+                        throw gpos.Damaged($"extension subtable {s} of lookup {index} points past the end of the table");
+                    }
+
+                    subtable += (int)extension;
                 }
 
                 if (subtableType == GposPairAdjustment)
