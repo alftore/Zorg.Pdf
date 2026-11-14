@@ -28,6 +28,7 @@ internal sealed class ImageSet
     public static async ValueTask<ImageSet> LoadAsync(PdfDocument document, RenderOptions options, DiagnosticSink sink, bool synchronous, CancellationToken cancellationToken)
     {
         var set = new ImageSet();
+        Dictionary<ImageSource, (double Width, double Height)> boxes = Boxes(document);
         foreach ((Image image, string path) in All(document))
         {
             if (image.Source is null || set._entries.ContainsKey(image.Source))
@@ -48,10 +49,26 @@ internal sealed class ImageSet
                     throw new PdfLimitException(string.Create(CultureInfo.InvariantCulture, $"The image is {data.Length:N0} bytes, more than the {options.Limits.MaxImageBytes:N0} allowed (RenderOptions.Limits.MaxImageBytes)."));
                 }
 
-                PreparedImage prepared = JpegReader.IsJpeg(data.Span) ? JpegReader.Read(data, options.Limits)
+                PdfImage? processed = null;
+                if (options.ImageProcessor is { } processor)
+                {
+                    (double width, double height) = boxes[image.Source];
+                    ValueTask<PdfImage?> pending = processor.ProcessAsync(new ImageRequest(data, path, width, height, synchronous), cancellationToken);
+                    if (synchronous && !pending.IsCompleted)
+                    {
+                        _ = pending.AsTask(); // Observed, so a later failure isn't unobserved; its result is dropped.
+                        sink.Error(DiagnosticCodes.AsyncRowsInSyncRender, "The image processor didn't finish synchronously, which a synchronous Render can't wait for. Use RenderAsync, or complete the work before returning when ImageRequest.Synchronous is set.", $"{path}/source");
+                        continue;
+                    }
+
+                    processed = await pending.ConfigureAwait(false);
+                }
+
+                PreparedImage prepared = processed is not null ? Prepare(processed, options.Limits)
+                    : JpegReader.IsJpeg(data.Span) ? JpegReader.Read(data, options.Limits)
                     : PngReader.IsPng(data.Span) ? PngReader.Read(data, options.Limits)
-                    : throw new PdfException("The image isn't a JPEG or a PNG.");
-                set._entries[image.Source] = new Entry(prepared);
+                    : throw new PdfException("The image isn't a JPEG or a PNG. Other formats need an image processor (RenderOptions.ImageProcessor), such as the one in Zorg.Pdf.Imaging.");
+                set._entries[image.Source] = new Entry(prepared, processed?.NaturalWidth, processed?.NaturalHeight);
             }
             catch (PdfException ex) when (ex is not PdfLimitException)
             {
@@ -64,6 +81,51 @@ internal sealed class ImageSet
         }
 
         return set;
+    }
+
+    /// <summary>
+    /// For each image, the largest box it's drawn in: its set width and height, or else the content area of the page
+    /// (bands are as wide as the content). An upper bound, so a processor that shrinks to it never loses detail.
+    /// </summary>
+    private static Dictionary<ImageSource, (double Width, double Height)> Boxes(PdfDocument document)
+    {
+        PageGeometry page = PageGeometry.From(document.Page);
+        var boxes = new Dictionary<ImageSource, (double Width, double Height)>();
+        foreach ((Image image, _) in All(document))
+        {
+            if (image.Source is null)
+            {
+                continue;
+            }
+
+            double width = image.Width?.Points ?? page.ContentWidth, height = image.Height?.Points ?? page.ContentHeight;
+            boxes[image.Source] = boxes.TryGetValue(image.Source, out (double Width, double Height) box)
+                ? (Math.Max(box.Width, width), Math.Max(box.Height, height))
+                : (width, height);
+        }
+
+        return boxes;
+    }
+
+    /// <summary>A processor's image as XObject data: JPEG checked and kept, pixels compressed, alpha as a soft mask.</summary>
+    private static PreparedImage Prepare(PdfImage image, PdfLimits limits)
+    {
+        if (image.IsJpeg)
+        {
+            return JpegReader.IsJpeg(image.Data.Span) ? JpegReader.Read(image.Data, limits) : throw new PdfException("The image processor returned JPEG data that isn't a JPEG.");
+        }
+
+        ImageLimits.CheckPixels(image.PixelWidth, image.PixelHeight, limits);
+        bool opaque = image.Alpha.IsEmpty || image.Alpha.Span.IndexOfAnyExcept((byte)255) < 0;
+        return new PreparedImage
+        {
+            Width = image.PixelWidth,
+            Height = image.PixelHeight,
+            ColorSpace = image.Format switch { PdfPixelFormat.Gray8 => ImageColorSpace.Gray, PdfPixelFormat.Rgb24 => ImageColorSpace.Rgb, _ => ImageColorSpace.Cmyk },
+            BitsPerComponent = 8,
+            Data = PngReader.Deflate(image.Data.Span),
+            Mask = opaque ? null : new PreparedImage { Width = image.PixelWidth, Height = image.PixelHeight, ColorSpace = ImageColorSpace.Gray, BitsPerComponent = 8, Data = PngReader.Deflate(image.Alpha.Span) },
+        };
     }
 
     /// <summary>Every image block with its JSON pointer: the content's, then the header's and the footer's.</summary>
@@ -215,13 +277,14 @@ internal sealed class ImageSet
     }
 
     /// <summary>One distinct image: its size in pixels, and its data until it's written.</summary>
-    internal sealed class Entry(PreparedImage image)
+    internal sealed class Entry(PreparedImage image, int? naturalWidth = null, int? naturalHeight = null)
     {
         public PreparedImage? Image { get; set; } = image;
 
-        public int Width { get; } = image.Width;
+        /// <summary>The width to size by: the processor's natural width, or the pixels embedded.</summary>
+        public int Width { get; } = naturalWidth ?? image.Width;
 
-        public int Height { get; } = image.Height;
+        public int Height { get; } = naturalHeight ?? image.Height;
 
         public byte[]? Name { get; set; }
 

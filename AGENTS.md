@@ -13,6 +13,7 @@ Async-first PDF generation for .NET 10, in C# only. Early 0.1: the public API is
 - Rendering needs fonts: `new RenderOptions { Fonts = FontCollection.Empty.Add(new FontFamily("Inter") { Regular = FontSource.FromFile("Inter-Regular.ttf"), Bold = ..., Italic = ..., Fallbacks = ["Noto Sans Symbols"] }) }`. No system fonts unless `FontResolver = FontResolvers.System()`. `await document.RenderAsync(stream, options, ct)`; `Render(stream, options)` for sync callers.
 - Styles: `new TextRun("bold") { Style = TextStyle.Bold }`; a style sets font family, size, weight, style, colour, line height. A missing face is synthesised (ZPDF-F003 Info).
 - Agent tools: `PdfTools.Create(new PdfToolOptions { Render = renderOptions, SaveAsync = ... })` in `Zorg.Pdf.Extensions.AI` gives `get_document_schema`, `validate_document` and `render_document` as `AIFunction`s. The host owns fonts and storage; the model sends document and data JSON.
+- Images: JPEG and PNG are read by Zorg.Pdf itself. Anything more (other formats, EXIF orientation, colour conversion, shrinking photos) goes through `RenderOptions.ImageProcessor`; the core library takes no image dependency.
 - A render checks everything it can before writing (validation, fonts, glyphs, control characters) and throws `PdfDocumentException` with every problem; warnings come back in `RenderResult.Diagnostics`. Output is always tagged; `Conformance = PdfConformance.PdfUA1` also claims PDF/UA-1.
 
 ## Working on the repo

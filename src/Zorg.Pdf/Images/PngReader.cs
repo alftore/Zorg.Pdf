@@ -329,7 +329,7 @@ internal static class PngReader
         _ => false,
     };
 
-    private static byte[] Deflate(byte[] data)
+    internal static byte[] Deflate(ReadOnlySpan<byte> data)
     {
         using var output = new MemoryStream();
         using (var zlib = new ZLibStream(output, CompressionLevel.Optimal, leaveOpen: true))

@@ -44,6 +44,12 @@ public sealed class RenderOptions
     /// <summary>Limits that stop a runaway render.</summary>
     public PdfLimits Limits { get; init; } = PdfLimits.Default;
 
+    /// <summary>
+    /// Prepares images before they're embedded: other formats, orientation, colour, shrinking. Null: JPEG and PNG
+    /// are read as they are. <c>Zorg.Pdf.Imaging</c> has one built on Zorg.Imaging.
+    /// </summary>
+    public IImageProcessor? ImageProcessor { get; init; }
+
     /// <summary>The creation date to write. Null (the default) writes none, so the same input gives the same bytes.</summary>
     public DateTimeOffset? CreationDate { get; init; }
 

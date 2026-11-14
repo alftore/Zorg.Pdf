@@ -211,6 +211,8 @@ Zorg.Pdf.Heading.Level.init -> void
 override Zorg.Pdf.Heading.ToString() -> string!
 static Zorg.Pdf.Heading.operator !=(Zorg.Pdf.Heading? left, Zorg.Pdf.Heading? right) -> bool
 static Zorg.Pdf.Heading.operator ==(Zorg.Pdf.Heading? left, Zorg.Pdf.Heading? right) -> bool
+Zorg.Pdf.IImageProcessor
+Zorg.Pdf.IImageProcessor.ProcessAsync(Zorg.Pdf.ImageRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Zorg.Pdf.PdfImage?>
 Zorg.Pdf.Image
 override Zorg.Pdf.Image.<Clone>$() -> Zorg.Pdf.Image!
 Zorg.Pdf.Image.Align.get -> Zorg.Pdf.TextAlign
@@ -233,6 +235,12 @@ Zorg.Pdf.Image.Width.get -> Zorg.Pdf.Length?
 Zorg.Pdf.Image.Width.init -> void
 static Zorg.Pdf.Image.operator !=(Zorg.Pdf.Image? left, Zorg.Pdf.Image? right) -> bool
 static Zorg.Pdf.Image.operator ==(Zorg.Pdf.Image? left, Zorg.Pdf.Image? right) -> bool
+Zorg.Pdf.ImageRequest
+Zorg.Pdf.ImageRequest.Bytes.get -> System.ReadOnlyMemory<byte>
+Zorg.Pdf.ImageRequest.MaxHeight.get -> Zorg.Pdf.Length
+Zorg.Pdf.ImageRequest.MaxWidth.get -> Zorg.Pdf.Length
+Zorg.Pdf.ImageRequest.Path.get -> string!
+Zorg.Pdf.ImageRequest.Synchronous.get -> bool
 Zorg.Pdf.ImageSource
 abstract Zorg.Pdf.ImageSource.<Clone>$() -> Zorg.Pdf.ImageSource!
 virtual Zorg.Pdf.ImageSource.EqualityContract.get -> System.Type!
@@ -453,6 +461,20 @@ Zorg.Pdf.PdfException
 Zorg.Pdf.PdfException.PdfException() -> void
 Zorg.Pdf.PdfException.PdfException(string! message) -> void
 Zorg.Pdf.PdfException.PdfException(string! message, System.Exception! innerException) -> void
+Zorg.Pdf.PdfImage
+Zorg.Pdf.PdfImage.<Clone>$() -> Zorg.Pdf.PdfImage!
+Zorg.Pdf.PdfImage.Equals(Zorg.Pdf.PdfImage? other) -> bool
+override Zorg.Pdf.PdfImage.Equals(object? obj) -> bool
+static Zorg.Pdf.PdfImage.FromPixels(int width, int height, Zorg.Pdf.PdfPixelFormat format, System.ReadOnlyMemory<byte> pixels, System.ReadOnlyMemory<byte> alpha = default(System.ReadOnlyMemory<byte>)) -> Zorg.Pdf.PdfImage!
+override Zorg.Pdf.PdfImage.GetHashCode() -> int
+static Zorg.Pdf.PdfImage.Jpeg(System.ReadOnlyMemory<byte> jpeg) -> Zorg.Pdf.PdfImage!
+Zorg.Pdf.PdfImage.NaturalHeight.get -> int?
+Zorg.Pdf.PdfImage.NaturalHeight.init -> void
+Zorg.Pdf.PdfImage.NaturalWidth.get -> int?
+Zorg.Pdf.PdfImage.NaturalWidth.init -> void
+override Zorg.Pdf.PdfImage.ToString() -> string!
+static Zorg.Pdf.PdfImage.operator !=(Zorg.Pdf.PdfImage? left, Zorg.Pdf.PdfImage? right) -> bool
+static Zorg.Pdf.PdfImage.operator ==(Zorg.Pdf.PdfImage? left, Zorg.Pdf.PdfImage? right) -> bool
 Zorg.Pdf.PdfJsonSchema
 static Zorg.Pdf.PdfJsonSchema.Current.get -> string!
 const Zorg.Pdf.PdfJsonSchema.Id = "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json" -> string!
@@ -478,6 +500,10 @@ Zorg.Pdf.PdfLimits.PdfLimits() -> void
 override Zorg.Pdf.PdfLimits.ToString() -> string!
 static Zorg.Pdf.PdfLimits.operator !=(Zorg.Pdf.PdfLimits? left, Zorg.Pdf.PdfLimits? right) -> bool
 static Zorg.Pdf.PdfLimits.operator ==(Zorg.Pdf.PdfLimits? left, Zorg.Pdf.PdfLimits? right) -> bool
+Zorg.Pdf.PdfPixelFormat
+Zorg.Pdf.PdfPixelFormat.Cmyk32 = 2 -> Zorg.Pdf.PdfPixelFormat
+Zorg.Pdf.PdfPixelFormat.Gray8 = 0 -> Zorg.Pdf.PdfPixelFormat
+Zorg.Pdf.PdfPixelFormat.Rgb24 = 1 -> Zorg.Pdf.PdfPixelFormat
 Zorg.Pdf.RenderOptions
 Zorg.Pdf.RenderOptions.Conformance.get -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.RenderOptions.Conformance.init -> void
@@ -490,6 +516,8 @@ Zorg.Pdf.RenderOptions.FontResolver.get -> Zorg.Pdf.Fonts.IFontResolver?
 Zorg.Pdf.RenderOptions.FontResolver.init -> void
 Zorg.Pdf.RenderOptions.Fonts.get -> Zorg.Pdf.Fonts.FontCollection!
 Zorg.Pdf.RenderOptions.Fonts.init -> void
+Zorg.Pdf.RenderOptions.ImageProcessor.get -> Zorg.Pdf.IImageProcessor?
+Zorg.Pdf.RenderOptions.ImageProcessor.init -> void
 Zorg.Pdf.RenderOptions.Limits.get -> Zorg.Pdf.PdfLimits!
 Zorg.Pdf.RenderOptions.Limits.init -> void
 Zorg.Pdf.RenderOptions.Progress.get -> System.IProgress<Zorg.Pdf.RenderProgress>?

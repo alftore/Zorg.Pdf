@@ -262,6 +262,7 @@ internal sealed class RenderTool(PdfToolOptions options) : PdfTool(
                 FontResolver = host.FontResolver,
                 Conformance = host.Conformance,
                 Limits = host.Limits,
+                ImageProcessor = host.ImageProcessor,
                 CreationDate = host.CreationDate,
                 Progress = host.Progress,
                 Data = data,
