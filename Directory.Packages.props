@@ -15,7 +15,7 @@
     <!-- Zorg.Pdf.Extensions.AI only. 10.11.0 rather than 11.0.0, which was four days old when this was added. -->
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
     <!-- Zorg.Pdf.Imaging only. First-party, so it doesn't wait out the age rule. -->
-    <PackageVersion Include="Zorg.Imaging" Version="0.3.0" />
+    <PackageVersion Include="Zorg.Imaging" Version="0.4.0" />
   </ItemGroup>
 
   <ItemGroup Label="Benchmarks">

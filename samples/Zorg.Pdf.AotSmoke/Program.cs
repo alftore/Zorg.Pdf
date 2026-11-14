@@ -313,9 +313,14 @@ else
         using var rendered = new MemoryStream();
         RenderResult example = PdfDocument.ParseJson(File.ReadAllText(path)).RenderAsync(rendered, exampleOptions).AsTask().GetAwaiter().GetResult();
         Check($"example {name}", !example.HasWarnings);
+
+        // 0.2 slice 6: the first page as a preview, through Zorg.Imaging's canvas; the gate compares it with MuPDF.
+        byte[] preview = Zorg.Pdf.Imaging.PdfPreview.RenderPagePngAsync(rendered.ToArray(), 0).AsTask().GetAwaiter().GetResult();
+        Check($"preview {name}", preview.Length > 1000 && preview[0] == 0x89);
         if (saveTo is not null)
         {
             File.WriteAllBytes(Path.Combine(saveTo, $"example-{name}.pdf"), rendered.ToArray());
+            File.WriteAllBytes(Path.Combine(saveTo, $"example-{name}.png"), preview);
         }
     }
 }

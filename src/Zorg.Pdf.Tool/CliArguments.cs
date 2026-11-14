@@ -7,7 +7,7 @@ namespace Zorg.Pdf.Tool;
 /// <summary>A parsed command line. Options take <c>--name value</c> or <c>--name=value</c>.</summary>
 internal sealed class CliArguments
 {
-    private static readonly string[] Commands = ["render", "validate", "watch", "schema"];
+    private static readonly string[] Commands = ["render", "validate", "watch", "preview", "schema"];
 
     /// <summary>render, validate, watch, schema, help or version.</summary>
     public string Command { get; private set; } = "help";
@@ -37,6 +37,13 @@ internal sealed class CliArguments
 
     public bool Verbose { get; private set; }
 
+    /// <summary>Also draw pages as PNG (render and watch), or the page to draw: 1-based, 0 for every page.</summary>
+    public bool Preview { get; private set; }
+
+    public int Page { get; private set; } = 1;
+
+    public double Dpi { get; private set; } = 96;
+
     public static bool TryParse(string[] args, [NotNullWhen(true)] out CliArguments? parsed, [NotNullWhen(false)] out string? error)
     {
         var result = new CliArguments();
@@ -62,7 +69,7 @@ internal sealed class CliArguments
                 inline = arg[(equals + 1)..];
             }
 
-            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--fonts" or "--font" or "--default-font";
+            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi";
             string? value = inline;
             if (takesValue && value is null)
             {
@@ -131,6 +138,37 @@ internal sealed class CliArguments
                 case "-v" or "--verbose":
                     result.Verbose = true;
                     break;
+                case "--preview":
+                    result.Preview = true;
+                    break;
+                case "--page":
+                    if (value == "all")
+                    {
+                        result.Page = 0;
+                    }
+                    else if (int.TryParse(value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int page) && page >= 1)
+                    {
+                        result.Page = page;
+                    }
+                    else
+                    {
+                        error = $"--page takes a page number from 1, or all, not \"{value}\".";
+                        return false;
+                    }
+
+                    break;
+                case "--dpi":
+                    if (double.TryParse(value, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out double dpi) && dpi is >= 18 and <= 600)
+                    {
+                        result.Dpi = dpi;
+                    }
+                    else
+                    {
+                        error = $"--dpi takes a resolution from 18 to 600, not \"{value}\".";
+                        return false;
+                    }
+
+                    break;
                 default:
                     error = $"Unknown option {name}.";
                     return false;
@@ -162,7 +200,7 @@ internal sealed class CliArguments
         if (expected == 2)
         {
             result.Input = positional[1];
-            if (result.Input == "-" && result.Output is null && result.Command != "validate")
+            if (result.Input == "-" && result.Output is null && result.Command is not ("validate" or "preview"))
             {
                 error = "A document read from standard input needs --output (a file, or - for standard output).";
                 return false;
@@ -176,7 +214,22 @@ internal sealed class CliArguments
             "validate" => ["-d", "--data", "--image", "--warnaserror", "--json", "-v", "--verbose"],
             _ => [],
         };
-        if (result.Command != "render" && result.Command != "watch")
+        if (result.Command == "preview")
+        {
+            string? wrong = options.Find(o => o is "--preview" or "--warnaserror");
+            if (wrong is not null)
+            {
+                error = $"{wrong} doesn't apply to preview.";
+                return false;
+            }
+        }
+        else if (result.Command == "validate" && options.Exists(o => o is "--page" or "--dpi" or "--preview"))
+        {
+            error = $"{options.Find(o => o is "--page" or "--dpi" or "--preview")} doesn't apply to validate.";
+            return false;
+        }
+
+        if (result.Command is not ("render" or "watch" or "preview"))
         {
             string? wrong = options.Find(o => Array.IndexOf(allowed, o) < 0);
             if (wrong is not null)

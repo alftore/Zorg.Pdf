@@ -51,6 +51,7 @@ internal static class Cli
           zorg-pdf render <document.json> [options]     Render to PDF
           zorg-pdf validate <document.json> [options]   Check a document and its data without rendering
           zorg-pdf watch <document.json> [options]      Render, then render again on every change
+          zorg-pdf preview <document.json|file.pdf>     Draw a page as PNG, to check the layout
           zorg-pdf schema                               Print the document JSON Schema
 
         Options:
@@ -64,6 +65,9 @@ internal static class Cli
               --pdfua                Claim PDF/UA-1 and treat accessibility warnings as errors
               --warnaserror          Exit with 1 when there are warnings
               --json                 Print results as JSON, one object per line
+              --preview              With render and watch: also draw pages as PNG beside the PDF
+              --page <n|all>             The page to draw, from 1 (default 1), or all
+              --dpi <n>                  The PNG's resolution, 18 to 600 (default 96)
           -v, --verbose              Also print information, such as images that were shrunk
           -h, --help                 Show this help
               --version              Show the version
@@ -98,6 +102,8 @@ internal static class Cli
                 return await ValidateAsync(parsed, console, cancellationToken).ConfigureAwait(false);
             case "render":
                 return await RenderAsync(parsed, console, cancellationToken).ConfigureAwait(false);
+            case "preview":
+                return await PreviewAsync(parsed, console, cancellationToken).ConfigureAwait(false);
             default:
                 return await WatchAsync(parsed, console, cancellationToken).ConfigureAwait(false);
         }
@@ -121,10 +127,71 @@ internal static class Cli
         return report.ExitCode;
     }
 
-    /// <summary>Reads, checks and renders once, collecting everything that happened in a report.</summary>
-    private static async Task<Report> RenderOnceAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken)
+    private static async Task<int> PreviewAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken)
     {
-        var report = new Report("render", args);
+        Report report;
+        byte[]? pdf;
+        if (args.Input.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            report = new Report("preview", args);
+            pdf = await ReadAsync(args.Input, console, report, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            using var memory = new MemoryStream();
+            report = await RenderOnceAsync(args, console, cancellationToken, memory).ConfigureAwait(false);
+            pdf = report.HasErrors ? null : memory.ToArray();
+        }
+
+        if (pdf is not null)
+        {
+            string target = args.Output ?? Path.ChangeExtension(args.Input == "-" ? "stdin" : args.Input, ".png");
+            await WritePreviewsAsync(args, pdf, target, report, cancellationToken).ConfigureAwait(false);
+        }
+
+        await report.PrintAsync(console.Out).ConfigureAwait(false);
+        return report.ExitCode;
+    }
+
+    /// <summary>Draws the pages asked for as PNG: <paramref name="target"/> for one page, name-N.png for each of several.</summary>
+    private static async Task WritePreviewsAsync(CliArguments args, byte[] pdf, string target, Report report, CancellationToken cancellationToken)
+    {
+        try
+        {
+            int count = PdfPreview.PageCount(pdf);
+            if (args.Page > count)
+            {
+                report.Fail(Usage, string.Create(CultureInfo.InvariantCulture, $"There's no page {args.Page}: the document has {count}."));
+                return;
+            }
+
+            int[] pages = args.Page == 0 ? [.. Enumerable.Range(1, count)] : [args.Page];
+            foreach (int page in pages)
+            {
+                string file = pages.Length == 1 ? target : Path.Combine(Path.GetDirectoryName(target) ?? "", string.Create(CultureInfo.InvariantCulture, $"{Path.GetFileNameWithoutExtension(target)}-{page}{Path.GetExtension(target)}"));
+                byte[] png = await PdfPreview.RenderPagePngAsync(pdf, page - 1, new PreviewOptions { Dpi = args.Dpi }, cancellationToken).ConfigureAwait(false);
+                string folder = Path.GetDirectoryName(Path.GetFullPath(file))!;
+                Directory.CreateDirectory(folder);
+                string temporary = Path.Combine(folder, $".{Path.GetFileName(file)}.{Guid.NewGuid():N}.tmp");
+                await File.WriteAllBytesAsync(temporary, png, cancellationToken).ConfigureAwait(false);
+                File.Move(temporary, file, overwrite: true);
+                report.Previewed(file, page, count);
+            }
+        }
+        catch (PdfPreviewException ex)
+        {
+            report.Fail(Problems, ex.Message);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            report.Fail(Usage, $"Can't write the preview: {ex.Message}");
+        }
+    }
+
+    /// <summary>Reads, checks and renders once, collecting everything that happened in a report.</summary>
+    private static async Task<Report> RenderOnceAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken, MemoryStream? memory = null)
+    {
+        var report = new Report(memory is null ? "render" : "preview", args);
         long started = Stopwatch.GetTimestamp();
         (PdfDocument? document, PdfData data) = await LoadAsync(args, console, report, cancellationToken).ConfigureAwait(false);
         if (document is null || report.HasErrors)
@@ -147,12 +214,16 @@ internal static class Cli
             ImageProcessor = new ImagingProcessor(),
         };
 
-        string output = args.Output ?? Path.ChangeExtension(args.Input, ".pdf");
+        string output = memory is not null ? "memory" : args.Output ?? Path.ChangeExtension(args.Input, ".pdf");
         string? temporary = null;
         try
         {
             RenderResult result;
-            if (output == "-")
+            if (memory is not null)
+            {
+                result = await document.RenderAsync(memory, options, cancellationToken).ConfigureAwait(false);
+            }
+            else if (output == "-")
             {
                 Stream stdout = console.OpenOutput();
                 await using (stdout.ConfigureAwait(false))
@@ -178,6 +249,10 @@ internal static class Cli
             }
 
             report.Rendered(output, result, Stopwatch.GetElapsedTime(started));
+            if (args.Preview && memory is null && output != "-")
+            {
+                await WritePreviewsAsync(args, await File.ReadAllBytesAsync(output, cancellationToken).ConfigureAwait(false), Path.ChangeExtension(output, ".png"), report, cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (PdfDocumentException ex)
         {
@@ -433,6 +508,7 @@ internal static class Cli
         private readonly List<(string File, PdfDiagnostic Diagnostic)> _diagnostics = [];
         private readonly List<string> _errors = [];
         private int _failure = Ok;
+        private readonly List<(string File, int Page, int Pages)> _previews = [];
         private (string File, RenderResult Result, TimeSpan Elapsed)? _rendered;
 
         public bool HasErrors => _failure != Ok || _diagnostics.Exists(d => d.Diagnostic.Severity == DiagnosticSeverity.Error);
@@ -450,6 +526,8 @@ internal static class Cli
             _failure = Math.Max(_failure, code);
             _errors.Add(message);
         }
+
+        public void Previewed(string file, int page, int pages) => _previews.Add((file, page, pages));
 
         public void Rendered(string file, RenderResult result, TimeSpan elapsed)
         {
@@ -480,12 +558,17 @@ internal static class Cli
                 await writer.WriteLineAsync($"{prefix}error: {error}").ConfigureAwait(false);
             }
 
-            if (_rendered is ({ } output, { } result, TimeSpan elapsed))
+            if (_rendered is ({ } output, { } result, TimeSpan elapsed) && output != "memory")
             {
                 string where = output == "-" ? "standard output" : output;
                 await writer.WriteLineAsync(string.Create(CultureInfo.InvariantCulture, $"{prefix}{where}: {result.PageCount} {(result.PageCount == 1 ? "page" : "pages")}, {Size(result.BytesWritten)}, {elapsed.TotalMilliseconds:0} ms")).ConfigureAwait(false);
             }
-            else if (command == "validate" && ExitCode == Ok)
+            foreach ((string file, int page, int pages) in _previews)
+            {
+                await writer.WriteLineAsync(string.Create(CultureInfo.InvariantCulture, $"{prefix}{file}: page {page} of {pages}")).ConfigureAwait(false);
+            }
+
+            if (command == "validate" && ExitCode == Ok)
             {
                 await writer.WriteLineAsync($"{Name(args.Input)}: valid").ConfigureAwait(false);
             }
@@ -507,6 +590,16 @@ internal static class Cli
                     json.WriteNumber("milliseconds", (long)elapsed.TotalMilliseconds);
                 }
 
+                json.WriteStartArray("previews");
+                foreach ((string file, int page, _) in _previews)
+                {
+                    json.WriteStartObject();
+                    json.WriteString("file", file);
+                    json.WriteNumber("page", page);
+                    json.WriteEndObject();
+                }
+
+                json.WriteEndArray();
                 json.WriteStartArray("diagnostics");
                 foreach ((string file, PdfDiagnostic d) in shown)
                 {

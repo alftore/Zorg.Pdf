@@ -159,8 +159,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/out"
           dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release -- "$RUNNER_TEMP/out"
           cd "$RUNNER_TEMP/out"
-          sha256sum --binary *.pdf
-          echo "hashes=$(sha256sum --binary *.pdf | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          sha256sum --binary *.pdf *.png
+          echo "hashes=$(sha256sum --binary *.pdf *.png | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
   determinism-ubuntu:
     name: Byte-identical output (Ubuntu)
@@ -194,8 +194,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/out"
           dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release -- "$RUNNER_TEMP/out"
           cd "$RUNNER_TEMP/out"
-          sha256sum --binary *.pdf
-          echo "hashes=$(sha256sum --binary *.pdf | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          sha256sum --binary *.pdf *.png
+          echo "hashes=$(sha256sum --binary *.pdf *.png | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
   determinism:
     name: Byte-identical output (compare)

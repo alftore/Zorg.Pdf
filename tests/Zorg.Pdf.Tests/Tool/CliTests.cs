@@ -121,6 +121,10 @@ public sealed class CliTests : IDisposable
     [InlineData("render", "a.json", "--pdfua=yes")]
     [InlineData("render", "-")]
     [InlineData("watch", "-", "-o", "x.pdf")]
+    [InlineData("validate", "a.json", "--page", "2")]
+    [InlineData("preview", "a.json", "--page", "0")]
+    [InlineData("preview", "a.json", "--dpi", "2000")]
+    [InlineData("preview", "a.json", "--warnaserror")]
     public async Task WrongCommandLinesExitWithTwo(params string[] args)
     {
         (int code, string output, string error) = await RunAsync(args);
@@ -151,6 +155,36 @@ public sealed class CliTests : IDisposable
 
         Assert.Equal(Cli.Problems, code);
         Assert.Contains("No fonts to render with", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PreviewDrawsPagesFromADocumentOrAPdf()
+    {
+        string document = Copy("timesheet.json");
+        string data = RepoFiles.Path("docs", "examples", "data", "timesheet.json");
+        string font = TestFonts.RequirePath();
+
+        (int code, string output, _) = await RunAsync("preview", document, "-d", data, "--font", font, "--dpi", "36");
+        (int all, string allOutput, _) = await RunAsync("render", document, "-d", data, "--font", font, "--preview", "--page", "all", "--dpi", "24");
+        (int fromPdf, _, _) = await RunAsync("preview", Path.ChangeExtension(document, ".pdf"), "--page", "2", "-o", Path.Combine(_folder, "second.png"));
+        (int missing, string missingOutput, _) = await RunAsync("preview", Path.ChangeExtension(document, ".pdf"), "--page", "9");
+
+        Assert.Equal((Cli.Ok, Cli.Ok, Cli.Ok, Cli.Usage), (code, all, fromPdf, missing));
+        Assert.Contains("timesheet.png: page 1 of 2", output, StringComparison.Ordinal);
+        Assert.Contains("timesheet-2.png: page 2 of 2", allOutput, StringComparison.Ordinal);
+        Assert.All(new[] { "timesheet-1.png", "timesheet-2.png", "second.png" }, f => Assert.Equal(0x89, File.ReadAllBytes(Path.Combine(_folder, f))[0]));
+        Assert.Contains("no page 9", missingOutput, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PreviewRefusesPdfsZorgPdfDidntWrite()
+    {
+        string pdf = Write("other.pdf", "%PDF-1.4 not really a PDF from Zorg.Pdf, and no startxref either %%EOF");
+
+        (int code, string output, _) = await RunAsync("preview", pdf);
+
+        Assert.Equal(Cli.Problems, code);
+        Assert.Contains("can't be read", output, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -92,4 +92,34 @@ if ! grep -q "Ελληνικά · Кириллица · Čeština" /tmp/document
   echo "FAIL pdftotext document.pdf: the Greek, Cyrillic and Czech text doesn't extract"; failed=1
 fi
 
+stage "Previews against MuPDF"
+# Zorg.Pdf.Imaging's preview of each example's first page, against mutool's drawing of the same page at 96 dpi:
+# the total ink must agree within 3 %, and the ink of every 16 x 16 block within a quarter of the block's range.
+for png in /out/example-*.png; do
+  pdf="${png%.png}.pdf"
+  mutool draw -q -r 96 -o /tmp/reference.png "$pdf" 1
+  python3 - "$png" /tmp/reference.png <<'PY' || failed=1
+import sys
+from PIL import Image
+ours, theirs = (Image.open(p).convert("L") for p in sys.argv[1:3])
+w, h = min(ours.width, theirs.width), min(ours.height, theirs.height)
+a, b = ours.crop((0, 0, w, h)).load(), theirs.crop((0, 0, w, h)).load()
+ink_a = sum(255 - a[x, y] for y in range(h) for x in range(w))
+ink_b = sum(255 - b[x, y] for y in range(h) for x in range(w))
+total = abs(ink_a - ink_b) / max(ink_b, 1)
+worst = 0.0
+for by in range(0, h - 15, 16):
+    for bx in range(0, w - 15, 16):
+        d = abs(sum(a[x, y] - b[x, y] for y in range(by, by + 16) for x in range(bx, bx + 16))) / 256
+        worst = max(worst, d)
+name = sys.argv[1].rsplit("/", 1)[-1]
+size = f"{ours.width}x{ours.height} vs {theirs.width}x{theirs.height}"
+if total <= 0.03 and worst <= 64 and abs(ours.width - theirs.width) <= 1 and abs(ours.height - theirs.height) <= 1:
+    print(f"ok   {name}: ink within {total:.2%}, worst 16px block {worst:.1f} levels ({size})")
+else:
+    print(f"FAIL {name}: ink differs {total:.2%}, worst 16px block {worst:.1f} levels ({size})")
+    sys.exit(1)
+PY
+done
+
 exit "$failed"

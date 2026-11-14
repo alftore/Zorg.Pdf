@@ -20,7 +20,7 @@ public sealed class PdfToolsTests
     {
         IReadOnlyList<AIFunction> tools = PdfTools.Create(new PdfToolOptions { Render = PdfInspect.Options() });
 
-        Assert.Equal(["get_document_schema", "validate_document", "render_document"], tools.Select(t => t.Name));
+        Assert.Equal(["get_document_schema", "validate_document", "render_document", "get_capabilities"], tools.Select(t => t.Name));
         Assert.All(tools, t => Assert.False(string.IsNullOrWhiteSpace(t.Description)));
         Assert.Equal("object", tools[2].JsonSchema.GetProperty("type").GetString());
         Assert.Equal("document", tools[2].JsonSchema.GetProperty("required")[0].GetString());
@@ -93,6 +93,41 @@ public sealed class PdfToolsTests
 
         JsonElement noDocument = await Call("render_document", []);
         Assert.Equal("ZPDF-J004", noDocument.GetProperty("diagnostics")[0].GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task ThePreviewToolReturnsAPictureOfThePageWithASummary()
+    {
+        var options = new PdfToolOptions
+        {
+            Render = PdfInspect.Options(),
+            PreviewAsync = (pdf, page, ct) => Zorg.Pdf.Imaging.PdfPreview.RenderPagePngAsync(pdf, page, new Zorg.Pdf.Imaging.PreviewOptions { Dpi = 36 }, ct),
+        };
+        AIFunction tool = Assert.Single(PdfTools.Create(options), t => t.Name == "render_preview");
+        var arguments = new AIFunctionArguments { ["document"] = Json("""{ "title": "x", "content": [{ "type": "paragraph", "inlines": ["Hello"] }] }"""), ["page"] = Json("1") };
+
+        var contents = Assert.IsType<List<AIContent>>(await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken));
+        JsonElement summary = Json(Assert.IsType<TextContent>(contents[0]).Text);
+        DataContent picture = Assert.IsType<DataContent>(contents[1]);
+
+        Assert.Equal((1, 1), (summary.GetProperty("page").GetInt32(), summary.GetProperty("pages").GetInt32()));
+        Assert.Equal("image/png", picture.MediaType);
+        Assert.Equal((byte)0x89, picture.Data.Span[0]);
+
+        arguments["page"] = Json("3");
+        JsonElement missing = Assert.IsType<JsonElement>(await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken));
+        Assert.Contains("no page 3", missing.GetProperty("error").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TheCapabilitiesToolSaysWhatTheHostRendersWith()
+    {
+        JsonElement result = await Call("get_capabilities", []);
+
+        Assert.Equal(["Body"], result.GetProperty("fontFamilies").EnumerateArray().Select(f => f.GetString()));
+        Assert.Equal("Body", result.GetProperty("defaultFontFamily").GetString());
+        Assert.False(result.GetProperty("previews").GetBoolean());
+        Assert.Equal(10_000, result.GetProperty("limits").GetProperty("maxPages").GetInt32());
     }
 
     private static JsonElement Json(string json)

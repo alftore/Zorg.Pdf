@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,8 +11,9 @@ namespace Zorg.Pdf.Extensions.AI;
 
 /// <summary>
 /// Tools that let an AI agent write PDF documents: <c>get_document_schema</c> to learn the format,
-/// <c>validate_document</c> to check a draft and fix it from diagnostics with JSON pointers, and
-/// <c>render_document</c> to render it with data. They take and return JSON, use no reflection (Native AOT works), and
+/// <c>validate_document</c> to check a draft and fix it from diagnostics with JSON pointers, <c>render_document</c>
+/// to render it with data, <c>get_capabilities</c> to learn the fonts and limits, and, when the host supplies
+/// <see cref="PdfToolOptions.PreviewAsync"/>, <c>render_preview</c> to look at a page as a picture. They take and return JSON, use no reflection (Native AOT works), and
 /// never touch the file system: fonts and limits come from the host's <see cref="PdfToolOptions.Render"/>, and the PDF
 /// goes wherever <see cref="PdfToolOptions.SaveAsync"/> puts it.
 /// </summary>
@@ -27,14 +29,19 @@ namespace Zorg.Pdf.Extensions.AI;
 /// </example>
 public static class PdfTools
 {
-    /// <summary>The three tools, configured with the host's fonts, limits and storage.</summary>
-    /// <param name="options">Fonts, conformance and limits for rendering, and where rendered files go.</param>
-    /// <returns><c>get_document_schema</c>, <c>validate_document</c> and <c>render_document</c>.</returns>
+    /// <summary>The tools, configured with the host's fonts, limits, storage and previews.</summary>
+    /// <param name="options">Fonts, conformance and limits for rendering, where rendered files go, and how pages are drawn.</param>
+    /// <returns>
+    /// <c>get_document_schema</c>, <c>validate_document</c>, <c>render_document</c> and <c>get_capabilities</c>;
+    /// with <see cref="PdfToolOptions.PreviewAsync"/>, <c>render_preview</c> too.
+    /// </returns>
     public static IReadOnlyList<AIFunction> Create(PdfToolOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(options.Render);
-        return [new SchemaTool(), new ValidateTool(), new RenderTool(options)];
+        return options.PreviewAsync is null
+            ? [new SchemaTool(), new ValidateTool(), new RenderTool(options), new CapabilitiesTool(options)]
+            : [new SchemaTool(), new ValidateTool(), new RenderTool(options), new CapabilitiesTool(options), new PreviewTool(options)];
     }
 }
 
@@ -52,6 +59,12 @@ public sealed class PdfToolOptions
     /// Without it, <c>render_document</c> reports pages, size and diagnostics but keeps no file.
     /// </summary>
     public Func<RenderedPdf, CancellationToken, ValueTask<string>>? SaveAsync { get; init; }
+
+    /// <summary>
+    /// Draws a page of a rendered PDF as PNG: the PDF, the page from 0, and a token. With it, the tools include
+    /// <c>render_preview</c>. <c>Zorg.Pdf.Imaging</c> has one: <c>(pdf, page, ct) =&gt; PdfPreview.RenderPagePngAsync(pdf, page, cancellationToken: ct)</c>.
+    /// </summary>
+    public Func<ReadOnlyMemory<byte>, int, CancellationToken, ValueTask<byte[]>>? PreviewAsync { get; init; }
 }
 
 /// <summary>A PDF rendered by <c>render_document</c>.</summary>
@@ -178,6 +191,7 @@ internal sealed class SchemaTool() : PdfTool(
         Lengths are numbers in points or strings with a unit: "2cm", "12pt", "5mm".
         Data is a separate JSON object whose properties are slots: { "lines": [["1", "Consulting", "9 375,00"]], "logo": { "base64": "..." } }.
         Unknown properties are errors. validate_document returns every problem with a code and a JSON pointer: fix those and validate again.
+        get_capabilities lists the fonts and limits. If render_preview is offered, look at the pages after rendering: text overlapping, cut off or outside its box is easy to see and not reported as an error.
         """;
 
     protected override ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken) =>
@@ -248,10 +262,36 @@ internal sealed class RenderTool(PdfToolOptions options) : PdfTool(
 {
     protected override async ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+        (PdfDocument? document, byte[]? pdf, RenderResult? result, IReadOnlyList<PdfDiagnostic> problems) = await RenderPdfAsync(options, arguments, cancellationToken).ConfigureAwait(false);
+        if (document is null || pdf is null || result is null)
+        {
+            return Failed(problems);
+        }
+
+        string? saved = options.SaveAsync is { } save
+            ? await save(new RenderedPdf(document.Title, pdf, result.PageCount), cancellationToken).ConfigureAwait(false)
+            : null;
+        return Result(writer =>
+        {
+            writer.WriteBoolean("rendered", true);
+            writer.WriteNumber("pages", result.PageCount);
+            writer.WriteNumber("bytes", result.BytesWritten);
+            if (saved is not null)
+            {
+                writer.WriteString("file", saved);
+            }
+
+            Diagnostics(writer, result.Diagnostics);
+        });
+    }
+
+    /// <summary>Parses, checks and renders the document in the arguments with the host's options: the PDF, or the problems.</summary>
+    internal static async ValueTask<(PdfDocument? Document, byte[]? Pdf, RenderResult? Result, IReadOnlyList<PdfDiagnostic> Problems)> RenderPdfAsync(PdfToolOptions options, AIFunctionArguments arguments, CancellationToken cancellationToken)
+    {
         (PdfDocument? document, PdfData data, List<PdfDiagnostic> problems) = Parse(arguments);
         if (document is null || problems.Exists(d => d.Severity == DiagnosticSeverity.Error))
         {
-            return Failed(problems);
+            return (null, null, null, problems);
         }
 
         using var output = new MemoryStream();
@@ -274,33 +314,110 @@ internal sealed class RenderTool(PdfToolOptions options) : PdfTool(
         }
         catch (PdfDocumentException ex)
         {
-            return Failed(ex.Diagnostics);
+            return (null, null, null, ex.Diagnostics);
         }
         catch (PdfLimitException ex)
         {
-            return Failed([new PdfDiagnostic("ZPDF-R003", DiagnosticSeverity.Error, ex.Message, "")]);
+            return (null, null, null, [new PdfDiagnostic("ZPDF-R003", DiagnosticSeverity.Error, ex.Message, "")]);
         }
 
-        string? saved = options.SaveAsync is { } save
-            ? await save(new RenderedPdf(document.Title, output.ToArray(), result.PageCount), cancellationToken).ConfigureAwait(false)
-            : null;
-        return Result(writer =>
-        {
-            writer.WriteBoolean("rendered", true);
-            writer.WriteNumber("pages", result.PageCount);
-            writer.WriteNumber("bytes", result.BytesWritten);
-            if (saved is not null)
-            {
-                writer.WriteString("file", saved);
-            }
-
-            Diagnostics(writer, result.Diagnostics);
-        });
+        return (document, output.ToArray(), result, problems);
     }
 
-    private static JsonElement Failed(IEnumerable<PdfDiagnostic> problems) => Result(writer =>
+    internal static JsonElement Failed(IEnumerable<PdfDiagnostic> problems) => Result(writer =>
     {
         writer.WriteBoolean("rendered", false);
         Diagnostics(writer, problems);
     });
+}
+
+/// <summary><c>render_preview</c>: renders the document and returns one page as a PNG picture, to check the layout by looking.</summary>
+internal sealed class PreviewTool(PdfToolOptions options) : PdfTool(
+    "render_preview",
+    "Renders a Zorg.Pdf document with its data and returns one page as a PNG picture, with the page count and warnings. Use it to check the layout by looking: overlapping or cut-off text, empty pages, an address outside its window, tables running off the page.",
+    """
+    {
+      "type": "object",
+      "properties": {
+        "document": { "type": "object", "description": "The document, as JSON. See get_document_schema." },
+        "data": { "type": "object", "description": "Data for the document's slots and template model." },
+        "page": { "type": "integer", "minimum": 1, "default": 1, "description": "The page to show, from 1." }
+      },
+      "required": ["document"]
+    }
+    """)
+{
+    protected override async ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+    {
+        int page = arguments.TryGetValue("page", out object? value) ? value switch
+        {
+            JsonElement { ValueKind: JsonValueKind.Number } n when n.TryGetInt32(out int p) => p,
+            int p => p,
+            long p => (int)Math.Clamp(p, int.MinValue, int.MaxValue),
+            _ => 1,
+        } : 1;
+        (_, byte[]? pdf, RenderResult? result, IReadOnlyList<PdfDiagnostic> problems) = await RenderTool.RenderPdfAsync(options, arguments, cancellationToken).ConfigureAwait(false);
+        if (pdf is null || result is null)
+        {
+            return RenderTool.Failed(problems);
+        }
+
+        if (page < 1 || page > result.PageCount)
+        {
+            return Result(writer =>
+            {
+                writer.WriteBoolean("rendered", true);
+                writer.WriteNumber("pages", result.PageCount);
+                writer.WriteString("error", $"There's no page {page}: the document has {result.PageCount}, numbered from 1.");
+            });
+        }
+
+        byte[] png = await options.PreviewAsync!(pdf, page - 1, cancellationToken).ConfigureAwait(false);
+        JsonElement summary = Result(writer =>
+        {
+            writer.WriteBoolean("rendered", true);
+            writer.WriteNumber("page", page);
+            writer.WriteNumber("pages", result.PageCount);
+            Diagnostics(writer, result.Diagnostics);
+        });
+        return new List<AIContent> { new TextContent(summary.GetRawText()), new DataContent(png, "image/png") };
+    }
+}
+
+/// <summary><c>get_capabilities</c>: what the host renders with, so the model writes documents that can be rendered.</summary>
+internal sealed class CapabilitiesTool(PdfToolOptions options) : PdfTool(
+    "get_capabilities",
+    "Returns what documents can use here: the font families, the default font, whether other installed fonts can be named, the conformance claimed, the limits, and whether render_preview exists.",
+    """{ "type": "object", "properties": {} }""")
+{
+    protected override ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+    {
+        RenderOptions render = options.Render;
+        return ValueTask.FromResult<object?>(Result(writer =>
+        {
+            writer.WriteStartArray("fontFamilies");
+            foreach (string family in render.Fonts.Families.Keys.Order(StringComparer.Ordinal))
+            {
+                writer.WriteStringValue(family);
+            }
+
+            writer.WriteEndArray();
+            if (render.Fonts.DefaultFamily is { } defaultFamily)
+            {
+                writer.WriteString("defaultFontFamily", defaultFamily);
+            }
+
+            writer.WriteBoolean("installedFontsByName", render.FontResolver is not null);
+            writer.WriteString("conformance", render.Conformance == PdfConformance.PdfUA1 ? "pdfUA1" : "none");
+            writer.WriteBoolean("imageFormatsBeyondJpegAndPng", render.ImageProcessor is not null);
+            writer.WriteStartObject("limits");
+            writer.WriteNumber("maxPages", render.Limits.MaxPages);
+            writer.WriteNumber("maxTableRows", render.Limits.MaxTableRows);
+            writer.WriteNumber("maxImageBytes", render.Limits.MaxImageBytes);
+            writer.WriteNumber("maxImagePixels", render.Limits.MaxImagePixels);
+            writer.WriteEndObject();
+            writer.WriteBoolean("previews", options.PreviewAsync is not null);
+            writer.WriteString("schema", PdfJsonSchema.Id);
+        }));
+    }
 }

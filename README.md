@@ -2,7 +2,7 @@
 
 Async-first PDF generation for .NET 10, written in C# only. Documents and reports from code, from a JSON document model, or from templates and data, in the spirit of jsreport, with tagged (accessible) output, no native binaries and no NuGet dependencies.
 
-**Status: 0.1 in development, not released.** Build a document in C# or JSON (schema in [schema/](schema/document-0.1.schema.json), ten examples with data in [docs/examples/](docs/examples)), validate it (codes in [docs/diagnostics.md](docs/diagnostics.md)), and render headings, paragraphs with bold, italic and fallback fonts, bulleted and numbered lists, tables with rows from `IAsyncEnumerable`, JPEG and PNG images, and headers and footers with "Page X of Y" as compact tagged PDF. Every example passes veraPDF PDF/UA-1 and comes out byte for byte the same on Windows and Linux. `Zorg.Pdf.Imaging` adds WebP, GIF, BMP and TIFF, EXIF orientation, sRGB conversion and downsampling through Zorg.Imaging. A tagged 1,000-row invoice renders in 30 ms (MigraDoc 6.2.4: 260 ms). What isn't supported is in [docs/limits.md](docs/limits.md).
+**Status: 0.1 in development, not released.** Build a document in C# or JSON (schema in [schema/](schema/document-0.1.schema.json), ten examples with data in [docs/examples/](docs/examples)), validate it (codes in [docs/diagnostics.md](docs/diagnostics.md)), and render headings, paragraphs with bold, italic and fallback fonts, bulleted and numbered lists, tables with rows from `IAsyncEnumerable`, JPEG and PNG images, and headers and footers with "Page X of Y" as compact tagged PDF. Every example passes veraPDF PDF/UA-1 and comes out byte for byte the same on Windows and Linux. `Zorg.Pdf.Imaging` adds WebP, GIF, BMP and TIFF, EXIF orientation, sRGB conversion and downsampling through Zorg.Imaging, and PNG previews of pages for checking layouts by eye or by agent. A tagged 1,000-row invoice renders in 30 ms (MigraDoc 6.2.4: 260 ms). What isn't supported is in [docs/limits.md](docs/limits.md).
 
 ```csharp
 var document = new PdfDocument("Invoice 2026-0042")
@@ -33,7 +33,7 @@ zorg-pdf watch docs/examples/letter.json --fonts ./fonts
 | Version | Scope | State |
 |---|---|---|
 | 0.1 | The document model and its JSON Schema; rendering headings, paragraphs, tables, images, headers and footers with page numbers; bold and italic; tagged output with PDF/UA-1; object streams for small files; agent tools as a stretch goal | Complete, in review: the library and `Zorg.Pdf.Extensions.AI` |
-| 0.2 | Templates and data binding, lists, cell spans, watermarks, PNG page previews, a `zorg-pdf` command-line tool | In progress: all but page previews done |
+| 0.2 | Templates and data binding, lists, cell spans, watermarks, text boxes, PNG page previews, a `zorg-pdf` command-line tool | Complete, in review |
 | 0.3 | Markdown, tables of contents and links, hyphenation, right-to-left and Arabic text, PDF/A | Planned |
 | 0.4 | Reading and merging PDFs, page groups, attachments, ZUGFeRD/Factur-X invoices | Planned |
 | 0.5 | Charts, barcodes, ASP.NET Core report jobs, signing | Planned |

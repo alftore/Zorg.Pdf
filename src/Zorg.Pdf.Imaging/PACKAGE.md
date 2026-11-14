@@ -25,6 +25,18 @@ var options = new RenderOptions
 await document.RenderAsync(output, options, cancellationToken);
 ```
 
+## Page previews
+
+`PdfPreview` draws pages of a PDF that Zorg.Pdf wrote as PNG, so a person or an agent can check a layout by looking.
+It reads only Zorg.Pdf's own output and refuses anything else, and gives the same pixels on every machine. It draws
+with Zorg.Imaging's canvas, which is experimental, so this API may change too.
+
+```csharp
+byte[] png = await PdfPreview.RenderPagePngAsync(pdf, page: 0, new PreviewOptions { Dpi = 96 }, cancellationToken);
+```
+
+For agents, pass it to the tools: `new PdfToolOptions { Render = ..., PreviewAsync = (pdf, page, ct) => PdfPreview.RenderPagePngAsync(pdf, page, cancellationToken: ct) }`.
+
 ## Documentation
 
 - [Known limits](https://github.com/alftore/Zorg.Pdf/blob/main/docs/limits.md)

@@ -14,7 +14,7 @@ Rules:
 
 | Package | Licence | Why | Risk |
 |---|---|---|---|
-| Zorg.Imaging 0.3.0 | MIT (checked in the `.nuspec`, 2026-11-14); no dependencies on `net10.0` | `Zorg.Pdf.Imaging` only: decoding, orientation, colour conversion and resizing of images | Low. The maintainer's own library, under the same rules (managed only, AOT-safe, no dependencies). First-party packages don't wait out the 7-day age rule. |
+| Zorg.Imaging 0.4.0 | MIT (checked in the `.nuspec`, 2026-11-14); no dependencies on `net10.0` | `Zorg.Pdf.Imaging` only: decoding, orientation, colour conversion and resizing of images, and its experimental canvas (`ZORGDRAW`) for page previews | Low. The maintainer's own library, under the same rules (managed only, AOT-safe, no dependencies). First-party packages don't wait out the 7-day age rule. |
 | Microsoft.Extensions.AI.Abstractions 10.11.0 | MIT (checked in the `.nuspec`, 2026-11-14); no dependencies on `net10.0` | `Zorg.Pdf.Extensions.AI` only: the `AIFunction` type its tools are | Low. Microsoft's abstraction for AI tools, used by every .NET AI client. 11.0.0 was four days old when this was added, so it waits. |
 
 ## Build only (not shipped)
