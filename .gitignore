@@ -1,0 +1,38 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+artifacts/
+*.nupkg
+*.snupkg
+TestResults/
+BenchmarkDotNet.Artifacts/
+
+# Local scratch, research and design notes (never committed)
+.tmp/
+
+# Downloaded test corpora and fonts (fetched by scripts, checksummed, never committed)
+.cache/
+
+# Test output written for inspection
+*.actual.pdf
+*.actual.png
+
+# IDE and OS files
+.claude/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+
+# Secrets and local settings
+*.env
+appsettings.Local.json
+
+# Snapshot candidates
+*.received.*
+
+# A Windows redirect run from a POSIX shell creates a real file with this name
+NUL

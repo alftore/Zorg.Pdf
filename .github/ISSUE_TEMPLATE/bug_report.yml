@@ -1,0 +1,68 @@
+name: Bug report
+description: A document lays out or renders wrongly, fails validation, or an operation throws.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please check [the known limits](https://github.com/alftore/Zorg.Pdf/blob/main/docs/limits.md) first. A document definition (or template and data) and a few lines of code get a fix fastest.
+
+        A template, data or PDF file that causes a crash, a hang or unbounded memory is a security problem: [report it privately](https://github.com/alftore/Zorg.Pdf/security/advisories/new) instead.
+  - type: input
+    id: version
+    attributes:
+      label: Zorg.Pdf version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: .NET version and OS
+      description: Say if you publish with Native AOT.
+      placeholder: .NET 10.0.1 on Ubuntu 24.04, x64
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Layout and pagination
+        - Text, fonts and shaping
+        - Tables
+        - Images
+        - Templates and data binding
+        - Accessibility (tagging, PDF/UA)
+        - Archiving (PDF/A)
+        - Agent tools (Extensions.AI)
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Code and document
+      description: The code you run, and the document definition or template and data. Remove anything private first.
+      render: csharp
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What you expected, and what a validator (veraPDF, qpdf) or another viewer reports, if you checked.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: The output PDF (attach it), the diagnostics, or the exception with its stack trace.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: A fix you have in mind, or a link to the spec.

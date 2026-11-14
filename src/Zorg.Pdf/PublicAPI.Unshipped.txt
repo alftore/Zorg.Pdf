@@ -1,0 +1,5 @@
+#nullable enable
+Zorg.Pdf.PdfException
+Zorg.Pdf.PdfException.PdfException() -> void
+Zorg.Pdf.PdfException.PdfException(string! message) -> void
+Zorg.Pdf.PdfException.PdfException(string! message, System.Exception! innerException) -> void

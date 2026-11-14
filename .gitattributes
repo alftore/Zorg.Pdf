@@ -1,0 +1,16 @@
+# Normalise line endings in the repository; check out with the platform default.
+* text=auto
+
+*.sh text eol=lf
+
+# PDF, font and image fixtures are byte-exact test data: never convert line endings in them.
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.icc binary
+*.bin binary

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Benchmarks aren't library code: no docs or ConfigureAwait rules, and BenchmarkDotNet needs public classes. -->
+    <NoWarn>$(NoWarn);CS1591;CA2007;CA1515;CA1822;CA1001;CA2000</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="PDFsharp-MigraDoc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Zorg.Pdf\Zorg.Pdf.csproj" />
+  </ItemGroup>
+
+</Project>

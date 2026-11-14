@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Zorg.Pdf/Zorg.Pdf.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Zorg.Pdf.Tests/Zorg.Pdf.Tests.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Zorg.Pdf.Benchmarks/Zorg.Pdf.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Zorg.Pdf.AotSmoke/Zorg.Pdf.AotSmoke.csproj" />
+  </Folder>
+</Solution>

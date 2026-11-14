@@ -1,0 +1,29 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait a week after a release, so a compromised version has time to be caught.
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      # 6.5.0 moved to AGPL-3.0 or a commercial licence; the benchmarks stay on 6.2.4 (MIT). See docs/dependencies.md.
+      - dependency-name: PDFsharp-MigraDoc
+        versions: ['>= 6.5.0']
+      - dependency-name: PDFsharp
+        versions: ['>= 6.5.0']
+    groups:
+      nuget:
+        patterns: ['*']

@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build Zorg.Pdf.slnx -c Release
+
+      - name: Test
+        run: dotnet test --solution Zorg.Pdf.slnx -c Release --no-build
+
+      - name: Pack
+        shell: bash
+        run: |
+          for project in src/*/*.csproj; do
+            dotnet pack "$project" -c Release --no-build -p:PackageOutputPath="$RUNNER_TEMP/packages"
+          done
+
+  # The library targets .NET 10; this runs its tests on the newest runtime, so a change there shows up here first.
+  dotnet11:
+    name: Tests on .NET 11
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6.1.0
+        with:
+          global-json-file: global.json
+          dotnet-version: 11.0.x
+
+      - name: Build
+        run: dotnet build Zorg.Pdf.slnx -c Release
+
+      - name: Test on the .NET 11 runtime
+        env:
+          DOTNET_ROLL_FORWARD: LatestMajor
+        run: dotnet test --solution Zorg.Pdf.slnx -c Release --no-build
+
+  # The same container as local runs: fonts and oracle tools (hb-shape, qpdf, poppler, MuPDF) are baked into
+  # scripts/linux/Dockerfile.alpine, and veraPDF validates the tagged invoice as PDF/UA-1. ZORG_REQUIRE_FONTS=1 and
+  # ZORG_REQUIRE_ORACLES=1 make a missing font or tool a failure, not a skip.
+  oracles:
+    name: Oracle tests (Alpine gate, veraPDF)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Linux gate
+        env:
+          ZORG_PDF_CONTAINER_CLI: docker
+        run: scripts/test-linux.sh
+
+  aot-smoke:
+    name: AOT smoke publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Install Native AOT prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
+      # The explicit shell turns on pipefail, so a failed publish isn't hidden by tee.
+      # A clean publish proves little on its own, so the sample is also run.
+      - name: Publish
+        shell: bash
+        run: |
+          dotnet publish samples/Zorg.Pdf.AotSmoke -r linux-x64 -c Release -o "$RUNNER_TEMP/aot" | tee "$RUNNER_TEMP/publish.log"
+          if grep -E '\bIL[23][0-9]{3}\b' "$RUNNER_TEMP/publish.log"; then
+            echo "::error::The publish reported trim or AOT warnings."
+            exit 1
+          fi
+
+      - name: Run
+        shell: bash
+        run: '"$RUNNER_TEMP/aot/Zorg.Pdf.AotSmoke"'

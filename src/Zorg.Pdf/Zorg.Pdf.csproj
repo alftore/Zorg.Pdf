@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Async-first PDF generation for .NET: documents and reports from code, JSON or templates and data, with tagged output and no native dependencies.</Description>
+    <PackageTags>pdf;report;reporting;template;pdf-ua;pdf-a;accessibility;document</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zorg.Pdf.Tests" />
+    <InternalsVisibleTo Include="Zorg.Pdf.AotSmoke" />
+    <InternalsVisibleTo Include="Zorg.Pdf.Benchmarks" />
+  </ItemGroup>
+
+</Project>
