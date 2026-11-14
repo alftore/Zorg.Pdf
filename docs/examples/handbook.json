@@ -1,0 +1,59 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Staff handbook 2027",
+  "language": "en",
+  "outlineLevels": 2,
+  "content": [
+    { "type": "heading", "inlines": ["Staff handbook 2027"] },
+    { "type": "paragraph", "inlines": ["Zorg Consulting AS, Storgata 1, 0155 Oslo"] },
+    {
+      "type": "sectionBreak",
+      "numbering": "lowerRoman",
+      "footer": { "content": [{ "type": "paragraph", "align": "center", "inlines": [{ "field": "pageNumber" }] }] }
+    },
+    { "type": "tableOfContents", "title": "Contents", "maxLevel": 2 },
+    {
+      "type": "sectionBreak",
+      "numbering": "number",
+      "footer": { "content": [{ "type": "paragraph", "align": "right", "inlines": ["Staff handbook 2027 · page ", { "field": "pageNumber" }, " of ", { "field": "pageCount" }] }] }
+    },
+    { "type": "heading", "inlines": ["Welcome"] },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "This handbook describes how we work: hours, holidays, travel and expenses. Questions go to ",
+        { "link": "mailto:hr@example.com", "inlines": ["hr@example.com"] },
+        ". The forms are in ",
+        { "link": "#forms", "inlines": ["the appendix"] },
+        "."
+      ]
+    },
+    { "type": "heading", "level": 2, "inlines": ["Working hours"] },
+    { "type": "paragraph", "inlines": ["Core hours are 09:00 to 15:00. Outside them, plan your day with your team and record your hours in the time sheet every Friday."] },
+    { "type": "heading", "level": 2, "inlines": ["Holidays"] },
+    { "type": "paragraph", "inlines": ["Everyone has 25 working days of holiday a year. Ask for three weeks in the summer by 1 April, and for other days two weeks ahead."] },
+    { "type": "pageBreak" },
+    { "type": "heading", "inlines": ["Travel and expenses"] },
+    {
+      "type": "paragraph",
+      "inlines": [
+        "Book travel through the agency and keep every receipt. The rates follow the ",
+        { "link": "https://example.com/rates", "inlines": ["state travel rates"], "description": "The state travel rates on example.com" },
+        "."
+      ]
+    },
+    { "type": "heading", "level": 2, "inlines": ["Mileage"] },
+    { "type": "paragraph", "inlines": ["Driving your own car is paid per kilometre at the state rate. Note the start, the end and the purpose of each trip."] },
+    {
+      "type": "sectionBreak",
+      "prefix": "A-",
+      "startAt": 1,
+      "header": { "content": [{ "type": "paragraph", "align": "right", "inlines": ["Appendix"] }] }
+    },
+    { "type": "heading", "id": "forms", "inlines": ["Appendix: forms"] },
+    {
+      "type": "list",
+      "items": ["Holiday request", "Travel request", "Expense claim with receipts", "Mileage log"]
+    }
+  ]
+}

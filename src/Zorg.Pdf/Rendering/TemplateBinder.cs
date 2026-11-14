@@ -148,6 +148,10 @@ internal sealed class TemplateBinder
 
                 return;
 
+            case SectionBreak section:
+                output.Add(section with { Header = Band(section.Header, $"{path}/header"), Footer = Band(section.Footer, $"{path}/footer") });
+                return;
+
             case TextBox box when !box.Content.IsDefault:
                 output.Add(box with { Content = ExpandAll(box.Content, $"{path}/content") });
                 return;
@@ -375,6 +379,11 @@ internal sealed class TemplateBinder
         IEnumerable<Block> all = document.Content.IsDefault ? [] : document.Content;
         all = all.Concat(document.Header?.Content.IsDefault == false ? document.Header.Content : []);
         all = all.Concat(document.Footer?.Content.IsDefault == false ? document.Footer.Content : []);
+        foreach (SectionBreak section in document.Content.IsDefault ? [] : document.Content.OfType<SectionBreak>())
+        {
+            all = all.Concat(section.Header?.Content.IsDefault == false ? section.Header.Content : []);
+            all = all.Concat(section.Footer?.Content.IsDefault == false ? section.Footer.Content : []);
+        }
         foreach (Block block in all)
         {
             foreach (Block inner in Walk(block))

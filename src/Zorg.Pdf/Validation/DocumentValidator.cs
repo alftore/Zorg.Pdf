@@ -254,6 +254,8 @@ internal sealed partial class DocumentValidator
                     Error(DiagnosticCodes.BadSection, "A section break goes at the top level of the content (or in a top-level when).", path);
                 }
 
+                Band(section.Header, $"{path}/header");
+                Band(section.Footer, $"{path}/footer");
                 break;
 
             case TableOfContents toc:
@@ -498,7 +500,7 @@ internal sealed partial class DocumentValidator
     private void Link(Link link, string path)
     {
         string? where = _noLinksIn ?? (path.Contains("/rows/", StringComparison.Ordinal) ? "table cells"
-            : path.StartsWith("/header", StringComparison.Ordinal) || path.StartsWith("/footer", StringComparison.Ordinal) ? "headers and footers"
+            : path.StartsWith("/header", StringComparison.Ordinal) || path.StartsWith("/footer", StringComparison.Ordinal) || path.Contains("/header/", StringComparison.Ordinal) || path.Contains("/footer/", StringComparison.Ordinal) ? "headers and footers"
             : null);
         if (where is not null)
         {

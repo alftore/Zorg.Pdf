@@ -183,11 +183,13 @@
         "id": { "$ref": "#/$defs/id" },
         "numbering": { "$ref": "#/$defs/pageNumberStyle" },
         "startAt": { "description": "The number of the section's first page; by default 1 when the numbering changes, else the count continues.", "type": "integer", "minimum": 1 },
-        "prefix": { "description": "Text before each page number, such as A-.", "type": "string", "maxLength": 32 }
+        "prefix": { "description": "Text before each page number, such as A-.", "type": "string", "maxLength": 32 },
+        "header": { "description": "The section's header; leave it out to keep the section before's, or { \"content\": [] } for none.", "$ref": "#/$defs/pageBand" },
+        "footer": { "description": "The section's footer; leave it out to keep the section before's, or { \"content\": [] } for none.", "$ref": "#/$defs/pageBand" }
       }
     },
     "tableOfContents": {
-      "description": "One entry per top-level heading of levels 1 to maxLevel, indented by level, with dot leaders and page numbers filled in when the document is finished. Each entry links to its heading. Styles toc1 to toc6.",
+      "description": "One entry per top-level heading after it, of levels 1 to maxLevel, indented by level, with dot leaders and page numbers filled in when the document is finished. Each entry links to its heading. Styles toc1 to toc6.",
       "type": "object",
       "required": ["type"],
       "additionalProperties": false,

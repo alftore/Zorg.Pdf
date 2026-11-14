@@ -23,29 +23,61 @@ internal sealed partial class RenderEngine
     internal const double MinContentHeight = 36;
 
     private readonly List<EmbeddedFont> _bandFonts = [];
-    private readonly List<PdfReference> _bandStreams = [];
     private readonly List<ImageSet.Entry> _bandImages = [];
-    private Band? _header;
-    private Band? _footer;
-    private PdfReference? _sharedBandStream;
 
-    /// <summary>Measures the header and footer and returns the content area that's left.</summary>
+    /// <summary>Each section's header and footer and the content area they leave; set 0 is the document's.</summary>
+    private readonly List<BandSet> _bandSets = [];
+
+    /// <summary>Which band set each top-level section break starts, by its index in the content.</summary>
+    private readonly Dictionary<int, int> _sectionBands = [];
+
+    /// <summary>Pages with fields in their bands: each page's own stream and set, drawn when the page count is known.</summary>
+    private readonly List<(PdfReference Stream, int Page, int Set)> _bandStreams = [];
+
+    /// <summary>The band set of the pages being written now.</summary>
+    private int _bandSet;
+
+    /// <summary>
+    /// Measures every section's header and footer before the first page, so a band too tall for the page is found
+    /// before anything is written, and returns the first section's content area. A section break's null band
+    /// inherits the one before; <see cref="PageBand.None"/> (no content) is no band.
+    /// </summary>
     private PageGeometry MeasureBands()
     {
-        _header = Band.From(_document.Header, "/header", "header", "Header"u8);
-        _footer = Band.From(_document.Footer, "/footer", "footer", "Footer"u8);
+        PageBand? header = _document.Header, footer = _document.Footer;
+        _bandSets.Add(MeasureBandSet(header, "/header", footer, "/footer"));
+        string headerPath = "/header", footerPath = "/footer";
+        for (int i = 0; i < _document.Content.Length; i++)
+        {
+            if (_document.Content[i] is SectionBreak { } section && (section.Header is not null || section.Footer is not null))
+            {
+                (header, headerPath) = section.Header is { } h ? (h, $"/content/{i}/header") : (header, headerPath);
+                (footer, footerPath) = section.Footer is { } f ? (f, $"/content/{i}/footer") : (footer, footerPath);
+                _sectionBands[i] = _bandSets.Count;
+                _bandSets.Add(MeasureBandSet(header, headerPath, footer, footerPath));
+            }
+        }
+
+        _bandFonts.Sort((a, b) => string.CompareOrdinal(a.Font.PostScriptName, b.Font.PostScriptName)); // Deterministic.
+        return _bandSets[0].Content;
+    }
+
+    private BandSet MeasureBandSet(PageBand? headerModel, string headerPath, PageBand? footerModel, string footerPath)
+    {
+        Band? header = headerModel is { Content.IsDefaultOrEmpty: false } ? Band.From(headerModel, headerPath, "header", "Header"u8) : null;
+        Band? footer = footerModel is { Content.IsDefaultOrEmpty: false } ? Band.From(footerModel, footerPath, "footer", "Footer"u8) : null;
         PageGeometry content = _pageGeometry;
-        var fonts = new HashSet<EmbeddedFont>();
-        foreach (Band? band in (ReadOnlySpan<Band?>)[_header, _footer])
+        string labels = Preflight.LabelCharacters(_document);
+        foreach (Band? band in (ReadOnlySpan<Band?>)[header, footer])
         {
             if (band is null)
             {
                 continue;
             }
 
-            // Three digits for the height; every digit once to find the fonts that may draw them.
+            // Three digits for the height; every label character once to find the fonts that may draw them.
             band.Height = Height(LayoutBand(band, _ => "000", report: true));
-            foreach (BandItem item in LayoutBand(band, _ => "0123456789", report: false))
+            foreach (BandItem item in LayoutBand(band, _ => labels, report: false))
             {
                 if (item.Image is { } image && !_bandImages.Contains(image))
                 {
@@ -56,63 +88,78 @@ internal sealed partial class RenderEngine
                 {
                     foreach (LineRun run in line.Runs)
                     {
-                        fonts.Add(run.Font);
+                        if (!_bandFonts.Contains(run.Font))
+                        {
+                            _bandFonts.Add(run.Font);
+                        }
                     }
                 }
             }
 
             double room = band.Height > 0 ? band.Height + BandGap : 0;
-            content = band == _header ? content with { Top = content.Top - room } : content with { Bottom = content.Bottom + room };
+            content = band == header ? content with { Top = content.Top - room } : content with { Bottom = content.Bottom + room };
         }
 
-        if ((_header ?? _footer) is not null && content.ContentHeight < MinContentHeight)
+        if ((header ?? footer) is not null && content.ContentHeight < MinContentHeight)
         {
             _sink.Error(
                 DiagnosticCodes.BandsTooTall,
                 string.Create(CultureInfo.InvariantCulture, $"The header and footer take {_pageGeometry.ContentHeight - content.ContentHeight:0.#} pt of the page's {_pageGeometry.ContentHeight:0.#} pt, leaving less than {MinContentHeight} pt for the content."),
-                _footer is not null ? "/footer" : "/header");
+                footer is not null ? footer.Path : header!.Path);
         }
 
-        _bandFonts.AddRange(fonts);
-        _bandFonts.Sort((a, b) => string.CompareOrdinal(a.Font.PostScriptName, b.Font.PostScriptName)); // Deterministic.
-        return content;
+        return new BandSet(header, footer, content);
     }
 
-    /// <summary>The band stream for the page being finished, or null without bands.</summary>
+    /// <summary>A section break: its pages use its band set and content area from the page it starts.</summary>
+    private void StartBandSet(int index)
+    {
+        if (_sectionBands.TryGetValue(index, out int set) && set != _bandSet)
+        {
+            _bandSet = set;
+            _geometry = _bandSets[set].Content;
+            _y = _geometry.Top; // The section's first page is still empty.
+        }
+    }
+
+    /// <summary>The band stream for the page being finished, or null when its section has no bands.</summary>
     private PdfReference? BandStream()
     {
-        if (_header is null && _footer is null)
+        BandSet set = _bandSets[_bandSet];
+        if (set.Header is null && set.Footer is null)
         {
             return null;
         }
 
-        if (!(_header?.HasFields ?? false) && !(_footer?.HasFields ?? false))
+        if (!(set.Header?.HasFields ?? false) && !(set.Footer?.HasFields ?? false))
         {
-            _sharedBandStream ??= _writer.Allocate();
-            return _sharedBandStream;
+            set.Shared ??= _writer.Allocate(); // The same on every page of the section: one stream.
+            return set.Shared;
         }
 
         PdfReference stream = _writer.Allocate();
-        _bandStreams.Add(stream);
+        _bandStreams.Add((stream, _page, _bandSet));
         return stream;
     }
 
     /// <summary>Draws and writes the band streams, now that the page count is known.</summary>
     private void WriteBands()
     {
-        if (_sharedBandStream is { } shared)
+        foreach (BandSet set in _bandSets)
         {
-            WriteBandStream(shared, 1, _documentWriter.Pages.Count);
-            return;
+            if (set.Shared is { } shared)
+            {
+                WriteBandStream(shared, set, 0, _documentWriter.Pages.Count);
+            }
         }
 
-        for (int i = 0; i < _bandStreams.Count; i++)
+        foreach ((PdfReference stream, int page, int set) in _bandStreams)
         {
-            WriteBandStream(_bandStreams[i], i + 1, _documentWriter.Pages.Count);
+            WriteBandStream(stream, _bandSets[set], page, _documentWriter.Pages.Count);
         }
     }
 
-    private void WriteBandStream(PdfReference reference, int page, int pages)
+    private void WriteBandStream(PdfReference reference, BandSet set, int page, int pages)
     {
         // This stream follows the page's own, so it starts from whatever state that one left: set the fill colour,
         // and let the first run set its font, stroke and rendering mode.
@@ -120,19 +167,31 @@ internal sealed partial class RenderEngine
         _content.SetFillGray(0);
         _fill = Color.Black;
         (_stroke, _strokeWidth, _renderingMode) = (null, 1, 0);
-        string Field(FieldKind kind) => kind == FieldKind.PageCount ? pages.ToString(CultureInfo.InvariantCulture) : Label(page - 1);
-        if (_header is not null)
+        string Field(FieldKind kind) => kind == FieldKind.PageCount ? pages.ToString(CultureInfo.InvariantCulture) : Label(page);
+        if (set.Header is { } header)
         {
-            DrawBand(_header, LayoutBand(_header, Field, report: false), _pageGeometry.Top);
+            DrawBand(header, LayoutBand(header, Field, report: false), _pageGeometry.Top);
         }
 
-        if (_footer is not null)
+        if (set.Footer is { } footer)
         {
-            DrawBand(_footer, LayoutBand(_footer, Field, report: false), _pageGeometry.Bottom + _footer.Height);
+            DrawBand(footer, LayoutBand(footer, Field, report: false), _pageGeometry.Bottom + footer.Height);
         }
 
         _writer.BeginStreamObject(reference);
         _writer.EndStreamObject(_content.WrittenSpan, compress: true);
+    }
+
+    /// <summary>A section's header and footer, the content area they leave, and their shared stream when they have no fields.</summary>
+    private sealed class BandSet(Band? header, Band? footer, PageGeometry content)
+    {
+        public Band? Header { get; } = header;
+
+        public Band? Footer { get; } = footer;
+
+        public PageGeometry Content { get; } = content;
+
+        public PdfReference? Shared { get; set; }
     }
 
     private void DrawBand(Band band, List<BandItem> items, double y)

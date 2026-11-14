@@ -172,4 +172,15 @@ public sealed record PageBand
     /// <summary>Paragraphs, images and spacers. It's an artifact for screen readers, not part of the text.</summary>
     [JsonRequired]
     public required ImmutableArray<Block> Content { get; init; }
+
+    /// <summary>
+    /// No band: a section that sets its header or footer to this has none, such as a cover page. In JSON
+    /// <c>{ "content": [] }</c>.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// new SectionBreak { Footer = PageBand.None }
+    /// </code>
+    /// </example>
+    public static PageBand None { get; } = new([]);
 }

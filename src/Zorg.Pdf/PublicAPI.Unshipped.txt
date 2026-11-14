@@ -419,6 +419,7 @@ Zorg.Pdf.PageBand.Content.init -> void
 Zorg.Pdf.PageBand.Equals(Zorg.Pdf.PageBand? other) -> bool
 override Zorg.Pdf.PageBand.Equals(object? obj) -> bool
 override Zorg.Pdf.PageBand.GetHashCode() -> int
+static Zorg.Pdf.PageBand.None.get -> Zorg.Pdf.PageBand!
 Zorg.Pdf.PageBand.PageBand(System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!> content) -> void
 override Zorg.Pdf.PageBand.ToString() -> string!
 static Zorg.Pdf.PageBand.operator !=(Zorg.Pdf.PageBand? left, Zorg.Pdf.PageBand? right) -> bool
@@ -695,7 +696,11 @@ override Zorg.Pdf.SectionBreak.<Clone>$() -> Zorg.Pdf.SectionBreak!
 override sealed Zorg.Pdf.SectionBreak.Equals(Zorg.Pdf.Block? other) -> bool
 Zorg.Pdf.SectionBreak.Equals(Zorg.Pdf.SectionBreak? other) -> bool
 override Zorg.Pdf.SectionBreak.Equals(object? obj) -> bool
+Zorg.Pdf.SectionBreak.Footer.get -> Zorg.Pdf.PageBand?
+Zorg.Pdf.SectionBreak.Footer.init -> void
 override Zorg.Pdf.SectionBreak.GetHashCode() -> int
+Zorg.Pdf.SectionBreak.Header.get -> Zorg.Pdf.PageBand?
+Zorg.Pdf.SectionBreak.Header.init -> void
 Zorg.Pdf.SectionBreak.Numbering.get -> Zorg.Pdf.PageNumberStyle?
 Zorg.Pdf.SectionBreak.Numbering.init -> void
 Zorg.Pdf.SectionBreak.Prefix.get -> string?

@@ -42,7 +42,7 @@ internal sealed partial class RenderEngine : IDisposable
     private readonly PdfObjectWriter _writer;
     private readonly DocumentWriter _documentWriter;
     private readonly Tagger _tagger;
-    private readonly PageGeometry _geometry; // The content area: the page inside its margins, less the header and footer.
+    private PageGeometry _geometry; // The content area: the page inside its margins, less the header and footer.
     private readonly PageGeometry _pageGeometry; // The page inside its margins.
     private readonly Dictionary<int, PreparedText> _prepared = [];
 
@@ -170,6 +170,7 @@ internal sealed partial class RenderEngine : IDisposable
                     break;
                 case SectionBreak section:
                     await PlaceSectionBreakAsync(section, cancellationToken).ConfigureAwait(false);
+                    StartBandSet(i);
                     Arrived(section);
                     break;
                 case TableOfContents toc:

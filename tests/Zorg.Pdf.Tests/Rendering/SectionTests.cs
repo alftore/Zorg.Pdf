@@ -64,6 +64,71 @@ public sealed class SectionTests
         Assert.DoesNotContain("/PageLabels", PdfInspect.Text(file), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task SectionsHaveTheirOwnHeaderAndFooter()
+    {
+        var footer = new PageBand([new Paragraph(["Page ", Field.PageNumber])]);
+        var header = new PageBand([new Paragraph("Appendix"), new Paragraph("Second header line"), new Paragraph("Third header line")]);
+        var document = new PdfDocument("Report")
+        {
+            Content =
+            [
+                new Heading("Cover"),                                                        // No footer: the document has none.
+                new SectionBreak { StartAt = 1, Footer = footer },
+                new Paragraph("Body one."),
+                new PageBreak(),
+                new Paragraph("Body two."),
+                new SectionBreak { Header = header },                                        // Keeps the footer, adds a header.
+                new Paragraph("Appendix text."),
+                new SectionBreak { Header = PageBand.None, Footer = PageBand.None },
+                new Paragraph("The end."),
+            ],
+        };
+
+        (byte[] file, RenderResult result) = await RenderTests.RenderAsync(document, PdfInspect.Options(PdfConformance.PdfUA1));
+
+        Assert.False(result.HasWarnings, string.Join(Environment.NewLine, result.Diagnostics));
+        PdfFile.CheckStructure(file);
+        var pages = PdfInspect.PageStreams(file);
+        Assert.Equal([1, 2, 2, 2, 1], pages.Select(p => p.Length)); // Bands on the body and the appendix only.
+        Assert.Equal(["Page 1", "Page 2"], pages.Skip(1).Take(2).Select(p => string.Concat(Text(p[1].Content))));
+        Assert.Equal(["Appendix", "Second header line", "Third header line", "Page 3"], Text(pages[3][1].Content));
+
+        // The header pushes the appendix text down; without bands the last page's text starts at the margin again.
+        double Top(string content) => double.Parse(Regex.Match(content, @"1 0 0 1 [\d.]+ ([\d.]+) Tm").Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.True(Top(pages[3][0].Content) < Top(pages[1][0].Content) - 20);
+        Assert.Equal(Top(pages[1][0].Content), Top(pages[4][0].Content), 6); // Same text style, no header: the same first baseline.
+    }
+
+    [Fact]
+    public async Task ABandWithoutFieldsIsSharedWithinItsSection()
+    {
+        var document = new PdfDocument("x")
+        {
+            Footer = new PageBand([new Paragraph("Confidential")]),
+            Content = [new Paragraph("a"), new PageBreak(), new Paragraph("b"), new SectionBreak { Footer = new PageBand([new Paragraph("Appendix")]) }, new Paragraph("c"), new PageBreak(), new Paragraph("d")],
+        };
+
+        (byte[] file, _) = await RenderTests.RenderAsync(document, PdfInspect.Options());
+
+        var bands = PdfInspect.PageStreams(file).Select(p => p[1].Number).ToArray();
+        Assert.Equal(4, bands.Length);
+        Assert.Equal(bands[0], bands[1]);
+        Assert.Equal(bands[2], bands[3]);
+        Assert.NotEqual(bands[0], bands[2]);
+    }
+
+    [Fact]
+    public void SectionBandsAreCheckedWhereTheyAre()
+    {
+        var document = new PdfDocument("x")
+        {
+            Content = [new Paragraph("a"), new SectionBreak { Footer = new PageBand([new Heading("Not in a band")]) }],
+        };
+
+        Assert.Equal("ZPDF-J018 /content/1/footer/content/0", Assert.Single(document.Validate().Diagnostics.Select(d => $"{d.Code} {d.Path}")));
+    }
+
     [Theory]
     [InlineData(4, PageNumberStyle.LowerRoman, "iv")]
     [InlineData(1994, PageNumberStyle.UpperRoman, "MCMXCIV")]

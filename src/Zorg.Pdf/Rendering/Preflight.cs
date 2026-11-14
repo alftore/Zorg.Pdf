@@ -43,11 +43,15 @@ internal static class Preflight
         return characters.ToString();
     }
 
-    /// <summary>The table of contents' entries: each top-level heading within its levels, with its index, level and text.</summary>
+    /// <summary>
+    /// The table of contents' entries: each top-level heading after it within its levels, with its index, level and
+    /// text. Headings before it (a title page, front matter) aren't listed.
+    /// </summary>
     public static List<(int Index, Heading Heading, int Level, string Text)> TocEntries(PdfDocument document, TableOfContents toc)
     {
         var entries = new List<(int, Heading, int, string)>();
-        for (int i = 0; i < document.Content.Length; i++)
+        int start = document.Content.IndexOf(toc, ReferenceEqualityComparer.Instance) + 1;
+        for (int i = start; i < document.Content.Length; i++)
         {
             if (document.Content[i] is Heading { Level: >= 1 and <= 6 } heading && heading.Level <= toc.MaxLevel)
             {
@@ -172,6 +176,14 @@ internal static class Preflight
 
         Band(document.Header, "/header", "header");
         Band(document.Footer, "/footer", "footer");
+        for (int s = 0; s < document.Content.Length; s++)
+        {
+            if (document.Content[s] is SectionBreak section)
+            {
+                Band(section.Header, $"/content/{s}/header", "header");
+                Band(section.Footer, $"/content/{s}/footer", "footer");
+            }
+        }
         if (document.Watermark?.Text is not null)
         {
             Need(styles.Named("watermark"), "/watermark/text");
@@ -227,6 +239,14 @@ internal static class Preflight
     {
         Band(document.Header, "/header", "header");
         Band(document.Footer, "/footer", "footer");
+        for (int s = 0; s < document.Content.Length; s++)
+        {
+            if (document.Content[s] is SectionBreak section)
+            {
+                Band(section.Header, $"/content/{s}/header", "header");
+                Band(section.Footer, $"/content/{s}/footer", "footer");
+            }
+        }
         if (document.Watermark?.Text is { } watermark)
         {
             Characters(watermark, Chain(styles.Named("watermark")), "/watermark/text");

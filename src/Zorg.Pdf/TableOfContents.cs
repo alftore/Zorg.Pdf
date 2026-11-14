@@ -4,8 +4,8 @@ using System.Text.Json.Serialization;
 namespace Zorg.Pdf;
 
 /// <summary>
-/// A table of contents: one entry per heading of the document (top-level headings, levels 1 to
-/// <see cref="MaxLevel"/>), indented by level, with dot leaders and the page each heading lands on. Every entry links
+/// A table of contents: one entry per heading that follows it (top-level headings, levels 1 to
+/// <see cref="MaxLevel"/>; a title page before it isn't listed), indented by level, with dot leaders and the page each heading lands on. Every entry links
 /// to its heading. It's laid out where it stands and its page numbers are filled in when the document is finished,
 /// so it can come before the headings it lists. Entries use the styles <c>toc1</c> to <c>toc6</c> (<c>toc1</c> is
 /// bold) over <c>body</c>. In JSON <c>{ "type": "tableOfContents", "title": "Contents", "maxLevel": 2 }</c>.
