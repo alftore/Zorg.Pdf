@@ -94,7 +94,7 @@ fi
 
 stage "Previews against MuPDF"
 # Zorg.Pdf.Imaging's preview of each example's first page, against mutool's drawing of the same page at 96 dpi:
-# the total ink must agree within 3 %, and the ink of every 16 x 16 block within a quarter of the block's range.
+# the total ink must agree within 3 % and every 16 x 16 block within 24 of 255 levels (measured: 0.1-2.9 % and 4-12).
 for png in /out/example-*.png; do
   pdf="${png%.png}.pdf"
   mutool draw -q -r 96 -o /tmp/reference.png "$pdf" 1
@@ -114,7 +114,7 @@ for by in range(0, h - 15, 16):
         worst = max(worst, d)
 name = sys.argv[1].rsplit("/", 1)[-1]
 size = f"{ours.width}x{ours.height} vs {theirs.width}x{theirs.height}"
-if total <= 0.03 and worst <= 64 and abs(ours.width - theirs.width) <= 1 and abs(ours.height - theirs.height) <= 1:
+if total <= 0.03 and worst <= 24 and abs(ours.width - theirs.width) <= 1 and abs(ours.height - theirs.height) <= 1:
     print(f"ok   {name}: ink within {total:.2%}, worst 16px block {worst:.1f} levels ({size})")
 else:
     print(f"FAIL {name}: ink differs {total:.2%}, worst 16px block {worst:.1f} levels ({size})")

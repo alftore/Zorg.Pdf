@@ -22,6 +22,9 @@ internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, 
     private readonly List<PdfValue> _operands = [];
     private State _state = new();
     private Shape _path = new();
+
+    /// <summary>The path so far when it's one straight segment (a table rule): drawn with square ends, as PDF's default butt caps.</summary>
+    private (Vector2 Start, Vector2? End)? _segment;
     private Matrix3x2 _textMatrix = Matrix3x2.Identity;
     private Matrix3x2 _lineMatrix = Matrix3x2.Identity;
     private int _operators;
@@ -101,18 +104,23 @@ internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, 
                 ExtGState();
                 break;
             case "re":
+                _segment = null;
                 _path.MoveTo(N(0), N(1)).LineTo(N(0) + N(2), N(1)).LineTo(N(0) + N(2), N(1) + N(3)).LineTo(N(0), N(1) + N(3)).Close();
                 break;
             case "m":
+                _segment = _path.IsEmpty ? (new Vector2(N(0), N(1)), null) : null;
                 _path.MoveTo(N(0), N(1));
                 break;
             case "l":
+                _segment = _segment is ({ } start, null) ? (start, new Vector2(N(0), N(1))) : null;
                 _path.LineTo(N(0), N(1));
                 break;
             case "c":
+                _segment = null;
                 _path.CubicTo(N(0), N(1), N(2), N(3), N(4), N(5));
                 break;
             case "h":
+                _segment = null;
                 _path.Close();
                 break;
             case "f" or "F" or "f*":
@@ -124,15 +132,13 @@ internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, 
                 _path = new Shape();
                 break;
             case "S":
-                if (!_path.IsEmpty)
-                {
-                    canvas.Stroke(_path, Math.Max(_state.LineWidth, 0), WithAlpha(_state.Stroke, _state.StrokeAlpha), _state.Ctm);
-                }
-
+                Stroke();
                 _path = new Shape();
+                _segment = null;
                 break;
             case "n":
                 _path = new Shape();
+                _segment = null;
                 break;
             case "BT":
                 _textMatrix = _lineMatrix = Matrix3x2.Identity;
@@ -184,6 +190,32 @@ internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, 
         }
     }
 
+    /// <summary>
+    /// Strokes the path. Only a hairline (<c>0 w</c>, "the thinnest line the device can draw") is widened to a pixel;
+    /// thinner lines than that are drawn at their width, faint, as MuPDF and pdf.js draw them.
+    /// </summary>
+    private void Stroke()
+    {
+        if (_path.IsEmpty)
+        {
+            return;
+        }
+
+        float width = Math.Max(_state.LineWidth, 0);
+        Rgba32 color = WithAlpha(_state.Stroke, _state.StrokeAlpha);
+        canvas.MinimumStrokeWidth = width == 0 ? 1 : 0;
+        if (_segment is ({ } start, { } end))
+        {
+            Vector2 a = Vector2.Transform(start, _state.Ctm), b = Vector2.Transform(end, _state.Ctm);
+            float scale = MathF.Sqrt(MathF.Abs(_state.Ctm.GetDeterminant()));
+            canvas.StrokeLine(a.X, a.Y, b.X, b.Y, width * scale, color);
+        }
+        else
+        {
+            canvas.Stroke(_path, width, color, _state.Ctm);
+        }
+    }
+
     private void ExtGState()
     {
         string name = _operands.Count > 0 && _operands[0] is PdfName n ? n.Value : throw PdfPreviewException.Malformed("gs needs a name.");
@@ -222,6 +254,7 @@ internal sealed class PageRasterizer(PreviewFile file, PdfDictionary resources, 
                 canvas.Fill(outline, fill, place);
                 if (_state.RenderingMode == 2)
                 {
+                    canvas.MinimumStrokeWidth = 0;
                     canvas.Stroke(outline, SyntheticBoldEm * font.UnitsPerEm, WithAlpha(_state.Stroke, _state.StrokeAlpha), place);
                 }
             }
