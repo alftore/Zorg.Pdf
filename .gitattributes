@@ -14,3 +14,6 @@
 *.jpeg binary
 *.icc binary
 *.bin binary
+
+# Hyphenation patterns ship byte for byte as published (their licences ask that the notices stay).
+src/Zorg.Pdf.Hyphenation/Patterns/*.tex -text

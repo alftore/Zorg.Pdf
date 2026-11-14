@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Hyphenation for Zorg.Pdf: Liang's patterns for English, German, French, Norwegian and Danish, from the hyph-utf8 project, so justified and narrow text breaks words where the language allows.</Description>
+    <PackageTags>pdf;hyphenation;typesetting;patterns;report</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zorg.Pdf\Zorg.Pdf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The hyph-utf8 files, unchanged: their notices are the condition of their licences (see docs/dependencies.md). -->
+    <EmbeddedResource Include="Patterns\hyph-*.tex" LogicalName="%(Filename)%(Extension)" />
+    <None Include="Patterns\hyph-*.tex" Pack="true" PackagePath="patterns\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zorg.Pdf.Tests" />
+  </ItemGroup>
+
+</Project>

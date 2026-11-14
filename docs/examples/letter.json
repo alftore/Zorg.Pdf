@@ -19,7 +19,8 @@
     "styles": {
       "body": {
         "size": "11pt",
-        "lineHeight": 1.3
+        "lineHeight": 1.3,
+        "hyphens": "auto"
       },
       "signature": {
         "fontStyle": "italic",

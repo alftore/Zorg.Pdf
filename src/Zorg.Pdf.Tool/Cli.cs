@@ -214,6 +214,7 @@ internal static class Cli
             Conformance = args.PdfUA ? PdfConformance.PdfUA1 : PdfConformance.None,
             Archive = args.Archive,
             ImageProcessor = new ImagingProcessor(),
+            Hyphenator = Zorg.Pdf.Hyphenation.PatternHyphenator.Default, // Used where a style says hyphens: auto.
         };
 
         string output = memory is not null ? "memory" : args.Output ?? Path.ChangeExtension(args.Input, ".pdf");

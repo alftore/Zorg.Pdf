@@ -193,6 +193,7 @@ internal sealed class SchemaTool() : PdfTool(
         Page numbering: "numbering": "lowerRoman" on the document numbers the first pages; { "type": "sectionBreak", "numbering": "number", "startAt": 1 } starts a new page and numbering ("prefix": "A-" for appendices), and takes its own "header" and "footer" ({ "content": [] } for none, as on a cover).
         A table of contents is a block: { "type": "tableOfContents", "title": "Contents", "maxLevel": 2 }; it lists the headings with page numbers.
         Links are inlines: { "link": "https://example.com", "inlines": ["our site"], "description": "Example's home page" }, or "mailto:..." or "#appendix-b"; in paragraphs, headings and list items.
+        Long words in justified or narrow text: give the body style "hyphens": "auto" (used when the host has a hyphenator; English, German, French, Norwegian, Danish).
         Lengths are numbers in points or strings with a unit: "2cm", "12pt", "5mm".
         Data is a separate JSON object whose properties are slots: { "lines": [["1", "Consulting", "9 375,00"]], "logo": { "base64": "..." } }.
         Unknown properties are errors. validate_document returns every problem with a code and a JSON pointer: fix those and validate again.

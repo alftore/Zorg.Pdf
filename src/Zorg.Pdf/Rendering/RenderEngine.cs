@@ -46,6 +46,9 @@ internal sealed partial class RenderEngine : IDisposable
     private readonly PageGeometry _pageGeometry; // The page inside its margins.
     private readonly Dictionary<int, PreparedText> _prepared = [];
 
+    /// <summary>Languages (and "" for a missing hyphenator) already reported as not hyphenated.</summary>
+    private readonly HashSet<string> _hyphenationNotes = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Headings for the outline, in order: title, level, page and top.</summary>
     private readonly List<OutlineEntry> _outline = [];
 
@@ -375,6 +378,11 @@ internal sealed partial class RenderEngine : IDisposable
             _content.BeginSpan(language); // A passage in another language, inside the element's marked content.
         }
 
+        if (run.Inserted)
+        {
+            _content.BeginActualText("\u00AD"); // A hyphen added at the line end copies out as a soft hyphen.
+        }
+
         if (!ReferenceEquals(run.Font, _textFont) || run.Size != _textSize)
         {
             _content.SetFont(_fonts.Use(run.Font, _writer), run.Size);
@@ -413,6 +421,11 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         _content.ShowGlyphs(run.Glyphs, run.ExtraAfter);
+        if (run.Inserted)
+        {
+            _content.EndMarkedContent();
+        }
+
         if (run.Language is not null)
         {
             _content.EndMarkedContent();
@@ -503,6 +516,35 @@ internal sealed partial class RenderEngine : IDisposable
         return new PreparedText(role, layout.Lines, before, after, block is Heading || block.KeepWithNext) { Language = BlockLanguage(style), Links = links };
     }
 
+    /// <summary>
+    /// The hyphenator and language for text set to hyphenate automatically, or null with a note (once) when there's
+    /// no hyphenator or it doesn't know the language.
+    /// </summary>
+    private (IHyphenator Hyphenator, string Language)? HyphenatorFor(string language)
+    {
+        if (_options.Hyphenator is not { } hyphenator)
+        {
+            if (_hyphenationNotes.Add(""))
+            {
+                _sink.Info(DiagnosticCodes.NoHyphenation, "Text is set to hyphenate automatically (hyphens: auto), but the render has no hyphenator, so only soft hyphens break words. Set RenderOptions.Hyphenator, such as PatternHyphenator.Default from Zorg.Pdf.Hyphenation.", "");
+            }
+
+            return null;
+        }
+
+        if (!hyphenator.Supports(language))
+        {
+            if (_hyphenationNotes.Add(language))
+            {
+                _sink.Info(DiagnosticCodes.NoHyphenation, $"The hyphenator has no rules for \"{language}\", so text in it is hyphenated only at soft hyphens.", "");
+            }
+
+            return null;
+        }
+
+        return (hyphenator, language);
+    }
+
     /// <summary>The style's language when it differs from the document's, for /Lang on the block's element.</summary>
     private string? BlockLanguage(TextStyle style) =>
         style.Language is { } language && !string.Equals(language, _document.Language, StringComparison.OrdinalIgnoreCase) ? language : null;
@@ -571,7 +613,13 @@ internal sealed partial class RenderEngine : IDisposable
             }
 
             string? language = runStyle.Language is { } own && !string.Equals(own, style.Language ?? _document.Language, StringComparison.OrdinalIgnoreCase) ? own : null;
-            return new TextSegment(text, chain, (runStyle.Size?.Points ?? size) * _textScale, runStyle.Color) { Language = language };
+            Hyphens hyphens = runStyle.Hyphens ?? Hyphens.Manual;
+            return new TextSegment(text, chain, (runStyle.Size?.Points ?? size) * _textScale, runStyle.Color)
+            {
+                Language = language,
+                Hyphens = hyphens,
+                Hyphenator = hyphens == Hyphens.Auto ? HyphenatorFor(runStyle.Language ?? _document.Language) : null,
+            };
         }
     }
 

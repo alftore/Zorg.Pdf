@@ -309,6 +309,7 @@ else
             Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }),
             Conformance = PdfConformance.PdfUA1,
             Archive = PdfArchive.PdfA2a, // The gate checks each example against PDF/UA-1 and PDF/A-2a.
+            Hyphenator = Zorg.Pdf.Hyphenation.PatternHyphenator.Default, // The letter hyphenates its Norwegian body text.
             Data = File.Exists(dataPath) ? PdfData.ParseJson(File.ReadAllText(dataPath)) : PdfData.Empty,
         };
         using var rendered = new MemoryStream();

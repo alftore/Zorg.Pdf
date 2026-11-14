@@ -48,6 +48,7 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-F005 | Error | A font file can't be read or used: damaged, not TrueType, or its licence forbids embedding. | Use another font file; the message says why. |
 | ZPDF-T001 | Warning | A word was wider than its column and was broken between characters. | Widen the column, make the text smaller, or add break points (spaces, soft hyphens). |
 | ZPDF-T002 | Error | The text has a control character that can't be drawn. | Remove it; use a line feed (`\n`) to break a line. |
+| ZPDF-T003 | Info | Text is set to `hyphens: auto`, but the render has no hyphenator, or the hyphenator has no rules for the text's language: only soft hyphens break words there. | Set `RenderOptions.Hyphenator` (`PatternHyphenator.Default` from Zorg.Pdf.Hyphenation), or set the text's `language` to one it knows. |
 | ZPDF-L001 | Warning | Rows joined by a `rowSpan` are taller together than a page, so they run past the bottom margin. A single row that tall splits across pages instead; rows joined by a span don't. | Shorten the spanned rows' text, or drop the span. |
 | ZPDF-L002 | Warning | A row from a data slot doesn't fill the columns it has (counting spans); it's padded with empty cells or cut. | Give every row one cell per free column. |
 | ZPDF-L003 | Warning | The fixed-width columns are wider than the page, so all columns are scaled to fit. | Make the fixed columns narrower, or use shares (`"2*"`). |

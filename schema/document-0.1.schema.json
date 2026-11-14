@@ -79,6 +79,7 @@
         "fontStyle": { "enum": ["normal", "italic"] },
         "color": { "$ref": "#/$defs/color" },
         "lineHeight": { "description": "Line height as a multiple of the font size.", "type": "number", "exclusiveMinimum": 0, "maximum": 10 },
+        "hyphens": { "description": "Hyphenation at line ends: manual (soft hyphens only, the default), auto (by the language, when the render has a hyphenator) or none.", "enum": ["manual", "auto", "none"] },
         "language": { "description": "The text's language as a BCP 47 tag (\"de\", \"nb-NO\") when it differs from the document's; screen readers switch voice for it.", "type": "string", "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$" }
       }
     },

@@ -62,6 +62,12 @@ public sealed class RenderOptions
     /// </summary>
     public IImageProcessor? ImageProcessor { get; init; }
 
+    /// <summary>
+    /// Hyphenates words in text whose style sets <see cref="Hyphens.Auto"/>, such as <c>PatternHyphenator.Default</c>
+    /// from <c>Zorg.Pdf.Hyphenation</c>. Null: only soft hyphens break words.
+    /// </summary>
+    public IHyphenator? Hyphenator { get; init; }
+
     /// <summary>The creation date to write. Null (the default) writes none, so the same input gives the same bytes.</summary>
     public DateTimeOffset? CreationDate { get; init; }
 

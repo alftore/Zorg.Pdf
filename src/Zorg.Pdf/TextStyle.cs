@@ -51,6 +51,18 @@ public sealed record TextStyle
     /// </example>
     public string? Language { get; init; }
 
+    /// <summary>
+    /// Whether words may be hyphenated at line ends: at soft hyphens only (<see cref="Pdf.Hyphens.Manual"/>, the
+    /// default), wherever the language allows (<see cref="Pdf.Hyphens.Auto"/>, with <see cref="RenderOptions.Hyphenator"/>),
+    /// or never. Headings are <c>Manual</c> unless their style says otherwise.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// Styles = new StyleSheet { Styles = StyleSheet.Default.Styles.SetItem("body", new TextStyle { Size = Length.Pt(10), Hyphens = Hyphens.Auto }) }
+    /// </code>
+    /// </example>
+    public Hyphens? Hyphens { get; init; }
+
     /// <summary>This style with every property <paramref name="over"/> sets taking its place.</summary>
     /// <param name="over">The style on top, or null.</param>
     /// <returns>The merged style.</returns>
@@ -63,6 +75,7 @@ public sealed record TextStyle
         Color = over.Color ?? Color,
         LineHeight = over.LineHeight ?? LineHeight,
         Language = over.Language ?? Language,
+        Hyphens = over.Hyphens ?? Hyphens,
     };
 }
 
@@ -120,12 +133,12 @@ public sealed record StyleSheet
             System.StringComparer.Ordinal,
             [
                 new("body", new TextStyle { Size = Length.Pt(10), LineHeight = 1.2 }),
-                new("heading1", new TextStyle { Size = Length.Pt(22), Weight = FontWeight.Bold }),
-                new("heading2", new TextStyle { Size = Length.Pt(16), Weight = FontWeight.Bold }),
-                new("heading3", new TextStyle { Size = Length.Pt(13), Weight = FontWeight.Bold }),
-                new("heading4", new TextStyle { Size = Length.Pt(11), Weight = FontWeight.Bold }),
-                new("heading5", new TextStyle { Size = Length.Pt(10), Weight = FontWeight.Bold }),
-                new("heading6", new TextStyle { Size = Length.Pt(10), Weight = FontWeight.Bold, FontStyle = FontStyle.Italic }),
+                new("heading1", new TextStyle { Size = Length.Pt(22), Weight = FontWeight.Bold, Hyphens = Pdf.Hyphens.Manual }),
+                new("heading2", new TextStyle { Size = Length.Pt(16), Weight = FontWeight.Bold, Hyphens = Pdf.Hyphens.Manual }),
+                new("heading3", new TextStyle { Size = Length.Pt(13), Weight = FontWeight.Bold, Hyphens = Pdf.Hyphens.Manual }),
+                new("heading4", new TextStyle { Size = Length.Pt(11), Weight = FontWeight.Bold, Hyphens = Pdf.Hyphens.Manual }),
+                new("heading5", new TextStyle { Size = Length.Pt(10), Weight = FontWeight.Bold, Hyphens = Pdf.Hyphens.Manual }),
+                new("heading6", new TextStyle { Size = Length.Pt(10), Weight = FontWeight.Bold, FontStyle = FontStyle.Italic, Hyphens = Pdf.Hyphens.Manual }),
                 new("tableHeader", new TextStyle { Size = Length.Pt(9), Weight = FontWeight.Bold }),
                 new("tableCell", new TextStyle { Size = Length.Pt(9) }),
                 new("header", new TextStyle { Size = Length.Pt(8) }),

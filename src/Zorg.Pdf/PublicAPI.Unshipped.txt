@@ -256,6 +256,13 @@ Zorg.Pdf.Heading.Level.init -> void
 override Zorg.Pdf.Heading.ToString() -> string!
 static Zorg.Pdf.Heading.operator !=(Zorg.Pdf.Heading? left, Zorg.Pdf.Heading? right) -> bool
 static Zorg.Pdf.Heading.operator ==(Zorg.Pdf.Heading? left, Zorg.Pdf.Heading? right) -> bool
+Zorg.Pdf.Hyphens
+Zorg.Pdf.Hyphens.Auto = 1 -> Zorg.Pdf.Hyphens
+Zorg.Pdf.Hyphens.Manual = 0 -> Zorg.Pdf.Hyphens
+Zorg.Pdf.Hyphens.None = 2 -> Zorg.Pdf.Hyphens
+Zorg.Pdf.IHyphenator
+Zorg.Pdf.IHyphenator.Supports(string! language) -> bool
+Zorg.Pdf.IHyphenator.TryHyphenate(string! language, System.ReadOnlySpan<char> word, System.Span<bool> breakAfter) -> bool
 Zorg.Pdf.IImageProcessor
 Zorg.Pdf.IImageProcessor.ProcessAsync(Zorg.Pdf.ImageRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Zorg.Pdf.PdfImage?>
 Zorg.Pdf.Image
@@ -638,6 +645,8 @@ Zorg.Pdf.RenderOptions.FontResolver.get -> Zorg.Pdf.Fonts.IFontResolver?
 Zorg.Pdf.RenderOptions.FontResolver.init -> void
 Zorg.Pdf.RenderOptions.Fonts.get -> Zorg.Pdf.Fonts.FontCollection!
 Zorg.Pdf.RenderOptions.Fonts.init -> void
+Zorg.Pdf.RenderOptions.Hyphenator.get -> Zorg.Pdf.IHyphenator?
+Zorg.Pdf.RenderOptions.Hyphenator.init -> void
 Zorg.Pdf.RenderOptions.ImageProcessor.get -> Zorg.Pdf.IImageProcessor?
 Zorg.Pdf.RenderOptions.ImageProcessor.init -> void
 Zorg.Pdf.RenderOptions.Limits.get -> Zorg.Pdf.PdfLimits!
@@ -891,6 +900,8 @@ Zorg.Pdf.TextStyle.FontFamily.init -> void
 Zorg.Pdf.TextStyle.FontStyle.get -> Zorg.Pdf.FontStyle?
 Zorg.Pdf.TextStyle.FontStyle.init -> void
 override Zorg.Pdf.TextStyle.GetHashCode() -> int
+Zorg.Pdf.TextStyle.Hyphens.get -> Zorg.Pdf.Hyphens?
+Zorg.Pdf.TextStyle.Hyphens.init -> void
 static Zorg.Pdf.TextStyle.Italic.get -> Zorg.Pdf.TextStyle!
 Zorg.Pdf.TextStyle.Language.get -> string?
 Zorg.Pdf.TextStyle.Language.init -> void

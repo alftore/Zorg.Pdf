@@ -55,6 +55,12 @@ internal sealed record TextSegment(string Text, FontChain Fonts, double Size, Co
 
     /// <summary>The index of the link this text belongs to, or -1.</summary>
     public int Link { get; init; } = -1;
+
+    /// <summary>How its words may be hyphenated: soft hyphens only, also by a hyphenator, or never.</summary>
+    public Hyphens Hyphens { get; init; }
+
+    /// <summary>For <see cref="Hyphens.Auto"/>: the hyphenator and the text's language.</summary>
+    public (IHyphenator Hyphenator, string Language)? Hyphenator { get; init; }
 }
 
 /// <summary>
@@ -71,6 +77,9 @@ internal sealed record LineRun(EmbeddedFont Font, double Size, Color? Color, ush
 
     /// <summary>The index of the link the run belongs to, or -1.</summary>
     public int Link { get; init; } = -1;
+
+    /// <summary>A hyphen added at a line end: it copies out as a soft hyphen (U+00AD), not as part of the word.</summary>
+    public bool Inserted { get; init; }
 
     /// <summary>Drawn slanted, because the family has no italic face.</summary>
     public bool SyntheticItalic { get; init; }
@@ -171,6 +180,9 @@ internal sealed class ParagraphLayout
         public Color? Color;
         public string? Language;
         public int Link;
+        public int Char;
+        public bool Inserted;
+        public (IHyphenator Hyphenator, string Language)? Hyphenator;
         public bool Bold;
         public bool Italic;
         public bool Space;
@@ -184,6 +196,7 @@ internal sealed class ParagraphLayout
     private sealed class LineBuilder(double width, TextAlign align, double lineHeight, List<LayoutLine> lines, List<TextDiagnostic> diagnostics)
     {
         private readonly List<Item> _items = [];
+        private readonly HashSet<int> _hyphenated = []; // Words already asked about, by their first item.
         private TextSegment _lastSegment = null!;
 
         public void Layout(IReadOnlyList<TextSegment> segments)
@@ -221,7 +234,7 @@ internal sealed class ParagraphLayout
                     if (c == 0x00AD || c == 0x200B)
                     {
                         // Soft hyphen and zero-width space: break opportunities with nothing to draw.
-                        if (_items.Count > 0)
+                        if (_items.Count > 0 && !(c == 0x00AD && segment.Hyphens == Hyphens.None))
                         {
                             Item last = _items[^1];
                             last.BreakAfter = true;
@@ -269,6 +282,8 @@ internal sealed class ParagraphLayout
                         Color = segment.Color,
                         Language = segment.Language,
                         Link = segment.Link,
+                        Char = c,
+                        Hyphenator = segment.Hyphenator,
                         Bold = segment.Fonts.SyntheticBold,
                         Italic = segment.Fonts.SyntheticItalic,
                         Space = space,
@@ -320,6 +335,7 @@ internal sealed class ParagraphLayout
             }
 
             _items.Clear();
+            _hyphenated.Clear();
         }
 
         /// <summary>Fills one line from <paramref name="start"/> and returns where the next one starts.</summary>
@@ -361,6 +377,11 @@ internal sealed class ParagraphLayout
                 return _items.Count;
             }
 
+            if (TryHyphenate(i, lastBreak))
+            {
+                return NextLine(start); // The overflowing word has break points now: fill the line again.
+            }
+
             if (lastBreak >= start)
             {
                 Emit(start, lastBreak, widthAtBreak, hyphenate: _items[lastBreak].SoftHyphenAfter, last: false);
@@ -387,6 +408,75 @@ internal sealed class ParagraphLayout
             Emit(start, end - 1, emergency, hyphenate: false, last: end == _items.Count);
             return end;
         }
+
+        /// <summary>
+        /// Asks the hyphenator where the word at <paramref name="overflow"/> may break, once per word, and marks those
+        /// places as soft hyphens. Only letters count: a word with digits or of fewer than five letters is left alone.
+        /// </summary>
+        private bool TryHyphenate(int overflow, int lastBreak)
+        {
+            int at = overflow;
+            if (at < _items.Count && !IsLetter(_items[at].Char) && at > 0)
+            {
+                at--; // Overflowing at the punctuation after a word: hyphenate the word.
+            }
+
+            if (at >= _items.Count || _items[at].Hyphenator is not { } context || !IsLetter(_items[at].Char))
+            {
+                return false;
+            }
+
+            int first = at, last = at;
+            while (first > 0 && first - 1 > lastBreak && !_items[first - 1].BreakAfter && IsLetter(_items[first - 1].Char))
+            {
+                first--;
+            }
+
+            while (last + 1 < _items.Count && !_items[last].BreakAfter && IsLetter(_items[last + 1].Char))
+            {
+                last++;
+            }
+
+            if (last - first + 1 < 5 || !_hyphenated.Add(first) || (first > 0 && !_items[first - 1].BreakAfter && !_items[first - 1].Space && IsDigitish(_items[first - 1].Char)))
+            {
+                return false;
+            }
+
+            var word = new StringBuilder(last - first + 1);
+            for (int k = first; k <= last; k++)
+            {
+                word.Append(new Rune(_items[k].Char).ToString());
+            }
+
+            if (word.Length != last - first + 1)
+            {
+                return false; // Letters outside the BMP: the indexes wouldn't line up; leave the word.
+            }
+
+            Span<bool> breaks = stackalloc bool[word.Length <= 256 ? word.Length : 0];
+            if (breaks.IsEmpty || !context.Hyphenator.TryHyphenate(context.Language, word.ToString(), breaks))
+            {
+                return false;
+            }
+
+            bool any = false;
+            for (int k = 0; k < breaks.Length - 1; k++)
+            {
+                if (breaks[k])
+                {
+                    Item item = _items[first + k];
+                    item.BreakAfter = item.SoftHyphenAfter = true;
+                    _items[first + k] = item;
+                    any = true;
+                }
+            }
+
+            return any;
+        }
+
+        private static bool IsLetter(int c) => c > 0 && Rune.IsValid(c) && (Rune.IsLetter(new Rune(c)) || Rune.GetUnicodeCategory(new Rune(c)) is UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark);
+
+        private static bool IsDigitish(int c) => c is >= '0' and <= '9';
 
         private static double HyphenWidth(Item before)
         {
@@ -415,7 +505,7 @@ internal sealed class ParagraphLayout
                 if (before.Font.TryGlyph(new Rune('-'), out ushort hyphen))
                 {
                     extra[^1] = before.Font.Kerning(before.Glyph, hyphen) * before.Size / 1000;
-                    placed.Add(before with { Glyph = hyphen, Space = false, Advance = before.Font.Width(hyphen) * before.Size / 1000 });
+                    placed.Add(before with { Glyph = hyphen, Space = false, Inserted = true, Advance = before.Font.Width(hyphen) * before.Size / 1000 });
                     extra.Add(0);
                 }
             }
@@ -465,7 +555,7 @@ internal sealed class ParagraphLayout
                 bool split = k == placed.Count
                     || !ReferenceEquals(placed[k].Font, placed[start].Font) || placed[k].Size != placed[start].Size || placed[k].Color != placed[start].Color
                     || placed[k].Bold != placed[start].Bold || placed[k].Italic != placed[start].Italic
-                    || !string.Equals(placed[k].Language, placed[start].Language, StringComparison.Ordinal) || placed[k].Link != placed[start].Link;
+                    || !string.Equals(placed[k].Language, placed[start].Language, StringComparison.Ordinal) || placed[k].Link != placed[start].Link || placed[k].Inserted != placed[start].Inserted;
                 if (!split)
                 {
                     continue;
@@ -483,7 +573,7 @@ internal sealed class ParagraphLayout
                     x += placed[start + g].Advance + extra[start + g];
                 }
 
-                runs.Add(new LineRun(first.Font, first.Size, first.Color, glyphs, after, runX) { SyntheticBold = first.Bold, SyntheticItalic = first.Italic, Language = first.Language, Link = first.Link });
+                runs.Add(new LineRun(first.Font, first.Size, first.Color, glyphs, after, runX) { SyntheticBold = first.Bold, SyntheticItalic = first.Italic, Language = first.Language, Link = first.Link, Inserted = first.Inserted });
                 start = k;
             }
 

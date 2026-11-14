@@ -28,6 +28,7 @@ namespace Zorg.Pdf.Json;
 [JsonSerializable(typeof(TextBoxPreset))]
 [JsonSerializable(typeof(TextOverflow))]
 [JsonSerializable(typeof(PageNumberStyle))]
+[JsonSerializable(typeof(Hyphens))]
 [JsonSerializable(typeof(TextStyle))]
 [JsonSerializable(typeof(FieldKind))]
 [JsonSerializable(typeof(TextAlign))]

@@ -35,4 +35,4 @@ Fonts come from the caller, never from a document; a damaged font is ZPDF-F005.
 - **PDF/A-2 only** (2b, 2u, 2a), with an sRGB output intent: no PDF/A-3 (attachments) or PDF/A-4 yet, and CMYK images must be converted to RGB (`ImagingProcessor` does).
 - **Page previews read only Zorg.Pdf's own PDFs** (`PdfPreview` refuses others), draw DeviceCMYK images with a plain conversion rather than a colour profile, and depend on Zorg.Imaging's experimental canvas.
 - **Fonts:** TrueType outlines only (`.ttf`, and the TrueType faces of collections, `.ttc`); no CFF (`.otf` with PostScript outlines), no symbol fonts.
-- **Text:** pair kerning only. No ligatures, no Arabic joining or Indic shaping, no right-to-left text, no hyphenation dictionary (soft hyphens work).
+- **Text:** pair kerning only. No ligatures, no Arabic joining or Indic shaping, no right-to-left text, hyphenation by patterns for English, German, French, Norwegian and Danish only (`Zorg.Pdf.Hyphenation`), greedy line breaking (no paragraph-wide optimisation).

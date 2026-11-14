@@ -67,6 +67,7 @@ internal static class DiagnosticCodes
     public const string RowCellCount = "ZPDF-L002";
     public const string ColumnsTooWide = "ZPDF-L003";
     public const string BandsTooTall = "ZPDF-L004";
+    public const string NoHyphenation = "ZPDF-T003";
     public const string TextShrunk = "ZPDF-L005";
     public const string TextOverflow = "ZPDF-L006";
     public const string TextBoxOffPage = "ZPDF-L007";

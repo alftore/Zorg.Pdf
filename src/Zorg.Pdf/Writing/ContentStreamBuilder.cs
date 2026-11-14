@@ -193,6 +193,18 @@ internal sealed class ContentStreamBuilder
         return Operator("BDC"u8);
     }
 
+    /// <summary><c>/Span &lt;&lt;/ActualText &lt;FEFF...&gt;&gt;&gt; BDC</c>: drawn content whose text is <paramref name="text"/>; end it with <see cref="EndMarkedContent"/>.</summary>
+    public ContentStreamBuilder BeginActualText(string text)
+    {
+        Write("/Span <</ActualText "u8);
+        byte[] utf16 = new byte[2 + (text.Length * 2)];
+        (utf16[0], utf16[1]) = (0xFE, 0xFF);
+        System.Text.Encoding.BigEndianUnicode.GetBytes(text, 0, text.Length, utf16, 2);
+        PdfFormat.WriteHexString(_buffer, utf16);
+        Write(">> "u8);
+        return Operator("BDC"u8);
+    }
+
     /// <summary>
     /// <c>BDC</c> for an artifact: content that isn't part of the document's text, such as page numbers, rules and
     /// backgrounds. Screen readers skip it. <paramref name="subtype"/> is Header, Footer or Watermark for pagination
