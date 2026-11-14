@@ -7,7 +7,7 @@ namespace Zorg.Pdf.Tool;
 /// <summary>A parsed command line. Options take <c>--name value</c> or <c>--name=value</c>.</summary>
 internal sealed class CliArguments
 {
-    private static readonly string[] Commands = ["render", "validate", "watch", "preview", "schema"];
+    private static readonly string[] Commands = ["render", "validate", "watch", "preview", "info", "schema"];
 
     /// <summary>render, validate, watch, schema, help or version.</summary>
     public string Command { get; private set; } = "help";
@@ -196,7 +196,7 @@ internal sealed class CliArguments
         result.Command = positional[0];
         if (Array.IndexOf(Commands, result.Command) < 0)
         {
-            error = $"Unknown command \"{result.Command}\". The commands are render, validate, watch and schema.";
+            error = $"Unknown command \"{result.Command}\". The commands are render, validate, watch, preview, info and schema.";
             return false;
         }
 
@@ -212,7 +212,7 @@ internal sealed class CliArguments
         if (expected == 2)
         {
             result.Input = positional[1];
-            if (result.Input == "-" && result.Output is null && result.Command is not ("validate" or "preview"))
+            if (result.Input == "-" && result.Output is null && result.Command is not ("validate" or "preview" or "info"))
             {
                 error = "A document read from standard input needs --output (a file, or - for standard output).";
                 return false;
@@ -223,6 +223,7 @@ internal sealed class CliArguments
         string[] allowed = result.Command switch
         {
             "schema" => [],
+            "info" => ["--json"],
             "validate" => ["-d", "--data", "--image", "--warnaserror", "--json", "-v", "--verbose"],
             _ => [],
         };

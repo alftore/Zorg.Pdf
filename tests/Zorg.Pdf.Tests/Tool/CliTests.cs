@@ -263,6 +263,28 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public async Task InfoShowsAnyPdfsPagesAndMetadata()
+    {
+        string document = Copy("invoice.json");
+        (int rendered, _, _) = await RunAsync("render", document, "--data", RepoFiles.Path("docs", "examples", "data", "invoice.json"), "--font", TestFonts.RequirePath());
+        string pdf = Path.ChangeExtension(document, ".pdf");
+        string broken = Write("broken.pdf", "%PDF-1.7\nnothing else");
+
+        (int code, string output, _) = await RunAsync("info", pdf);
+        (int jsonCode, string json, _) = await RunAsync("info", pdf, "--json");
+        (int brokenCode, _, string error) = await RunAsync("info", broken);
+
+        Assert.Equal((Cli.Ok, Cli.Ok, Cli.Ok), (rendered, code, jsonCode));
+        Assert.Matches(@"invoice\.pdf: PDF 1\.7, 2 pages, tagged", output);
+        Assert.Contains("pages 1-2: 210 x 297 mm (595.28 x 841.89 pt)", output, StringComparison.Ordinal);
+        using JsonDocument parsed = JsonDocument.Parse(json);
+        Assert.Equal(2, parsed.RootElement.GetProperty("pageCount").GetInt32());
+        Assert.Equal(595.28, parsed.RootElement.GetProperty("pages")[0].GetProperty("width").GetDouble(), 2);
+        Assert.Equal(Cli.Problems, brokenCode);
+        Assert.Contains("broken.pdf: ", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task MarkdownRendersWithImagesFromBesideItButNotFromOutside()
     {
         Directory.CreateDirectory(Path.Combine(_folder, "img"));

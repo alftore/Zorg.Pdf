@@ -92,6 +92,35 @@ if ! grep -q "Ελληνικά · Кириллица · Čeština" /tmp/document
   echo "FAIL pdftotext document.pdf: the Greek, Cyrillic and Czech text doesn't extract"; failed=1
 fi
 
+stage "Reader against qpdf"
+# PdfFileInfo (zorg-pdf info) reads each smoke PDF as other tools rewrite it: object streams packed or unpacked, a
+# classic cross-reference table, QDF, linearized, cleaned and decompressed by MuPDF, and encrypted with an empty user
+# password. Its page count must match qpdf's, and only the encrypted copy may say it's encrypted.
+info() { timeout 60 dotnet src/Zorg.Pdf.Tool/bin/Release/net10.0/Zorg.Pdf.Tool.dll info --json "$1"; }
+mkdir -p /tmp/variants
+for pdf in /out/*.pdf; do
+  name="$(basename "$pdf" .pdf)"
+  expected="$(qpdf --show-npages "$pdf")"
+  rm -f /tmp/variants/*.pdf
+  qpdf --object-streams=generate "$pdf" /tmp/variants/objstm.pdf
+  qpdf --object-streams=disable --compress-streams=n "$pdf" /tmp/variants/classic.pdf
+  qpdf --qdf "$pdf" /tmp/variants/qdf.pdf
+  qpdf --linearize "$pdf" /tmp/variants/linear.pdf
+  qpdf --object-streams=disable --encrypt "" owner 256 -- "$pdf" /tmp/variants/encrypted.pdf
+  mutool clean -gggg "$pdf" /tmp/variants/mupdf.pdf
+  mutool clean -d "$pdf" /tmp/variants/decompressed.pdf
+  for variant in /tmp/variants/*.pdf; do
+    kind="$(basename "$variant" .pdf)"
+    json="$(info "$variant" || true)"
+    got="$(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d.get("pageCount", "error: " + d.get("error", "?")), d.get("encrypted"))' "$json" 2>&1 || echo "no output")"
+    want="$expected $([ "$kind" = encrypted ] && echo True || echo False)"
+    if [ "$got" != "$want" ]; then
+      echo "FAIL reader $name ($kind): got \"$got\", qpdf says \"$want\""; failed=1
+    fi
+  done
+  echo "ok   reader $name: $expected pages in 7 rewrites"
+done
+
 stage "Previews against MuPDF"
 # Zorg.Pdf.Imaging's preview of each example's first page, against mutool's drawing of the same page at 96 dpi:
 # the total ink must agree within 3 % and every 16 x 16 block within 24 of 255 levels (measured: 0.1-2.9 % and 4-12).

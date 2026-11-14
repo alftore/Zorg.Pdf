@@ -53,6 +53,7 @@ internal static class Cli
           zorg-pdf validate <document.json> [options]   Check a document and its data without rendering
           zorg-pdf watch <document.json> [options]      Render, then render again on every change
           zorg-pdf preview <document.json|file.pdf>     Draw a page as PNG, to check the layout
+          zorg-pdf info <file.pdf>                      Show any PDF's pages, sizes and metadata
           zorg-pdf schema                               Print the document JSON Schema
 
         Options:
@@ -107,6 +108,8 @@ internal static class Cli
                 return await RenderAsync(parsed, console, cancellationToken).ConfigureAwait(false);
             case "preview":
                 return await PreviewAsync(parsed, console, cancellationToken).ConfigureAwait(false);
+            case "info":
+                return await InfoAsync(parsed, console, cancellationToken).ConfigureAwait(false);
             default:
                 return await WatchAsync(parsed, console, cancellationToken).ConfigureAwait(false);
         }
@@ -128,6 +131,136 @@ internal static class Cli
         Report report = await RenderOnceAsync(args, console, cancellationToken).ConfigureAwait(false);
         await report.PrintAsync(args.Output == "-" ? console.Error : console.Out).ConfigureAwait(false);
         return report.ExitCode;
+    }
+
+    /// <summary>Pages, sizes, metadata and problems of any PDF; exit 1 when it can't be read.</summary>
+    private static async Task<int> InfoAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken)
+    {
+        var report = new Report("info", args);
+        byte[]? file = await ReadAsync(args.Input, console, report, cancellationToken).ConfigureAwait(false);
+        if (file is null)
+        {
+            await report.PrintAsync(console.Error).ConfigureAwait(false);
+            return report.ExitCode;
+        }
+
+        PdfFileInfo info;
+        try
+        {
+            info = PdfFileInfo.Read(file);
+        }
+        catch (PdfReadException ex)
+        {
+            if (args.Json)
+            {
+                await console.Out.WriteLineAsync(InfoJson(null, ex.Message)).ConfigureAwait(false);
+            }
+            else
+            {
+                await console.Error.WriteLineAsync($"{args.Input}: {ex.Message}").ConfigureAwait(false);
+            }
+
+            return Problems;
+        }
+
+        if (args.Json)
+        {
+            await console.Out.WriteLineAsync(InfoJson(info, null)).ConfigureAwait(false);
+            return Ok;
+        }
+
+        var text = new StringBuilder();
+        text.Append(CultureInfo.InvariantCulture, $"{args.Input}: PDF {info.Version}, {info.PageCount} page{(info.PageCount == 1 ? "" : "s")}");
+        text.Append(info.IsTagged ? ", tagged" : ", not tagged").Append(info.IsEncrypted ? ", encrypted" : "").AppendLine();
+        foreach ((string label, string? value) in new[] { ("Title", info.Title), ("Author", info.Author), ("Subject", info.Subject), ("Keywords", info.Keywords), ("Language", info.Language), ("Creator", info.Creator), ("Producer", info.Producer) })
+        {
+            if (value is not null)
+            {
+                text.Append(CultureInfo.InvariantCulture, $"  {label + ":",-10} {value}").AppendLine();
+            }
+        }
+
+        // Runs of pages with the same size, as "pages 1-3: 210 x 297 mm (595 x 842 pt)".
+        for (int i = 0; i < info.Pages.Length;)
+        {
+            int j = i;
+            while (j + 1 < info.Pages.Length && info.Pages[j + 1] with { Number = 0 } == info.Pages[i] with { Number = 0 })
+            {
+                j++;
+            }
+
+            PdfPageInfo page = info.Pages[i];
+            string pages = i == j ? $"page {i + 1}" : $"pages {i + 1}-{j + 1}";
+            string rotation = page.Rotation == 0 ? "" : $", rotated {page.Rotation}°";
+            text.Append(CultureInfo.InvariantCulture, $"  {pages}: {page.Width * 25.4 / 72:0} x {page.Height * 25.4 / 72:0} mm ({page.Width:0.##} x {page.Height:0.##} pt){rotation}").AppendLine();
+            i = j + 1;
+        }
+
+        foreach (PdfDiagnostic diagnostic in info.Diagnostics)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"  {(diagnostic.Severity == DiagnosticSeverity.Warning ? "warning" : "info")} {diagnostic.Code}: {diagnostic.Message}").AppendLine();
+        }
+
+        await console.Out.WriteAsync(text.ToString()).ConfigureAwait(false);
+        return Ok;
+    }
+
+    private static string InfoJson(PdfFileInfo? info, string? error)
+    {
+        using var buffer = new MemoryStream();
+        using (var json = new Utf8JsonWriter(buffer, new JsonWriterOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }))
+        {
+            json.WriteStartObject();
+            json.WriteString("command", "info");
+            json.WriteBoolean("ok", info is not null);
+            if (error is not null)
+            {
+                json.WriteString("error", error);
+            }
+
+            if (info is not null)
+            {
+                json.WriteString("version", info.Version);
+                json.WriteNumber("pageCount", info.PageCount);
+                json.WriteBoolean("tagged", info.IsTagged);
+                json.WriteBoolean("encrypted", info.IsEncrypted);
+                foreach ((string name, string? value) in new[] { ("title", info.Title), ("author", info.Author), ("subject", info.Subject), ("keywords", info.Keywords), ("language", info.Language), ("creator", info.Creator), ("producer", info.Producer) })
+                {
+                    if (value is not null)
+                    {
+                        json.WriteString(name, value);
+                    }
+                }
+
+                json.WriteStartArray("pages");
+                foreach (PdfPageInfo page in info.Pages)
+                {
+                    json.WriteStartObject();
+                    json.WriteNumber("number", page.Number);
+                    json.WriteNumber("width", Math.Round(page.Width, 3));
+                    json.WriteNumber("height", Math.Round(page.Height, 3));
+                    json.WriteNumber("rotation", page.Rotation);
+                    json.WriteEndObject();
+                }
+
+                json.WriteEndArray();
+                json.WriteStartArray("diagnostics");
+                foreach (PdfDiagnostic d in info.Diagnostics)
+                {
+                    json.WriteStartObject();
+                    json.WriteString("code", d.Code);
+                    json.WriteString("severity", d.Severity == DiagnosticSeverity.Warning ? "warning" : "info");
+                    json.WriteString("message", d.Message);
+                    json.WriteEndObject();
+                }
+
+                json.WriteEndArray();
+            }
+
+            json.WriteEndObject();
+        }
+
+        return Encoding.UTF8.GetString(buffer.ToArray());
     }
 
     private static async Task<int> PreviewAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken)
