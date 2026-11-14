@@ -79,5 +79,9 @@ pdftotext -enc UTF-8 /out/invoice.pdf /tmp/invoice.txt
 if ! grep -q "Blåbærsyltetøy-integrasjon" /tmp/invoice.txt; then
   echo "FAIL pdftotext invoice.pdf: the Norwegian text doesn't extract"; failed=1
 fi
+pdftotext -enc UTF-8 /out/document.pdf /tmp/document.txt
+if ! grep -q "Ελληνικά · Кириллица · Čeština" /tmp/document.txt; then
+  echo "FAIL pdftotext document.pdf: the Greek, Cyrillic and Czech text doesn't extract"; failed=1
+fi
 
 exit "$failed"

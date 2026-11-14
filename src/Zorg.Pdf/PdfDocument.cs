@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Zorg.Pdf.Json;
 using Zorg.Pdf.Validation;
 
@@ -127,6 +128,54 @@ public sealed record PdfDocument
     /// <param name="indented">Indent for reading.</param>
     /// <returns>The JSON text.</returns>
     public string ToJson(bool indented = false) => DocumentJson.Write(this with { Schema = PdfJsonSchema.Id }, indented);
+
+    /// <summary>
+    /// Renders the document as PDF to <paramref name="output"/>, streaming pages as they're finished.
+    /// </summary>
+    /// <remarks>
+    /// Everything that can be checked before writing is checked first (the document, fonts, every character's glyph);
+    /// any error throws <see cref="PdfDocumentException"/> with all of them before a byte is written. After that, only
+    /// cancellation, a <see cref="PdfLimits"/> limit or an I/O error can stop the render, leaving a partial file in
+    /// <paramref name="output"/>; render to a <see cref="System.IO.MemoryStream"/> first when that matters. The output
+    /// is always tagged for accessibility.
+    /// </remarks>
+    /// <param name="output">Where the PDF goes. It's flushed, not closed.</param>
+    /// <param name="options">Fonts, conformance and limits. Fonts are required.</param>
+    /// <param name="cancellationToken">Stops the render between blocks and pages.</param>
+    /// <returns>The page count, the size and any warnings, such as words broken because they didn't fit.</returns>
+    /// <exception cref="PdfDocumentException">The document, its fonts or its text have errors; nothing was written.</exception>
+    /// <exception cref="PdfLimitException">A limit in <see cref="RenderOptions.Limits"/> was exceeded mid-render.</exception>
+    /// <example>
+    /// <code>
+    /// var options = new RenderOptions
+    /// {
+    ///     Fonts = FontCollection.Empty.Add(new FontFamily("Inter") { Regular = FontSource.FromFile("Inter-Regular.ttf") }),
+    /// };
+    /// await using FileStream file = File.Create("invoice.pdf");
+    /// RenderResult result = await Invoice.RenderAsync(file, options, cancellationToken);
+    /// </code>
+    /// </example>
+    public ValueTask<RenderResult> RenderAsync(System.IO.Stream output, RenderOptions? options = null, System.Threading.CancellationToken cancellationToken = default) =>
+        Rendering.RenderEngine.RenderAsync(this, output, options, synchronous: false, cancellationToken);
+
+    /// <summary>
+    /// Renders the document synchronously, writing with <see cref="System.IO.Stream.Write(ReadOnlySpan{byte})"/>. Prefer
+    /// <see cref="RenderAsync"/> for network streams; this one suits files, memory and command-line tools.
+    /// </summary>
+    /// <param name="output">Where the PDF goes. It's flushed, not closed.</param>
+    /// <param name="options">Fonts, conformance and limits. Fonts are required.</param>
+    /// <returns>The page count, the size and any warnings.</returns>
+    /// <exception cref="PdfDocumentException">The document, its fonts or its text have errors; nothing was written.</exception>
+    /// <exception cref="PdfLimitException">A limit in <see cref="RenderOptions.Limits"/> was exceeded mid-render.</exception>
+    public RenderResult Render(System.IO.Stream output, RenderOptions? options = null)
+    {
+        ValueTask<RenderResult> render = Rendering.RenderEngine.RenderAsync(this, output, options, synchronous: true, System.Threading.CancellationToken.None);
+
+        // In synchronous mode nothing awaits a pending operation, so the task has always completed here.
+        return render.IsCompleted
+            ? render.GetAwaiter().GetResult()
+            : throw new InvalidOperationException("A synchronous render left a pending operation. This is a bug in Zorg.Pdf; please report it.");
+    }
 
     /// <summary>
     /// Checks the document without rendering it: shape, values, accessibility basics. It never throws for a bad

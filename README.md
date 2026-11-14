@@ -2,7 +2,7 @@
 
 Async-first PDF generation for .NET 10, written in C# only. Documents and reports from code, from a JSON document model, or from templates and data, in the spirit of jsreport, with tagged (accessible) output, no native binaries and no NuGet dependencies.
 
-**Status: early 0.1 development, not released.** The document model exists: build a document in C# or JSON, validate it, and round-trip it through JSON (schema in [schema/](schema/document-0.1.schema.json), examples in [docs/examples/](docs/examples), diagnostic codes in [docs/diagnostics.md](docs/diagnostics.md)). Rendering it to PDF is the next slice; the engine behind it is proven by an internal spike that passes veraPDF PDF/UA-1. What isn't supported is in [docs/limits.md](docs/limits.md).
+**Status: early 0.1 development, not released.** The document model exists: build a document in C# or JSON, validate it, and round-trip it through JSON (schema in [schema/](schema/document-0.1.schema.json), examples in [docs/examples/](docs/examples), diagnostic codes in [docs/diagnostics.md](docs/diagnostics.md)). `RenderAsync` and `Render` turn headings, paragraphs, spacers and page breaks into tagged PDF that passes veraPDF PDF/UA-1; tables, images, headers and footers come in the next slices. What isn't supported is in [docs/limits.md](docs/limits.md).
 
 ## Goals
 

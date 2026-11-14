@@ -72,7 +72,7 @@ run_cli 120 run --rm -v "$outvolume:/out" "$image" tar -cf - -C /out . | tar -xf
   { echo "FAIL no PDFs came out of the container"; exit 1; }
 
 stage "veraPDF $verapdf"
-for pdf in invoice.pdf; do
+for pdf in invoice.pdf document.pdf; do # The spike invoice (tables) and a document from the public render API.
   report="$(run_cli 300 run -i --rm --entrypoint sh "$verapdf" -c \
     'cat > /tmp/f.pdf && /opt/verapdf/verapdf --flavour ua1 --format xml /tmp/f.pdf 2>/dev/null' < "$out/$pdf")"
   # Here-strings, not pipes: with pipefail, "printf | grep -q" can fail when grep stops reading early.

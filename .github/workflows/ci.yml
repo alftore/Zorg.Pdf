@@ -100,10 +100,11 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Install Native AOT prerequisites
+      # DejaVu Sans is the font the sample renders with; ZORG_REQUIRE_FONTS=1 below makes its absence a failure.
+      - name: Install Native AOT prerequisites and a font
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang zlib1g-dev
+          sudo apt-get install -y clang zlib1g-dev fonts-dejavu-core
 
       # The explicit shell turns on pipefail, so a failed publish isn't hidden by tee.
       # A clean publish proves little on its own, so the sample is also run.
@@ -118,4 +119,6 @@ jobs:
 
       - name: Run
         shell: bash
+        env:
+          ZORG_REQUIRE_FONTS: '1'
         run: '"$RUNNER_TEMP/aot/Zorg.Pdf.AotSmoke"'

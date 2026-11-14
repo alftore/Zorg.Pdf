@@ -33,6 +33,16 @@ internal static class DiagnosticCodes
     public const string BadLanguage = "ZPDF-A002";
     public const string NoAltText = "ZPDF-A003";
 
+    // F: fonts.
+    public const string NoFonts = "ZPDF-F001";
+    public const string MissingGlyph = "ZPDF-F002";
+    public const string UnknownFontFamily = "ZPDF-F004";
+    public const string FontUnreadable = "ZPDF-F005";
+
     // T: text.
     public const string WordTooWide = "ZPDF-T001";
+    public const string ControlCharacter = "ZPDF-T002";
+
+    // R: rendering and limits.
+    public const string NotDrawnYet = "ZPDF-R001";
 }

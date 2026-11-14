@@ -43,9 +43,17 @@ internal sealed class PdfObjectWriter : IDisposable
     private bool _openIsStream;
     private bool _finished;
     private bool _writingTrailer;
+    private readonly bool _synchronous;
 
-    public PdfObjectWriter(Stream output, PdfVersion version)
+    /// <param name="output">Where the file goes. Not closed.</param>
+    /// <param name="version">The header version.</param>
+    /// <param name="synchronous">
+    /// Writes with <see cref="Stream.Write(ReadOnlySpan{byte})"/>, so every returned <see cref="ValueTask"/> has already
+    /// completed. Used by the synchronous render API, which must never block on a pending task.
+    /// </param>
+    public PdfObjectWriter(Stream output, PdfVersion version, bool synchronous = false)
     {
+        _synchronous = synchronous;
         ArgumentNullException.ThrowIfNull(output);
         if (!output.CanWrite)
         {
@@ -277,7 +285,35 @@ internal sealed class PdfObjectWriter : IDisposable
     /// Writes the cross-reference table and trailer, and flushes everything. Every allocated object must have been
     /// written. The output stream is flushed but not closed.
     /// </summary>
-    public async ValueTask FinishAsync(PdfReference root, PdfReference info = default, CancellationToken cancellationToken = default)
+    public ValueTask FinishAsync(PdfReference root, PdfReference info = default, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        WriteTrailer(root, info);
+        if (_synchronous)
+        {
+            FinishSync();
+            return ValueTask.CompletedTask;
+        }
+
+        return FinishCoreAsync(cancellationToken);
+    }
+
+    private void FinishSync()
+    {
+        FlushSync();
+        _output.Flush();
+    }
+
+    /// <summary>True once <see cref="FinishAsync"/> has written the trailer; the file size is then <see cref="Position"/>.</summary>
+    public bool IsFinished => _finished;
+
+    private async ValueTask FinishCoreAsync(CancellationToken cancellationToken)
+    {
+        await FlushCoreAsync(cancellationToken).ConfigureAwait(false);
+        await _output.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private void WriteTrailer(PdfReference root, PdfReference info)
     {
         EnsureNotFinished();
         if (_open.IsValid)
@@ -325,9 +361,6 @@ internal sealed class PdfObjectWriter : IDisposable
         PdfFormat.WriteInteger(_buffer, xref);
         PdfFormat.WriteAscii(_buffer, "\n%%EOF\n"u8);
         _finished = true;
-
-        await FlushAsync(cancellationToken).ConfigureAwait(false);
-        await _output.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public void Dispose() => _hash?.Dispose();
@@ -412,10 +445,34 @@ internal sealed class PdfObjectWriter : IDisposable
         }
     }
 
-    private async ValueTask FlushAsync(CancellationToken cancellationToken)
+    private ValueTask FlushAsync(CancellationToken cancellationToken)
+    {
+        if (!_synchronous)
+        {
+            return FlushCoreAsync(cancellationToken);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        FlushSync();
+        return ValueTask.CompletedTask;
+    }
+
+    private async ValueTask FlushCoreAsync(CancellationToken cancellationToken)
     {
         HashPending();
         await _output.WriteAsync(_buffer.WrittenMemory, cancellationToken).ConfigureAwait(false);
+        Flushed();
+    }
+
+    private void FlushSync()
+    {
+        HashPending();
+        _output.Write(_buffer.WrittenSpan);
+        Flushed();
+    }
+
+    private void Flushed()
+    {
         _flushed += _buffer.WrittenCount;
         _buffer.ResetWrittenCount();
         _hashedInBuffer = 0;

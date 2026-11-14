@@ -64,6 +64,15 @@ internal sealed class ContentStreamBuilder
         return Operator("g"u8);
     }
 
+    /// <summary><c>rg</c>: fill colour (text and shapes) in DeviceRGB, each component 0 to 1.</summary>
+    public ContentStreamBuilder SetFillRgb(double r, double g, double b)
+    {
+        Number(r);
+        Number(g);
+        Number(b);
+        return Operator("rg"u8);
+    }
+
     /// <summary><c>re f</c>: fills a rectangle.</summary>
     public ContentStreamBuilder FillRectangle(double x, double y, double width, double height)
     {

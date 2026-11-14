@@ -1,6 +1,6 @@
 # Working on Zorg.Pdf
 
-Async-first PDF generation for .NET 10, in C# only. Early 0.1: the public API is the document model (`PdfDocument`, blocks, inlines, styles, units), its JSON form and validation. There's no public render API yet, so don't call `RenderAsync` or other types from the design notes as if they existed.
+Async-first PDF generation for .NET 10, in C# only. Early 0.1: the public API is the document model (`PdfDocument`, blocks, inlines, styles, units), its JSON form, validation, and rendering of headings, paragraphs, spacers and page breaks (`RenderAsync`, `Render`). Tables, images and page bands are in the model but not drawn yet (ZPDF-R001). Don't call types from the design notes that don't exist yet.
 
 ## Writing code that uses Zorg.Pdf
 
@@ -10,6 +10,8 @@ Async-first PDF generation for .NET 10, in C# only. Early 0.1: the public API is
 - Data that changes per render is a slot: `TableRows.Bound("lines")` / `{"$data": "lines"}`, `ImageSource.FromSlot("logo")`. Documents never name files.
 - `PdfDocument.TryParseJson` never throws; `Validate()` never throws for a bad document. Both return diagnostics with a code (`docs/diagnostics.md`) and a JSON pointer.
 - The JSON Schema is `PdfJsonSchema.Current`; `PdfDocument.ToJson()` writes `$schema`. Unknown JSON properties are errors.
+- Rendering needs fonts: `new RenderOptions { Fonts = FontCollection.Empty.Add(new FontFamily("Inter") { Regular = FontSource.FromFile("Inter-Regular.ttf") }) }`. There are no system fonts. `await document.RenderAsync(stream, options, ct)`; `Render(stream, options)` for sync callers.
+- A render checks everything it can before writing (validation, fonts, glyphs, control characters) and throws `PdfDocumentException` with every problem; warnings come back in `RenderResult.Diagnostics`. Output is always tagged; `Conformance = PdfConformance.PdfUA1` also claims PDF/UA-1.
 
 ## Working on the repo
 

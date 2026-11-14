@@ -134,6 +134,40 @@ Zorg.Pdf.FontStyle.Normal = 0 -> Zorg.Pdf.FontStyle
 Zorg.Pdf.FontWeight
 Zorg.Pdf.FontWeight.Bold = 1 -> Zorg.Pdf.FontWeight
 Zorg.Pdf.FontWeight.Normal = 0 -> Zorg.Pdf.FontWeight
+Zorg.Pdf.Fonts.FontCollection
+Zorg.Pdf.Fonts.FontCollection.Add(Zorg.Pdf.Fonts.FontFamily! family) -> Zorg.Pdf.Fonts.FontCollection!
+Zorg.Pdf.Fonts.FontCollection.DefaultFamily.get -> string?
+static Zorg.Pdf.Fonts.FontCollection.Empty.get -> Zorg.Pdf.Fonts.FontCollection!
+Zorg.Pdf.Fonts.FontCollection.Families.get -> System.Collections.Immutable.ImmutableDictionary<string!, Zorg.Pdf.Fonts.FontFamily!>!
+Zorg.Pdf.Fonts.FontCollection.WithDefault(string! familyName) -> Zorg.Pdf.Fonts.FontCollection!
+Zorg.Pdf.Fonts.FontFamily
+Zorg.Pdf.Fonts.FontFamily.<Clone>$() -> Zorg.Pdf.Fonts.FontFamily!
+Zorg.Pdf.Fonts.FontFamily.Deconstruct(out string! Name) -> void
+Zorg.Pdf.Fonts.FontFamily.Equals(Zorg.Pdf.Fonts.FontFamily? other) -> bool
+override Zorg.Pdf.Fonts.FontFamily.Equals(object? obj) -> bool
+Zorg.Pdf.Fonts.FontFamily.FontFamily(string! Name) -> void
+override Zorg.Pdf.Fonts.FontFamily.GetHashCode() -> int
+Zorg.Pdf.Fonts.FontFamily.Name.get -> string!
+Zorg.Pdf.Fonts.FontFamily.Name.init -> void
+Zorg.Pdf.Fonts.FontFamily.Regular.get -> Zorg.Pdf.Fonts.FontSource?
+Zorg.Pdf.Fonts.FontFamily.Regular.init -> void
+override Zorg.Pdf.Fonts.FontFamily.ToString() -> string!
+static Zorg.Pdf.Fonts.FontFamily.operator !=(Zorg.Pdf.Fonts.FontFamily? left, Zorg.Pdf.Fonts.FontFamily? right) -> bool
+static Zorg.Pdf.Fonts.FontFamily.operator ==(Zorg.Pdf.Fonts.FontFamily? left, Zorg.Pdf.Fonts.FontFamily? right) -> bool
+Zorg.Pdf.Fonts.FontSource
+abstract Zorg.Pdf.Fonts.FontSource.<Clone>$() -> Zorg.Pdf.Fonts.FontSource!
+virtual Zorg.Pdf.Fonts.FontSource.EqualityContract.get -> System.Type!
+virtual Zorg.Pdf.Fonts.FontSource.Equals(Zorg.Pdf.Fonts.FontSource? other) -> bool
+override Zorg.Pdf.Fonts.FontSource.Equals(object? obj) -> bool
+Zorg.Pdf.Fonts.FontSource.FontSource() -> void
+Zorg.Pdf.Fonts.FontSource.FontSource(Zorg.Pdf.Fonts.FontSource! original) -> void
+static Zorg.Pdf.Fonts.FontSource.FromBytes(System.ReadOnlyMemory<byte> bytes) -> Zorg.Pdf.Fonts.FontSource!
+static Zorg.Pdf.Fonts.FontSource.FromFile(string! path) -> Zorg.Pdf.Fonts.FontSource!
+override Zorg.Pdf.Fonts.FontSource.GetHashCode() -> int
+virtual Zorg.Pdf.Fonts.FontSource.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override Zorg.Pdf.Fonts.FontSource.ToString() -> string!
+static Zorg.Pdf.Fonts.FontSource.operator !=(Zorg.Pdf.Fonts.FontSource? left, Zorg.Pdf.Fonts.FontSource? right) -> bool
+static Zorg.Pdf.Fonts.FontSource.operator ==(Zorg.Pdf.Fonts.FontSource? left, Zorg.Pdf.Fonts.FontSource? right) -> bool
 Zorg.Pdf.Heading
 override Zorg.Pdf.Heading.<Clone>$() -> Zorg.Pdf.Heading!
 Zorg.Pdf.Heading.Align.get -> Zorg.Pdf.TextAlign
@@ -318,6 +352,9 @@ Zorg.Pdf.Paragraph.SpaceAfter.init -> void
 override Zorg.Pdf.Paragraph.ToString() -> string!
 static Zorg.Pdf.Paragraph.operator !=(Zorg.Pdf.Paragraph? left, Zorg.Pdf.Paragraph? right) -> bool
 static Zorg.Pdf.Paragraph.operator ==(Zorg.Pdf.Paragraph? left, Zorg.Pdf.Paragraph? right) -> bool
+Zorg.Pdf.PdfConformance
+Zorg.Pdf.PdfConformance.None = 0 -> Zorg.Pdf.PdfConformance
+Zorg.Pdf.PdfConformance.PdfUA1 = 1 -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfDiagnostic
 Zorg.Pdf.PdfDiagnostic.<Clone>$() -> Zorg.Pdf.PdfDiagnostic!
 Zorg.Pdf.PdfDiagnostic.Code.get -> string!
@@ -356,6 +393,8 @@ Zorg.Pdf.PdfDocument.Page.init -> void
 static Zorg.Pdf.PdfDocument.ParseJson(System.ReadOnlySpan<byte> utf8Json) -> Zorg.Pdf.PdfDocument!
 static Zorg.Pdf.PdfDocument.ParseJson(string! json) -> Zorg.Pdf.PdfDocument!
 Zorg.Pdf.PdfDocument.PdfDocument(string! title) -> void
+Zorg.Pdf.PdfDocument.Render(System.IO.Stream! output, Zorg.Pdf.RenderOptions? options = null) -> Zorg.Pdf.RenderResult!
+Zorg.Pdf.PdfDocument.RenderAsync(System.IO.Stream! output, Zorg.Pdf.RenderOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Zorg.Pdf.RenderResult!>
 Zorg.Pdf.PdfDocument.Schema.get -> string?
 Zorg.Pdf.PdfDocument.Schema.init -> void
 Zorg.Pdf.PdfDocument.Styles.get -> Zorg.Pdf.StyleSheet?
@@ -382,6 +421,52 @@ Zorg.Pdf.PdfException.PdfException(string! message, System.Exception! innerExcep
 Zorg.Pdf.PdfJsonSchema
 static Zorg.Pdf.PdfJsonSchema.Current.get -> string!
 const Zorg.Pdf.PdfJsonSchema.Id = "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json" -> string!
+Zorg.Pdf.PdfLimitException
+Zorg.Pdf.PdfLimitException.PdfLimitException() -> void
+Zorg.Pdf.PdfLimitException.PdfLimitException(string! message) -> void
+Zorg.Pdf.PdfLimitException.PdfLimitException(string! message, System.Exception! innerException) -> void
+Zorg.Pdf.PdfLimits
+Zorg.Pdf.PdfLimits.<Clone>$() -> Zorg.Pdf.PdfLimits!
+static Zorg.Pdf.PdfLimits.Default.get -> Zorg.Pdf.PdfLimits!
+Zorg.Pdf.PdfLimits.Equals(Zorg.Pdf.PdfLimits? other) -> bool
+override Zorg.Pdf.PdfLimits.Equals(object? obj) -> bool
+override Zorg.Pdf.PdfLimits.GetHashCode() -> int
+Zorg.Pdf.PdfLimits.MaxPages.get -> int
+Zorg.Pdf.PdfLimits.MaxPages.init -> void
+Zorg.Pdf.PdfLimits.PdfLimits() -> void
+override Zorg.Pdf.PdfLimits.ToString() -> string!
+static Zorg.Pdf.PdfLimits.operator !=(Zorg.Pdf.PdfLimits? left, Zorg.Pdf.PdfLimits? right) -> bool
+static Zorg.Pdf.PdfLimits.operator ==(Zorg.Pdf.PdfLimits? left, Zorg.Pdf.PdfLimits? right) -> bool
+Zorg.Pdf.RenderOptions
+Zorg.Pdf.RenderOptions.Conformance.get -> Zorg.Pdf.PdfConformance
+Zorg.Pdf.RenderOptions.Conformance.init -> void
+Zorg.Pdf.RenderOptions.CreationDate.get -> System.DateTimeOffset?
+Zorg.Pdf.RenderOptions.CreationDate.init -> void
+static Zorg.Pdf.RenderOptions.Default.get -> Zorg.Pdf.RenderOptions!
+Zorg.Pdf.RenderOptions.Fonts.get -> Zorg.Pdf.Fonts.FontCollection!
+Zorg.Pdf.RenderOptions.Fonts.init -> void
+Zorg.Pdf.RenderOptions.Limits.get -> Zorg.Pdf.PdfLimits!
+Zorg.Pdf.RenderOptions.Limits.init -> void
+Zorg.Pdf.RenderOptions.Progress.get -> System.IProgress<Zorg.Pdf.RenderProgress>?
+Zorg.Pdf.RenderOptions.Progress.init -> void
+Zorg.Pdf.RenderOptions.RenderOptions() -> void
+Zorg.Pdf.RenderProgress
+Zorg.Pdf.RenderProgress.BytesWritten.get -> long
+Zorg.Pdf.RenderProgress.BytesWritten.init -> void
+Zorg.Pdf.RenderProgress.Deconstruct(out int PagesWritten, out long BytesWritten) -> void
+Zorg.Pdf.RenderProgress.Equals(Zorg.Pdf.RenderProgress other) -> bool
+override Zorg.Pdf.RenderProgress.GetHashCode() -> int
+Zorg.Pdf.RenderProgress.PagesWritten.get -> int
+Zorg.Pdf.RenderProgress.PagesWritten.init -> void
+Zorg.Pdf.RenderProgress.RenderProgress() -> void
+Zorg.Pdf.RenderProgress.RenderProgress(int PagesWritten, long BytesWritten) -> void
+static Zorg.Pdf.RenderProgress.operator !=(Zorg.Pdf.RenderProgress left, Zorg.Pdf.RenderProgress right) -> bool
+static Zorg.Pdf.RenderProgress.operator ==(Zorg.Pdf.RenderProgress left, Zorg.Pdf.RenderProgress right) -> bool
+Zorg.Pdf.RenderResult
+Zorg.Pdf.RenderResult.BytesWritten.get -> long
+Zorg.Pdf.RenderResult.Diagnostics.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.PdfDiagnostic!>
+Zorg.Pdf.RenderResult.HasWarnings.get -> bool
+Zorg.Pdf.RenderResult.PageCount.get -> int
 Zorg.Pdf.SlotImageSource
 override Zorg.Pdf.SlotImageSource.<Clone>$() -> Zorg.Pdf.SlotImageSource!
 Zorg.Pdf.SlotImageSource.Deconstruct(out string! Slot) -> void
@@ -522,5 +607,7 @@ Zorg.Pdf.ValidationResult.IsValid.get -> bool
 ~override Zorg.Pdf.Length.Equals(object obj) -> bool
 ~override Zorg.Pdf.PageSize.Equals(object obj) -> bool
 ~override Zorg.Pdf.PageSize.ToString() -> string
+~override Zorg.Pdf.RenderProgress.Equals(object obj) -> bool
+~override Zorg.Pdf.RenderProgress.ToString() -> string
 ~override Zorg.Pdf.Thickness.Equals(object obj) -> bool
 ~override Zorg.Pdf.Thickness.ToString() -> string
