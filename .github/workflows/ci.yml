@@ -154,18 +154,18 @@ jobs:
       - name: Render and hash
         shell: bash
         env:
-          ZORG_PDF_TEST_FONT: ${{ runner.temp }}/liberation-fonts-ttf-2.1.5/LiberationSans-Regular.ttf
           ZORG_REQUIRE_FONTS: '1'
+          HASHES: hashes-${{ matrix.os }}.txt
         run: |
+          export ZORG_PDF_TEST_FONT="$RUNNER_TEMP/liberation-fonts-ttf-2.1.5/LiberationSans-Regular.ttf"
           mkdir -p "$RUNNER_TEMP/out"
           dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release -- "$RUNNER_TEMP/out"
-          cd "$RUNNER_TEMP/out"
-          sha256sum --binary *.pdf | tee "$RUNNER_TEMP/hashes-${{ matrix.os }}.txt"
+          (cd "$RUNNER_TEMP/out" && sha256sum --binary *.pdf) | tee "$HASHES"
 
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: hashes-${{ matrix.os }}
-          path: ${{ runner.temp }}/hashes-${{ matrix.os }}.txt
+          path: hashes-${{ matrix.os }}.txt
 
   determinism-compare:
     name: Byte-identical output (compare)
