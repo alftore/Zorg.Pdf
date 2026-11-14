@@ -17,6 +17,48 @@ namespace Zorg.Pdf.Rendering;
 internal static class Preflight
 {
     /// <summary>The style of a run: its block's style with the run's own on top.</summary>
+    /// <summary>The table of contents' entries: each top-level heading within its levels, with its index, level and text.</summary>
+    public static List<(int Index, Heading Heading, int Level, string Text)> TocEntries(PdfDocument document, TableOfContents toc)
+    {
+        var entries = new List<(int, Heading, int, string)>();
+        for (int i = 0; i < document.Content.Length; i++)
+        {
+            if (document.Content[i] is Heading { Level: >= 1 and <= 6 } heading && heading.Level <= toc.MaxLevel)
+            {
+                entries.Add((i, heading, heading.Level, PlainText(heading.Inlines)));
+            }
+        }
+
+        return entries;
+    }
+
+    /// <summary>Inlines as plain text: runs and link text, line breaks as spaces, fields left out; trimmed.</summary>
+    public static string PlainText(ImmutableArray<Inline> inlines)
+    {
+        var text = new System.Text.StringBuilder();
+        Append(inlines);
+        return text.ToString().Trim();
+
+        void Append(ImmutableArray<Inline> list)
+        {
+            foreach (Inline inline in list.IsDefault ? [] : list)
+            {
+                switch (inline)
+                {
+                    case TextRun run:
+                        text.Append(run.Text);
+                        break;
+                    case LineBreak:
+                        text.Append(' ');
+                        break;
+                    case Link link:
+                        Append(link.Inlines);
+                        break;
+                }
+            }
+        }
+    }
+
     public static TextStyle RunStyle(TextStyle block, Inline inline) => inline is TextRun { Style: { } own } ? block.Merge(own) : block;
 
     /// <summary>The face a style asks for, or null when no family is named anywhere.</summary>
@@ -58,6 +100,18 @@ internal static class Preflight
                     TextStyle style = styles.ForListParagraph(paragraph, listStyle);
                     Need(style, paragraph.Style is not null ? $"{path}/style" : path);
                     Runs(paragraph.Inlines, style, $"{path}/inlines");
+                }
+            }
+            else if (block is TableOfContents toc)
+            {
+                if (toc.Title is { } title)
+                {
+                    Need(styles.For(new Heading(title)), $"/content/{i}/title");
+                }
+
+                foreach ((_, _, int level, _) in TocEntries(document, toc))
+                {
+                    Need(styles.Named($"toc{level}"), $"/content/{i}");
                 }
             }
             else if (block is TextBox box && !box.Content.IsDefault)
@@ -167,6 +221,18 @@ internal static class Preflight
                     foreach ((Paragraph paragraph, string itemPath, string? listStyle) in ListParagraphs(list, path, list.Style))
                     {
                         Inlines(paragraph.Inlines, styles.ForListParagraph(paragraph, listStyle), $"{itemPath}/inlines");
+                    }
+
+                    break;
+                case TableOfContents toc:
+                    if (toc.Title is { } tocTitle)
+                    {
+                        Characters(tocTitle, Chain(styles.For(new Heading(tocTitle))), $"{path}/title");
+                    }
+
+                    foreach ((_, _, int level, string entry) in TocEntries(document, toc))
+                    {
+                        Characters(entry + "0123456789.", Chain(styles.Named($"toc{level}")), path); // Any page number, and the leader dots.
                     }
 
                     break;

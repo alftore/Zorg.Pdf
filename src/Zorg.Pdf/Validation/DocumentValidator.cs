@@ -18,6 +18,7 @@ internal sealed partial class DocumentValidator
     private readonly List<(string Id, string Path)> _internalLinks = []; // Checked against the ids at the end.
     private string? _noLinksIn; // Where links can't go yet, while validating it.
     private bool _inLink;
+    private string? _tocPath; // The table of contents seen so far: one per document.
     private readonly ImmutableDictionary<string, TextStyle> _styles;
 
     private DocumentValidator(PdfDocument document)
@@ -235,6 +236,32 @@ internal sealed partial class DocumentValidator
 
             case TextBox box:
                 TextBox(box, path);
+                break;
+
+            case TableOfContents toc:
+                if (toc.MaxLevel is < 1 or > 6)
+                {
+                    Error(DiagnosticCodes.BadTableOfContents, Invariant($"maxLevel is 1 to 6; {toc.MaxLevel} isn't."), $"{path}/maxLevel");
+                }
+
+                if (toc.Title is { } tocTitle && string.IsNullOrWhiteSpace(tocTitle))
+                {
+                    Error(DiagnosticCodes.BadTableOfContents, "A title has text; leave it out for none.", $"{path}/title");
+                }
+
+                if (!_anchorPaths.Contains(path))
+                {
+                    Error(DiagnosticCodes.BadTableOfContents, "A table of contents goes at the top level of the content (or in a top-level when), not in a list, box, repeat or band.", path);
+                }
+                else if (_tocPath is { } first)
+                {
+                    Error(DiagnosticCodes.BadTableOfContents, $"There's already a table of contents at {first}; a document has one.", path);
+                }
+                else
+                {
+                    _tocPath = path;
+                }
+
                 break;
 
             case Repeat repeat:

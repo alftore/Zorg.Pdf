@@ -739,6 +739,22 @@ Zorg.Pdf.Table.TableStyle.init -> void
 override Zorg.Pdf.Table.ToString() -> string!
 static Zorg.Pdf.Table.operator !=(Zorg.Pdf.Table? left, Zorg.Pdf.Table? right) -> bool
 static Zorg.Pdf.Table.operator ==(Zorg.Pdf.Table? left, Zorg.Pdf.Table? right) -> bool
+Zorg.Pdf.TableOfContents
+override Zorg.Pdf.TableOfContents.<Clone>$() -> Zorg.Pdf.TableOfContents!
+override sealed Zorg.Pdf.TableOfContents.Equals(Zorg.Pdf.Block? other) -> bool
+Zorg.Pdf.TableOfContents.Equals(Zorg.Pdf.TableOfContents? other) -> bool
+override Zorg.Pdf.TableOfContents.Equals(object? obj) -> bool
+override Zorg.Pdf.TableOfContents.GetHashCode() -> int
+Zorg.Pdf.TableOfContents.Leaders.get -> bool
+Zorg.Pdf.TableOfContents.Leaders.init -> void
+Zorg.Pdf.TableOfContents.MaxLevel.get -> int
+Zorg.Pdf.TableOfContents.MaxLevel.init -> void
+Zorg.Pdf.TableOfContents.TableOfContents() -> void
+Zorg.Pdf.TableOfContents.Title.get -> string?
+Zorg.Pdf.TableOfContents.Title.init -> void
+override Zorg.Pdf.TableOfContents.ToString() -> string!
+static Zorg.Pdf.TableOfContents.operator !=(Zorg.Pdf.TableOfContents? left, Zorg.Pdf.TableOfContents? right) -> bool
+static Zorg.Pdf.TableOfContents.operator ==(Zorg.Pdf.TableOfContents? left, Zorg.Pdf.TableOfContents? right) -> bool
 Zorg.Pdf.TableRows
 abstract Zorg.Pdf.TableRows.<Clone>$() -> Zorg.Pdf.TableRows!
 static Zorg.Pdf.TableRows.Bound(string! slot) -> Zorg.Pdf.TableRows!

@@ -16,6 +16,7 @@
   "content": [
     { "type": "heading", "inlines": ["Monthly sales report"] },
     { "type": "paragraph", "inlines": ["October 2026. Figures in thousands of NOK, excluding VAT."] },
+    { "type": "tableOfContents", "maxLevel": 2 },
     { "type": "heading", "level": 2, "keepWithNext": true, "inlines": ["Sales by region"] },
     {
       "type": "table",

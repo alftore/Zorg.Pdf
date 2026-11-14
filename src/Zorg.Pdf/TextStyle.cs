@@ -131,6 +131,7 @@ public sealed record StyleSheet
                 new("header", new TextStyle { Size = Length.Pt(8) }),
                 new("footer", new TextStyle { Size = Length.Pt(8) }),
                 new("link", new TextStyle { Color = Color.Parse("#0B57D0") }),
+                new("toc1", new TextStyle { Weight = FontWeight.Bold }),
                 new("watermark", new TextStyle { Weight = FontWeight.Bold }),
             ]),
     };

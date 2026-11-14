@@ -20,6 +20,7 @@ namespace Zorg.Pdf;
 [JsonDerivedType(typeof(Spacer), "spacer")]
 [JsonDerivedType(typeof(PageBreak), "pageBreak")]
 [JsonDerivedType(typeof(TextBox), "textBox")]
+[JsonDerivedType(typeof(TableOfContents), "tableOfContents")]
 public abstract record Block
 {
     /// <summary>The name of a style in the document's <see cref="StyleSheet"/>, replacing the block's default style.</summary>

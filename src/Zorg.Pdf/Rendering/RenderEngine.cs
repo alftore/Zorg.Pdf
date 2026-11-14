@@ -134,6 +134,7 @@ internal sealed partial class RenderEngine : IDisposable
 
     private async ValueTask RunAsync(CancellationToken cancellationToken)
     {
+        PrepareTableOfContents();
         StartPage();
         for (int i = 0; i < _document.Content.Length; i++)
         {
@@ -166,6 +167,10 @@ internal sealed partial class RenderEngine : IDisposable
                     Arrived(list);
                     await PlaceListAsync(i, list, cancellationToken).ConfigureAwait(false);
                     break;
+                case TableOfContents toc:
+                    Arrived(toc);
+                    await PlaceTableOfContentsAsync(i, toc, cancellationToken).ConfigureAwait(false);
+                    break;
                 case TextBox box:
                     if (box.Id is { } boxId && box.Resolve() is { } place)
                     {
@@ -180,6 +185,7 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         await FinishPageAsync(cancellationToken).ConfigureAwait(false);
+        WriteTocNumbers(); // Before the fonts are written: the digits join their subsets.
         WriteBands();
         WriteWatermark();
         foreach ((EmbeddedFont font, _, PdfReference reference) in _fonts.Used)
@@ -316,6 +322,12 @@ internal sealed partial class RenderEngine : IDisposable
     /// </summary>
     private void Arrived(Block block)
     {
+        if (_tocNames.TryGetValue(block, out string? tocName))
+        {
+            _destinations[tocName] = (_page, _y);
+            _headingPages[block] = _page;
+        }
+
         if (block.Id is { } id)
         {
             _destinations[id] = (_page, _y);
@@ -328,16 +340,7 @@ internal sealed partial class RenderEngine : IDisposable
     }
 
     /// <summary>A heading's text for its bookmark: its runs, with line breaks as spaces and fields left out.</summary>
-    private static string OutlineTitle(ImmutableArray<Inline> inlines)
-    {
-        var title = new System.Text.StringBuilder();
-        foreach (Inline inline in inlines.IsDefault ? [] : inlines)
-        {
-            title.Append(inline switch { TextRun run => run.Text, LineBreak => " ", Link { Inlines.IsDefault: false } link => OutlineTitle(link.Inlines), _ => "" });
-        }
-
-        return title.ToString().Trim();
-    }
+    private static string OutlineTitle(ImmutableArray<Inline> inlines) => Preflight.PlainText(inlines);
 
     /// <summary>Starts a text object; the font is set again by the first run in it.</summary>
     private void BeginText()
@@ -624,9 +627,10 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         images.Sort((a, b) => a.Image.Number.CompareTo(b.Image.Number));
+        PdfReference? toc = TocStream();
         PdfReference? band = BandStream();
         PdfReference[] annotations = WriteLinkAnnotations();
-        _documentWriter.WritePage(_page, _tagger.PageKey(_page), _content.WrittenSpan, fonts, images, WatermarkUnder(), [.. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState(), annotations);
+        _documentWriter.WritePage(_page, _tagger.PageKey(_page), _content.WrittenSpan, fonts, images, WatermarkUnder(), [.. toc is { } t ? [t] : Array.Empty<PdfReference>(), .. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState(), annotations);
         await _writer.FlushIfNeededAsync(cancellationToken).ConfigureAwait(false);
         _options.Progress?.Report(new RenderProgress(_page + 1, _writer.Position));
     }
