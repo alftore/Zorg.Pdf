@@ -55,10 +55,29 @@ public sealed class WatermarkTests
         Assert.Contains("/Type /ExtGState /ca 0.15 /CA 0.15", PdfInspect.Text(file), StringComparison.Ordinal);
         Assert.Contains("/ExtGState <</GW ", PdfInspect.Text(file), StringComparison.Ordinal);
 
-        // Automatic size: "DRAFT" across 80 % of A4's diagonal reach is far larger than body text.
-        double size = double.Parse(Regex.Match(watermark, @" ([\d.]+) Tf").Groups[1].Value, CultureInfo.InvariantCulture);
-        Assert.InRange(size, 150, 250);
+        // Automatic size: "DRAFT" turned 45 degrees within 80 % of A4 is far larger than body text.
+        Assert.InRange(FontSize(watermark), 120, 200);
     }
+
+    [Fact]
+    public async Task AnAutomaticSizeCountsTheTextsHeightToo()
+    {
+        // A wide, short page: by length alone "DRAFT" would be about 190 pt, three times the page's height.
+        var document = new PdfDocument("x")
+        {
+            Page = new PageSettings { Size = new PageSize(Length.Mm(300), Length.Mm(25)), Margin = Thickness.All(Length.Mm(2)) },
+            Watermark = new Watermark("DRAFT") { Angle = 0 },
+            Content = [new Paragraph("Ticket")],
+        };
+
+        (byte[] file, _) = await RenderTests.RenderAsync(document, PdfInspect.Options());
+
+        double size = FontSize(PdfInspect.PageStreams(file)[0][^1].Content);
+        Assert.InRange(size, 30, 0.8 * Length.Mm(25).Points);
+    }
+
+    private static double FontSize(string content) =>
+        double.Parse(Regex.Match(content, @" ([\d.]+) Tf").Groups[1].Value, CultureInfo.InvariantCulture);
 
     [Fact]
     public async Task AnImageWatermarkCanSitBehindTheContent()

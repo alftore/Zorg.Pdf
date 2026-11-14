@@ -72,22 +72,26 @@ internal sealed partial class RenderEngine
         _watermarkState = _writer.Allocate();
     }
 
-    /// <summary>The font size at which the text spans <see cref="WatermarkReach"/> of the page along its angle.</summary>
+    /// <summary>
+    /// The font size at which the text's box, turned to its angle, fits within <see cref="WatermarkReach"/> of the
+    /// page's width and height. Both the text's length and its line height count, so a tall font or a steep angle
+    /// can't reach the page's corners.
+    /// </summary>
     private double AutoWatermarkSize(string text, TextStyle style, double angle)
     {
-        PreparedText probe = LayoutText(new Paragraph(text), style.Merge(new TextStyle { Size = Length.Pt(100) }), "/watermark/text", null, report: false, width: 1e6);
-        double width = probe.Lines is [{ } line, ..] ? line.Width : 0;
-        if (width <= 0)
+        const double Probe = 100;
+        PreparedText probe = LayoutText(new Paragraph(text), style.Merge(new TextStyle { Size = Length.Pt(Probe) }), "/watermark/text", null, report: false, width: 1e6);
+        if (probe.Lines is not [{ Width: > 0 } line, ..])
         {
             return 72;
         }
 
         double radians = angle * Math.PI / 180;
         double cos = Math.Abs(Math.Cos(radians)), sin = Math.Abs(Math.Sin(radians));
-        double reach = Math.Min(
-            cos > 1e-6 ? WatermarkReach * _pageGeometry.Width / cos : double.MaxValue,
-            sin > 1e-6 ? WatermarkReach * _pageGeometry.Height / sin : double.MaxValue);
-        return Math.Clamp(100 * reach / width, 8, 400);
+        double across = (line.Width * cos) + (line.Height * sin);
+        double down = (line.Width * sin) + (line.Height * cos);
+        double scale = Math.Min(WatermarkReach * _pageGeometry.Width / across, WatermarkReach * _pageGeometry.Height / down);
+        return Math.Clamp(Probe * scale, 8, 400);
     }
 
     private PdfReference[] WatermarkUnder() =>
