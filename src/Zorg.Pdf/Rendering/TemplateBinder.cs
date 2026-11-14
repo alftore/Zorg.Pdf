@@ -148,6 +148,10 @@ internal sealed class TemplateBinder
 
                 return;
 
+            case TextBox box when !box.Content.IsDefault:
+                output.Add(box with { Content = ExpandAll(box.Content, $"{path}/content") });
+                return;
+
             case Table { Rows: RepeatedTableRows repeated } table:
                 output.Add(table with { Rows = TableRows.Inline(RepeatRows(repeated, $"{path}/rows")) });
                 return;
@@ -388,6 +392,7 @@ internal sealed class TemplateBinder
             Repeat r when !r.Content.IsDefault => r.Content,
             Conditional c when !c.Content.IsDefault => c.Content,
             List l when !l.Items.IsDefault => l.Items.Where(i => i is not null && !i.Content.IsDefault).SelectMany(i => i.Content),
+            TextBox t when !t.Content.IsDefault => t.Content,
             _ => [],
         };
         foreach (Block child in children)

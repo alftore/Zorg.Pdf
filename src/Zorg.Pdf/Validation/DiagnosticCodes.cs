@@ -31,6 +31,7 @@ internal static class DiagnosticCodes
     public const string ListContent = "ZPDF-J021";
     public const string BadWatermark = "ZPDF-J022";
     public const string BadTemplate = "ZPDF-J023";
+    public const string BadTextBox = "ZPDF-J024";
 
     // B: binding a template to its model.
     public const string BindingMissing = "ZPDF-B001";
@@ -61,6 +62,9 @@ internal static class DiagnosticCodes
     public const string RowCellCount = "ZPDF-L002";
     public const string ColumnsTooWide = "ZPDF-L003";
     public const string BandsTooTall = "ZPDF-L004";
+    public const string TextShrunk = "ZPDF-L005";
+    public const string TextOverflow = "ZPDF-L006";
+    public const string TextBoxOffPage = "ZPDF-L007";
 
     // I: images.
     public const string ImageUnreadable = "ZPDF-I001";

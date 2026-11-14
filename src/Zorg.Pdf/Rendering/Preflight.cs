@@ -60,6 +60,18 @@ internal static class Preflight
                     Runs(paragraph.Inlines, style, $"{path}/inlines");
                 }
             }
+            else if (block is TextBox box && !box.Content.IsDefault)
+            {
+                for (int p = 0; p < box.Content.Length; p++)
+                {
+                    if (box.Content[p] is Paragraph paragraph)
+                    {
+                        TextStyle style = styles.For(paragraph);
+                        Need(style, paragraph.Style is not null ? $"/content/{i}/content/{p}/style" : $"/content/{i}/content/{p}");
+                        Runs(paragraph.Inlines, style, $"/content/{i}/content/{p}/inlines");
+                    }
+                }
+            }
             else if (block is Table table)
             {
                 Need(styles.TableHeader(), $"/content/{i}/columns");
@@ -149,6 +161,16 @@ internal static class Preflight
                     foreach ((Paragraph paragraph, string itemPath, string? listStyle) in ListParagraphs(list, path, list.Style))
                     {
                         Inlines(paragraph.Inlines, styles.ForListParagraph(paragraph, listStyle), $"{itemPath}/inlines");
+                    }
+
+                    break;
+                case TextBox box when !box.Content.IsDefault:
+                    for (int p = 0; p < box.Content.Length; p++)
+                    {
+                        if (box.Content[p] is Paragraph paragraph)
+                        {
+                            Inlines(paragraph.Inlines, styles.For(paragraph), $"{path}/content/{p}/inlines");
+                        }
                     }
 
                     break;

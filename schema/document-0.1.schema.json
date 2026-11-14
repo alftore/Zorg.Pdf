@@ -139,7 +139,7 @@
       "description": "Something that flows down the page. The \"type\" property says which.",
       "type": "object",
       "required": ["type"],
-      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when"] } },
+      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox"] } },
       "oneOf": [
         { "$ref": "#/$defs/heading" },
         { "$ref": "#/$defs/paragraph" },
@@ -149,8 +149,31 @@
         { "$ref": "#/$defs/spacer" },
         { "$ref": "#/$defs/pageBreak" },
         { "$ref": "#/$defs/repeat" },
-        { "$ref": "#/$defs/when" }
+        { "$ref": "#/$defs/when" },
+        { "$ref": "#/$defs/textBox" }
       ]
+    },
+    "textBox": {
+      "description": "Paragraphs at a fixed place on the page, measured from the paper's top-left corner, such as a letter's address for a window envelope. Takes no room in the flow. Give a preset, or x, y, width and height (which override a preset).",
+      "type": "object",
+      "required": ["type", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "textBox" },
+        "style": { "description": "A named style.", "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "content": { "description": "Paragraphs, or repeat and when blocks that make them.", "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/block" } },
+        "preset": { "description": "din5008A: 85 x 45 mm at 20 mm from the left and 27 mm from the top; din5008B: the same at 45 mm from the top. Text starts 5 mm in.", "enum": ["none", "din5008A", "din5008B"] },
+        "x": { "$ref": "#/$defs/length" },
+        "y": { "$ref": "#/$defs/length" },
+        "width": { "$ref": "#/$defs/length" },
+        "height": { "$ref": "#/$defs/length" },
+        "padding": { "$ref": "#/$defs/thickness" },
+        "borderColor": { "$ref": "#/$defs/color" },
+        "borderWidth": { "description": "Default 0.5 pt when there's a border colour.", "$ref": "#/$defs/length" },
+        "overflow": { "description": "Text that doesn't fit: shrinkToFit (the default) makes it smaller down to minSize, then cuts whole lines; clip cuts whole lines; visible draws past the box.", "enum": ["shrinkToFit", "clip", "visible"] },
+        "minSize": { "description": "The smallest body text size shrinkToFit uses. Default 6 pt.", "$ref": "#/$defs/length" }
+      }
     },
     "heading": {
       "description": "A heading, tagged H1 to H6.",

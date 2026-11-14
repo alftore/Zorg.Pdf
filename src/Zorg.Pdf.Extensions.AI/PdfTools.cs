@@ -168,7 +168,8 @@ internal sealed class SchemaTool() : PdfTool(
 {
     internal const string Guide = """
         A document is JSON: { "title": "...", "language": "en", "content": [blocks] }, with optional "page", "header", "footer", "watermark" ({ "text": "DRAFT" }) and "styles".
-        Blocks have a "type": "heading" (with "level" 1 to 6, never skipping a level), "paragraph", "list", "table", "image", "spacer" or "pageBreak".
+        Blocks have a "type": "heading" (with "level" 1 to 6, never skipping a level), "paragraph", "list", "table", "image", "spacer", "pageBreak" or "textBox".
+        A letter's address for a window envelope: { "type": "textBox", "preset": "din5008B", "content": [paragraphs, one per line] }, then a spacer of about 5.5cm so the text below starts under it. Text too long for the box is made smaller; "overflow": "clip" cuts whole lines instead. Other boxes take "x", "y", "width" and "height" from the paper's top-left corner.
         Lists: { "type": "list", "marker": "bullet" or "number", "items": ["text", { "content": [paragraphs and nested lists] }] }.
         Text is "inlines": an array of strings, { "text": "...", "style": { "weight": "bold" } }, { "lineBreak": true } and, in headers and footers, { "field": "pageNumber" } or { "field": "pageCount" }.
         Tables have "columns" ([{ "header": "Amount", "width": "2*", "align": "right" }]) and "rows": an array of rows of cells (strings, or { "inlines": [...], "columnSpan": 2, "rowSpan": 2 }), or { "$data": "slot" } to take them from data.

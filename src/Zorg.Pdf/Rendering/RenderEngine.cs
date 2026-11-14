@@ -157,6 +157,9 @@ internal sealed partial class RenderEngine : IDisposable
                 case List list:
                     await PlaceListAsync(i, list, cancellationToken).ConfigureAwait(false);
                     break;
+                case TextBox box:
+                    PlaceTextBox(i, box);
+                    break;
             }
 
             _prepared.Remove(i);
@@ -439,7 +442,7 @@ internal sealed partial class RenderEngine : IDisposable
                 _fonts.TryGet(Preflight.Face(style, _styles, _defaultFamily)!.Value, out chain);
             }
 
-            return new TextSegment(text, chain, runStyle.Size?.Points ?? size, runStyle.Color);
+            return new TextSegment(text, chain, (runStyle.Size?.Points ?? size) * _textScale, runStyle.Color);
         }
     }
 

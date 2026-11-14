@@ -25,6 +25,8 @@ namespace Zorg.Pdf.Json;
 [JsonSerializable(typeof(ImmutableArray<Block>))]
 [JsonSerializable(typeof(ListMarker))]
 [JsonSerializable(typeof(WatermarkLayer))]
+[JsonSerializable(typeof(TextBoxPreset))]
+[JsonSerializable(typeof(TextOverflow))]
 [JsonSerializable(typeof(TextStyle))]
 [JsonSerializable(typeof(FieldKind))]
 [JsonSerializable(typeof(TextAlign))]

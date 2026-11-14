@@ -27,6 +27,7 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-J020 | Error | A list has no items, an item has no content, or `start` is negative. | Give every list items and every item text; number from 0 or more. |
 | ZPDF-J021 | Error | A list item holds something other than paragraphs and lists, or lists nest more than six deep. | Put headings, tables and images between lists; flatten deep nesting. |
 | ZPDF-J022 | Error | A watermark has neither text nor an image, or both; or its opacity isn't between 0 and 1, or its angle isn't a number. | Set `text` or `image`, and an opacity from 0 to 1. |
+| ZPDF-J024 | Error | A text box has no place (no `preset`, or not all of `x`, `y`, `width` and `height`), a size of zero or less, a start off the page, padding that leaves no room, or content other than paragraphs. | Give it a `preset` or all four, inside the page, and paragraphs. |
 | ZPDF-J023 | Error | A template part is incomplete: a `bind` without a path, a `repeat` without `items` or content, or a `when` without a `test` or content. | Give every binding a path such as `customer.name`, and every repeat and when their content. |
 | ZPDF-B001 | Warning | A binding found no value in the model (or the render has no model), or the value can't be shown as text, or its `format` doesn't fit it. The text is left empty or unformatted. | Add the value to the model, fix the path, or bind a value inside the object. |
 | ZPDF-B002 | Warning | A `repeat` names something in the model that isn't an array, so its content is left out. | Point `items` at an array. |
@@ -45,6 +46,9 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-L001 | Warning | Rows joined by a `rowSpan` are taller together than a page, so they run past the bottom margin. A single row that tall splits across pages instead; rows joined by a span don't. | Shorten the spanned rows' text, or drop the span. |
 | ZPDF-L002 | Warning | A row from a data slot doesn't fill the columns it has (counting spans); it's padded with empty cells or cut. | Give every row one cell per free column. |
 | ZPDF-L003 | Warning | The fixed-width columns are wider than the page, so all columns are scaled to fit. | Make the fixed columns narrower, or use shares (`"2*"`). |
+| ZPDF-L005 | Info | A text box's text was made smaller to fit (`overflow: shrinkToFit`). The message gives the size. | Nothing, or shorten the text, or make the box larger. |
+| ZPDF-L006 | Warning | A text box's text doesn't fit: lines were left out (`clip`, or `shrinkToFit` at its minimum size), or run past the box (`visible`). | Shorten the text, make the box larger, or lower `minSize`. |
+| ZPDF-L007 | Warning | A text box reaches past the edge of the page. | Move it or make it smaller. |
 | ZPDF-L004 | Error | The header and footer leave less than 36 pt of the page for the content. | Shorten the header or footer, use smaller text, or narrow the top and bottom margins. |
 | ZPDF-I001 | Error | An image can't be embedded: it isn't a JPEG or PNG, it's damaged, or it's a kind PDF can't hold (12-bit, lossless or arithmetic-coded JPEG). The message says which. | Save it again as an 8-bit baseline or progressive JPEG, or as a PNG. |
 | ZPDF-I002 | Error | An image is over `RenderOptions.Limits.MaxImageBytes` or `MaxImagePixels`. | Make the image smaller, or raise the limit if the input is trusted. |

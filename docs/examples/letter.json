@@ -36,26 +36,18 @@
       ]
     },
     {
-      "type": "spacer",
-      "height": "1cm"
-    },
-    {
-      "type": "paragraph",
-      "inlines": [
-        "Blåbær & Syltetøy AB",
-        {
-          "lineBreak": true
-        },
-        "Kungsgatan 12",
-        {
-          "lineBreak": true
-        },
-        "111 43 Stockholm"
+      "type": "textBox",
+      "preset": "din5008B",
+      "content": [
+        { "type": "paragraph", "inlines": ["Blåbær & Syltetøy AB"] },
+        { "type": "paragraph", "inlines": ["Att. Sven Svensson"] },
+        { "type": "paragraph", "inlines": ["Kungsgatan 12"] },
+        { "type": "paragraph", "inlines": ["111 43 Stockholm"] }
       ]
     },
     {
       "type": "spacer",
-      "height": "1cm"
+      "height": "5.5cm"
     },
     {
       "type": "heading",

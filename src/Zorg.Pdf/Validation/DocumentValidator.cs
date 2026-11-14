@@ -41,6 +41,7 @@ internal sealed partial class DocumentValidator
         }
 
         Page(document.Page ?? PageSettings.A4, "/page");
+        _page = Rendering.PageGeometry.From(document.Page ?? PageSettings.A4);
 
         if (document.Styles is { } sheet)
         {
@@ -145,6 +146,8 @@ internal sealed partial class DocumentValidator
         }
     }
 
+    private Rendering.PageGeometry _page;
+
     private void Block(Block? block, string path)
     {
         if (block is null)
@@ -192,6 +195,10 @@ internal sealed partial class DocumentValidator
 
             case List list:
                 List(list, path, 1);
+                break;
+
+            case TextBox box:
+                TextBox(box, path);
                 break;
 
             case Repeat repeat:
@@ -404,6 +411,62 @@ internal sealed partial class DocumentValidator
             case null:
                 Error(DiagnosticCodes.MissingProperty, "The rows are null. Leave \"rows\" out for a table with only a header.", $"{path}/rows");
                 break;
+        }
+    }
+
+    private void TextBox(TextBox box, string path)
+    {
+        if (box.Resolve() is not { } place)
+        {
+            Error(DiagnosticCodes.BadTextBox, "A text box needs a place: a \"preset\" such as \"din5008B\", or \"x\", \"y\", \"width\" and \"height\".", path);
+        }
+        else if (place.Width <= 0 || place.Height <= 0)
+        {
+            Error(DiagnosticCodes.BadTextBox, "A text box's width and height are more than zero.", place.Width <= 0 ? $"{path}/width" : $"{path}/height");
+        }
+        else if (place.X < 0 || place.Y < 0 || place.X >= _page.Width || place.Y >= _page.Height)
+        {
+            Error(DiagnosticCodes.BadTextBox, Invariant($"The text box starts at {place.X:0.#} pt, {place.Y:0.#} pt, which isn't on the {_page.Width:0.#} × {_page.Height:0.#} pt page. x and y are measured from the paper's top-left corner."), place.X < 0 || place.X >= _page.Width ? $"{path}/x" : $"{path}/y");
+        }
+        else
+        {
+            if (place.X + place.Width > _page.Width + 0.01 || place.Y + place.Height > _page.Height + 0.01)
+            {
+                Warning(DiagnosticCodes.TextBoxOffPage, "The text box reaches past the edge of the page, so part of it can't be seen.", path);
+            }
+
+            if (place.Padding.Left.Points + place.Padding.Right.Points >= place.Width || place.Padding.Top.Points + place.Padding.Bottom.Points >= place.Height)
+            {
+                Error(DiagnosticCodes.BadTextBox, "The text box's padding leaves no room for text.", $"{path}/padding");
+            }
+        }
+
+        if (box.MinSize is { } min && min.Points <= 0)
+        {
+            Error(DiagnosticCodes.BadTextBox, "A text box's minSize is more than zero.", $"{path}/minSize");
+        }
+
+        if (box.BorderWidth is { } border)
+        {
+            NotNegative(border, $"{path}/borderWidth");
+        }
+
+        if (box.Content.IsDefaultOrEmpty)
+        {
+            Error(DiagnosticCodes.BadTextBox, "A text box needs \"content\": its paragraphs.", $"{path}/content");
+            return;
+        }
+
+        for (int b = 0; b < box.Content.Length; b++)
+        {
+            string blockPath = $"{path}/content/{b}";
+            if (box.Content[b] is not (Paragraph or Repeat or Conditional or null))
+            {
+                Error(DiagnosticCodes.BadTextBox, "A text box holds paragraphs only (or repeats and whens that make them).", blockPath);
+                continue;
+            }
+
+            Block(box.Content[b], blockPath);
         }
     }
 

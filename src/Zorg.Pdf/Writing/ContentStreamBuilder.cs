@@ -143,6 +143,17 @@ internal sealed class ContentStreamBuilder
         return Operator("f"u8);
     }
 
+    /// <summary><c>re S</c>: strokes a rectangle's outline.</summary>
+    public ContentStreamBuilder StrokeRectangle(double x, double y, double width, double height)
+    {
+        Number(x);
+        Number(y);
+        Number(width);
+        Number(height);
+        Operator("re"u8);
+        return Operator("S"u8);
+    }
+
     /// <summary><c>m l S</c>: strokes a straight line.</summary>
     public ContentStreamBuilder StrokeLine(double x1, double y1, double x2, double y2)
     {

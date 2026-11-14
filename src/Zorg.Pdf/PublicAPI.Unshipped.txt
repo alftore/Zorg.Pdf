@@ -750,6 +750,46 @@ Zorg.Pdf.TextAlign.Center = 1 -> Zorg.Pdf.TextAlign
 Zorg.Pdf.TextAlign.Justify = 3 -> Zorg.Pdf.TextAlign
 Zorg.Pdf.TextAlign.Left = 0 -> Zorg.Pdf.TextAlign
 Zorg.Pdf.TextAlign.Right = 2 -> Zorg.Pdf.TextAlign
+Zorg.Pdf.TextBox
+override Zorg.Pdf.TextBox.<Clone>$() -> Zorg.Pdf.TextBox!
+Zorg.Pdf.TextBox.BorderColor.get -> Zorg.Pdf.Color?
+Zorg.Pdf.TextBox.BorderColor.init -> void
+Zorg.Pdf.TextBox.BorderWidth.get -> Zorg.Pdf.Length?
+Zorg.Pdf.TextBox.BorderWidth.init -> void
+Zorg.Pdf.TextBox.Content.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!>
+Zorg.Pdf.TextBox.Content.init -> void
+override sealed Zorg.Pdf.TextBox.Equals(Zorg.Pdf.Block? other) -> bool
+Zorg.Pdf.TextBox.Equals(Zorg.Pdf.TextBox? other) -> bool
+override Zorg.Pdf.TextBox.Equals(object? obj) -> bool
+override Zorg.Pdf.TextBox.GetHashCode() -> int
+Zorg.Pdf.TextBox.Height.get -> Zorg.Pdf.Length?
+Zorg.Pdf.TextBox.Height.init -> void
+Zorg.Pdf.TextBox.MinSize.get -> Zorg.Pdf.Length?
+Zorg.Pdf.TextBox.MinSize.init -> void
+Zorg.Pdf.TextBox.Overflow.get -> Zorg.Pdf.TextOverflow
+Zorg.Pdf.TextBox.Overflow.init -> void
+Zorg.Pdf.TextBox.Padding.get -> Zorg.Pdf.Thickness?
+Zorg.Pdf.TextBox.Padding.init -> void
+Zorg.Pdf.TextBox.Preset.get -> Zorg.Pdf.TextBoxPreset
+Zorg.Pdf.TextBox.Preset.init -> void
+Zorg.Pdf.TextBox.TextBox(System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Block!> content) -> void
+override Zorg.Pdf.TextBox.ToString() -> string!
+Zorg.Pdf.TextBox.Width.get -> Zorg.Pdf.Length?
+Zorg.Pdf.TextBox.Width.init -> void
+Zorg.Pdf.TextBox.X.get -> Zorg.Pdf.Length?
+Zorg.Pdf.TextBox.X.init -> void
+Zorg.Pdf.TextBox.Y.get -> Zorg.Pdf.Length?
+Zorg.Pdf.TextBox.Y.init -> void
+static Zorg.Pdf.TextBox.operator !=(Zorg.Pdf.TextBox? left, Zorg.Pdf.TextBox? right) -> bool
+static Zorg.Pdf.TextBox.operator ==(Zorg.Pdf.TextBox? left, Zorg.Pdf.TextBox? right) -> bool
+Zorg.Pdf.TextBoxPreset
+Zorg.Pdf.TextBoxPreset.Din5008A = 1 -> Zorg.Pdf.TextBoxPreset
+Zorg.Pdf.TextBoxPreset.Din5008B = 2 -> Zorg.Pdf.TextBoxPreset
+Zorg.Pdf.TextBoxPreset.None = 0 -> Zorg.Pdf.TextBoxPreset
+Zorg.Pdf.TextOverflow
+Zorg.Pdf.TextOverflow.Clip = 1 -> Zorg.Pdf.TextOverflow
+Zorg.Pdf.TextOverflow.ShrinkToFit = 0 -> Zorg.Pdf.TextOverflow
+Zorg.Pdf.TextOverflow.Visible = 2 -> Zorg.Pdf.TextOverflow
 Zorg.Pdf.TextRun
 override Zorg.Pdf.TextRun.<Clone>$() -> Zorg.Pdf.TextRun!
 Zorg.Pdf.TextRun.Deconstruct(out string! Text) -> void
