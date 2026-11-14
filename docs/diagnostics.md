@@ -52,6 +52,7 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-M001 | Warning | Markdown (Zorg.Pdf.Markdown) has raw HTML, which isn't rendered: it was left out. The path is `markdown:line:column`. | Write it in Markdown, or leave it out. |
 | ZPDF-M002 | Info | A Markdown construct was simplified or left out: strikethrough, an image inside text, a heading or table in a list item, front matter keys other than `title` and `lang`. | Restructure it, or accept the simpler form. |
 | ZPDF-M003 | Info | A Markdown link's target isn't one a PDF can use (`https://`, `http://`, `mailto:` or `#id`), or the link is in a table cell: its text was kept without the link. | Use an absolute URL or a block id, and keep links out of tables for now. |
+| ZPDF-M004 | Error | The Markdown is nested too deeply to read: lists, quotes, emphasis or links inside each other past the parser's depth limit. Nothing is rendered. | Flatten the nesting. |
 | ZPDF-L001 | Warning | Rows joined by a `rowSpan` are taller together than a page, so they run past the bottom margin. A single row that tall splits across pages instead; rows joined by a span don't. | Shorten the spanned rows' text, or drop the span. |
 | ZPDF-L002 | Warning | A row from a data slot doesn't fill the columns it has (counting spans); it's padded with empty cells or cut. | Give every row one cell per free column. |
 | ZPDF-L003 | Warning | The fixed-width columns are wider than the page, so all columns are scaled to fit. | Make the fixed columns narrower, or use shares (`"2*"`). |

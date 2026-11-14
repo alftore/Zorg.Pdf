@@ -93,7 +93,7 @@ internal sealed partial class RenderEngine
                 _writer.Name("S"u8);
                 _writer.Name("URI"u8);
                 _writer.Name("URI"u8);
-                _writer.LiteralString(Encoding.ASCII.GetBytes(new Uri(pending.Link.Target).AbsoluteUri)); // URIs are 7-bit ASCII.
+                _writer.LiteralString(Encoding.ASCII.GetBytes(AsciiUri(pending.Link.Target))); // URIs are 7-bit ASCII.
                 _writer.EndDictionary();
             }
 
@@ -131,5 +131,14 @@ internal sealed partial class RenderEngine
         public int Key { get; } = key;
 
         public List<(double X, double Y, double Width, double Height)> Areas { get; } = [];
+    }
+
+    /// <summary>An absolute URI in 7-bit ASCII: the path percent-encoded, an international host as punycode.</summary>
+    internal static string AsciiUri(string target)
+    {
+        var uri = new Uri(target);
+        return uri.IsUnc || uri.HostNameType != UriHostNameType.Dns || uri.Host == uri.IdnHost
+            ? uri.AbsoluteUri
+            : new UriBuilder(uri) { Host = uri.IdnHost }.Uri.AbsoluteUri;
     }
 }

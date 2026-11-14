@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Xunit;
+using Zorg.Pdf.Rendering;
 using Zorg.Pdf.Tests.Writing;
 
 namespace Zorg.Pdf.Tests.Rendering;
@@ -55,6 +56,13 @@ public sealed partial class LinkTests
         Assert.Equal(Enumerable.Range(0, 5), keys); // Page 1, its three links, page 2.
         Assert.Matches(@"/ParentTreeNextKey 5", text);
     }
+
+    [Theory]
+    [InlineData("https://bücher.example/ä(b)", "https://xn--bcher-kva.example/%C3%A4(b)")]
+    [InlineData("https://example.com/terms?a=1&b=æ", "https://example.com/terms?a=1&b=%C3%A6")]
+    [InlineData("mailto:kari@example.com", "mailto:kari@example.com")]
+    public void LinkTargetsAreWrittenAsAsciiWithPunycodeHosts(string target, string expected) =>
+        Assert.Equal(expected, RenderEngine.AsciiUri(target));
 
     [Fact]
     public void LinksRoundTripAndAreChecked()

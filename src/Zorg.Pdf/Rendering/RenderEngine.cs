@@ -171,6 +171,8 @@ internal sealed partial class RenderEngine : IDisposable
                     Arrived(list);
                     await PlaceListAsync(i, list, cancellationToken).ConfigureAwait(false);
                     break;
+                case SectionBreak when i == _document.Content.Length - 1:
+                    break; // Nothing follows: no new page, and no label range for it.
                 case SectionBreak section:
                     await PlaceSectionBreakAsync(section, cancellationToken).ConfigureAwait(false);
                     StartBandSet(i);

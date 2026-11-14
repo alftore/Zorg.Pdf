@@ -243,6 +243,11 @@ internal sealed partial class DocumentValidator
                 {
                     Error(DiagnosticCodes.BadSection, Invariant($"startAt is 1 or more; {section.StartAt} isn't."), $"{path}/startAt");
                 }
+                else if (section.StartAt > MaxStartAt(section.Numbering))
+                {
+                    // Letters repeat (a, …, z, aa, …), so a large start makes every label long.
+                    Error(DiagnosticCodes.BadSection, Invariant($"startAt is at most {MaxStartAt(section.Numbering):N0} for this numbering; {section.StartAt:N0} isn't."), $"{path}/startAt");
+                }
 
                 if (section.Prefix is { } prefix && (prefix.Length > 32 || System.Linq.Enumerable.Any(prefix, char.IsControl)))
                 {
@@ -737,4 +742,8 @@ internal sealed partial class DocumentValidator
 
     [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")]
     private static partial Regex IdPattern();
+
+    /// <summary>The largest start a section's numbering may have: 260 (zzzzzzzzzz) for letters, a billion for the rest.</summary>
+    internal static int MaxStartAt(PageNumberStyle? numbering) =>
+        numbering is PageNumberStyle.LowerLetter or PageNumberStyle.UpperLetter ? 260 : 1_000_000_000;
 }

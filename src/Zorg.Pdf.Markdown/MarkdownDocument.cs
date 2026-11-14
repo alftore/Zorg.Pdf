@@ -47,7 +47,17 @@ public static class MarkdownDocument
     {
         ArgumentNullException.ThrowIfNull(markdown);
         options ??= MarkdownOptions.Default;
-        Markdig.Syntax.MarkdownDocument parsed = Markdig.Markdown.Parse(markdown, Pipeline);
+        Markdig.Syntax.MarkdownDocument parsed;
+        try
+        {
+            parsed = Markdig.Markdown.Parse(markdown, Pipeline);
+        }
+        catch (ArgumentException ex) when (ex.Message.Contains("nested", StringComparison.OrdinalIgnoreCase))
+        {
+            // Markdig stops at its depth limit (lists, quotes, emphasis or links inside each other) by throwing.
+            var empty = new PdfDocument(options.Title ?? "Untitled") { Language = options.Language ?? "en", Styles = options.Styles };
+            return new MarkdownResult(empty, [new PdfDiagnostic("ZPDF-M004", DiagnosticSeverity.Error, "The Markdown is nested too deeply (lists, quotes, emphasis or links inside each other) to read.", "markdown")]);
+        }
         var converter = new Converter();
         (string? title, string? language) = converter.FrontMatter(parsed);
         ImmutableArray<Block> content = converter.Blocks(parsed);

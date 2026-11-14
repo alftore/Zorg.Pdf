@@ -114,12 +114,32 @@ internal sealed partial class RenderEngine
         _tagger.End(tocElement, _documentWriter.Pages);
     }
 
-    /// <summary>Room for the widest page number this document can have, in the entry's style.</summary>
+    /// <summary>
+    /// Room for the widest page label this document can have, in the entry's style: digits up to the page limit, and
+    /// for each section's numbering and prefix the longest labels its first pages can have.
+    /// </summary>
     private double NumberColumn(TextStyle style)
     {
-        string widest = new('0', _options.Limits.MaxPages.ToString(CultureInfo.InvariantCulture).Length);
-        PreparedText digits = LayoutText(new Paragraph(widest), style, "/", fields: null, report: false, width: 1e6);
-        return digits.Lines is [{ } line, ..] ? line.Width : 0;
+        var samples = new HashSet<string>(StringComparer.Ordinal) { new('0', _options.Limits.MaxPages.ToString(CultureInfo.InvariantCulture).Length) };
+        IEnumerable<(PageNumberStyle Style, int Start, string? Prefix)> numberings =
+            _document.Content.OfType<SectionBreak>().Select(s => (s.Numbering ?? PageNumberStyle.Number, s.StartAt ?? 1, s.Prefix)).Prepend((_document.Numbering, 1, null));
+        int span = Math.Min(_options.Limits.MaxPages, 2000);
+        foreach ((PageNumberStyle numbering, int start, string? prefix) in numberings)
+        {
+            foreach (string label in Enumerable.Range(0, span).Select(n => (prefix ?? "") + Number(start + n, numbering)).OrderByDescending(l => l.Length).Take(3))
+            {
+                samples.Add(label);
+            }
+        }
+
+        double widest = 0;
+        foreach (string sample in samples)
+        {
+            PreparedText text = LayoutText(new Paragraph(sample), style, "/", fields: null, report: false, width: 1e6);
+            widest = Math.Max(widest, text.Lines is [{ } line, ..] ? line.Width : 0);
+        }
+
+        return widest;
     }
 
     /// <summary>Spaced dots from <paramref name="from"/> to <paramref name="to"/>, ending at <paramref name="to"/>: a layout artifact.</summary>

@@ -57,6 +57,44 @@ public sealed class SectionTests
     }
 
     [Fact]
+    public async Task ABreakWithNothingAfterItAddsNoPage()
+    {
+        var document = new PdfDocument("x") { Content = [new Paragraph("a"), new SectionBreak { Numbering = PageNumberStyle.LowerRoman }] };
+
+        (byte[] file, _) = await RenderTests.RenderAsync(document, PdfInspect.Options());
+
+        Assert.Single(PdfInspect.PageStreams(file));
+        Assert.DoesNotContain("/PageLabels", PdfInspect.Text(file), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LargeStartsAreRefusedWhereTheyWouldMakeLongOrOverflowingLabels()
+    {
+        static PdfDocument Start(PageNumberStyle style, int start) => new("x") { Content = [new SectionBreak { Numbering = style, StartAt = start }, new Paragraph("a")] };
+
+        Assert.Equal("ZPDF-J029", Assert.Single(Start(PageNumberStyle.UpperLetter, 2_000_000_000).Validate().Diagnostics).Code);
+        Assert.Empty(Start(PageNumberStyle.UpperLetter, 260).Validate().Diagnostics);
+        Assert.Empty(Start(PageNumberStyle.Number, 1_000_000_000).Validate().Diagnostics);
+        Assert.Single(Start(PageNumberStyle.Number, int.MaxValue).Validate().Diagnostics);
+    }
+
+    [Fact]
+    public async Task TheContentsMakeRoomForLongLabels()
+    {
+        static PdfDocument Contents(string? prefix) => new("x")
+        {
+            Content = [new TableOfContents(), new SectionBreak { Numbering = PageNumberStyle.UpperRoman, StartAt = 3888, Prefix = prefix }, new Heading("Late")],
+        };
+
+        (byte[] plain, _) = await RenderTests.RenderAsync(Contents(null), PdfInspect.Options());
+        (byte[] prefixed, _) = await RenderTests.RenderAsync(Contents("Appendix-Section-"), PdfInspect.Options());
+
+        static int Dots(byte[] file) => Text(PdfInspect.PageStreams(file)[0][0].Content).Max(t => t.Count(c => c == '.'));
+        Assert.Contains("Appendix-Section-MMMDCCCLXXXVIII", Text(PdfInspect.PageStreams(prefixed)[0][1].Content));
+        Assert.True(Dots(prefixed) <= Dots(plain) - 10, $"Leaders: {Dots(prefixed)} with the prefix, {Dots(plain)} without."); // The leaders stop before the longer label.
+    }
+
+    [Fact]
     public async Task PlainNumberingWritesNoLabels()
     {
         (byte[] file, _) = await RenderTests.RenderAsync(new PdfDocument("x") { Content = [new Paragraph("a"), new SectionBreak(), new Paragraph("b")] }, PdfInspect.Options());

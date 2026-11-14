@@ -115,6 +115,31 @@ public sealed class MarkdownTests
         Assert.Equal("Untitled", MarkdownDocument.Parse("text").Document.Title);
     }
 
+    [Theory]
+    [InlineData("quotes")]
+    [InlineData("lists")]
+    [InlineData("links")]
+    public void MarkdownNestedPastTheParsersLimitIsAnErrorNotACrash(string nesting)
+    {
+        string text = nesting switch
+        {
+            "quotes" => new string('>', 200) + " x",
+            "lists" => string.Concat(Enumerable.Range(0, 120).Select(i => new string(' ', i * 2) + "- a\n")),
+            _ => new string('[', 300) + "x" + string.Concat(Enumerable.Repeat("](https://u.example)", 300)),
+        };
+
+        MarkdownResult result = MarkdownDocument.Parse(text);
+
+        if (nesting == "links")
+        {
+            Assert.NotEmpty(result.Document.Content); // Markdig reads these without nesting them deeply: no crash, no error.
+            return;
+        }
+
+        Assert.Equal(DiagnosticSeverity.Error, Assert.Single(result.Diagnostics, d => d.Code == "ZPDF-M004").Severity);
+        Assert.Empty(result.Document.Content);
+    }
+
     [Fact]
     public async Task AMarkdownDocumentRendersTaggedWithItsImage()
     {

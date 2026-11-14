@@ -71,6 +71,7 @@ internal static class DiagnosticCodes
     public const string MarkdownHtml = "ZPDF-M001";        // Reported by Zorg.Pdf.Markdown.
     public const string MarkdownSimplified = "ZPDF-M002";
     public const string MarkdownLink = "ZPDF-M003";
+    public const string MarkdownTooDeep = "ZPDF-M004";
     public const string TextShrunk = "ZPDF-L005";
     public const string TextOverflow = "ZPDF-L006";
     public const string TextBoxOffPage = "ZPDF-L007";
