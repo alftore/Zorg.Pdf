@@ -17,6 +17,32 @@ namespace Zorg.Pdf.Rendering;
 internal static class Preflight
 {
     /// <summary>The style of a run: its block's style with the run's own on top.</summary>
+    /// <summary>Every character a page label can have in this document: digits, and the letters and prefixes its sections use.</summary>
+    public static string LabelCharacters(PdfDocument document)
+    {
+        var characters = new System.Text.StringBuilder("0123456789");
+        void Add(PageNumberStyle style) => characters.Append(style switch
+        {
+            PageNumberStyle.LowerRoman => "ivxlcdm",
+            PageNumberStyle.UpperRoman => "IVXLCDM",
+            PageNumberStyle.LowerLetter => "abcdefghijklmnopqrstuvwxyz",
+            PageNumberStyle.UpperLetter => "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            _ => "",
+        });
+
+        Add(document.Numbering);
+        foreach (Block block in document.Content)
+        {
+            if (block is SectionBreak section)
+            {
+                Add(section.Numbering ?? PageNumberStyle.Number);
+                characters.Append(section.Prefix);
+            }
+        }
+
+        return characters.ToString();
+    }
+
     /// <summary>The table of contents' entries: each top-level heading within its levels, with its index, level and text.</summary>
     public static List<(int Index, Heading Heading, int Level, string Text)> TocEntries(PdfDocument document, TableOfContents toc)
     {
@@ -232,7 +258,7 @@ internal static class Preflight
 
                     foreach ((_, _, int level, string entry) in TocEntries(document, toc))
                     {
-                        Characters(entry + "0123456789.", Chain(styles.Named($"toc{level}")), path); // Any page number, and the leader dots.
+                        Characters(entry + LabelCharacters(document) + ".", Chain(styles.Named($"toc{level}")), path); // Any page label, and the leader dots.
                     }
 
                     break;
@@ -305,7 +331,7 @@ internal static class Preflight
                         Inlines(link.Inlines, block.Merge(styles.LinkStyle), $"{path}/{j}/inlines", inBand);
                         break;
                     case Field when inBand:
-                        Characters("0123456789", Chain(block), $"{path}/{j}"); // Any digit may be drawn.
+                        Characters(LabelCharacters(document), Chain(block), $"{path}/{j}"); // Any page label may be drawn.
                         break;
                     case Field:
                         sink.Warning(DiagnosticCodes.NotDrawnYet, "Page number fields are drawn only in headers and footers in this version; the field is left out.", $"{path}/{j}");

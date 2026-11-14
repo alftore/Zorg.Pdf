@@ -120,7 +120,7 @@ internal sealed partial class RenderEngine
         _content.SetFillGray(0);
         _fill = Color.Black;
         (_stroke, _strokeWidth, _renderingMode) = (null, 1, 0);
-        string Field(FieldKind kind) => (kind == FieldKind.PageCount ? pages : page).ToString(CultureInfo.InvariantCulture);
+        string Field(FieldKind kind) => kind == FieldKind.PageCount ? pages.ToString(CultureInfo.InvariantCulture) : Label(page - 1);
         if (_header is not null)
         {
             DrawBand(_header, LayoutBand(_header, Field, report: false), _pageGeometry.Top);

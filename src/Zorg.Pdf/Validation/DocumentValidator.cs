@@ -238,6 +238,24 @@ internal sealed partial class DocumentValidator
                 TextBox(box, path);
                 break;
 
+            case SectionBreak section:
+                if (section.StartAt is < 1)
+                {
+                    Error(DiagnosticCodes.BadSection, Invariant($"startAt is 1 or more; {section.StartAt} isn't."), $"{path}/startAt");
+                }
+
+                if (section.Prefix is { } prefix && (prefix.Length > 32 || System.Linq.Enumerable.Any(prefix, char.IsControl)))
+                {
+                    Error(DiagnosticCodes.BadSection, "A prefix is a few characters of text, such as \"A-\".", $"{path}/prefix");
+                }
+
+                if (!_anchorPaths.Contains(path))
+                {
+                    Error(DiagnosticCodes.BadSection, "A section break goes at the top level of the content (or in a top-level when).", path);
+                }
+
+                break;
+
             case TableOfContents toc:
                 if (toc.MaxLevel is < 1 or > 6)
                 {

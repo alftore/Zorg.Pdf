@@ -433,6 +433,12 @@ Zorg.Pdf.PageBreak.PageBreak() -> void
 override Zorg.Pdf.PageBreak.ToString() -> string!
 static Zorg.Pdf.PageBreak.operator !=(Zorg.Pdf.PageBreak? left, Zorg.Pdf.PageBreak? right) -> bool
 static Zorg.Pdf.PageBreak.operator ==(Zorg.Pdf.PageBreak? left, Zorg.Pdf.PageBreak? right) -> bool
+Zorg.Pdf.PageNumberStyle
+Zorg.Pdf.PageNumberStyle.LowerLetter = 3 -> Zorg.Pdf.PageNumberStyle
+Zorg.Pdf.PageNumberStyle.LowerRoman = 1 -> Zorg.Pdf.PageNumberStyle
+Zorg.Pdf.PageNumberStyle.Number = 0 -> Zorg.Pdf.PageNumberStyle
+Zorg.Pdf.PageNumberStyle.UpperLetter = 4 -> Zorg.Pdf.PageNumberStyle
+Zorg.Pdf.PageNumberStyle.UpperRoman = 2 -> Zorg.Pdf.PageNumberStyle
 Zorg.Pdf.PageOrientation
 Zorg.Pdf.PageOrientation.Landscape = 1 -> Zorg.Pdf.PageOrientation
 Zorg.Pdf.PageOrientation.Portrait = 0 -> Zorg.Pdf.PageOrientation
@@ -538,6 +544,8 @@ Zorg.Pdf.PdfDocument.Header.get -> Zorg.Pdf.PageBand?
 Zorg.Pdf.PdfDocument.Header.init -> void
 Zorg.Pdf.PdfDocument.Language.get -> string!
 Zorg.Pdf.PdfDocument.Language.init -> void
+Zorg.Pdf.PdfDocument.Numbering.get -> Zorg.Pdf.PageNumberStyle
+Zorg.Pdf.PdfDocument.Numbering.init -> void
 Zorg.Pdf.PdfDocument.OutlineLevels.get -> int
 Zorg.Pdf.PdfDocument.OutlineLevels.init -> void
 Zorg.Pdf.PdfDocument.Page.get -> Zorg.Pdf.PageSettings!
@@ -682,6 +690,22 @@ Zorg.Pdf.RepeatedTableRows.RepeatedTableRows(string! Items, System.Collections.I
 override Zorg.Pdf.RepeatedTableRows.ToString() -> string!
 static Zorg.Pdf.RepeatedTableRows.operator !=(Zorg.Pdf.RepeatedTableRows? left, Zorg.Pdf.RepeatedTableRows? right) -> bool
 static Zorg.Pdf.RepeatedTableRows.operator ==(Zorg.Pdf.RepeatedTableRows? left, Zorg.Pdf.RepeatedTableRows? right) -> bool
+Zorg.Pdf.SectionBreak
+override Zorg.Pdf.SectionBreak.<Clone>$() -> Zorg.Pdf.SectionBreak!
+override sealed Zorg.Pdf.SectionBreak.Equals(Zorg.Pdf.Block? other) -> bool
+Zorg.Pdf.SectionBreak.Equals(Zorg.Pdf.SectionBreak? other) -> bool
+override Zorg.Pdf.SectionBreak.Equals(object? obj) -> bool
+override Zorg.Pdf.SectionBreak.GetHashCode() -> int
+Zorg.Pdf.SectionBreak.Numbering.get -> Zorg.Pdf.PageNumberStyle?
+Zorg.Pdf.SectionBreak.Numbering.init -> void
+Zorg.Pdf.SectionBreak.Prefix.get -> string?
+Zorg.Pdf.SectionBreak.Prefix.init -> void
+Zorg.Pdf.SectionBreak.SectionBreak() -> void
+Zorg.Pdf.SectionBreak.StartAt.get -> int?
+Zorg.Pdf.SectionBreak.StartAt.init -> void
+override Zorg.Pdf.SectionBreak.ToString() -> string!
+static Zorg.Pdf.SectionBreak.operator !=(Zorg.Pdf.SectionBreak? left, Zorg.Pdf.SectionBreak? right) -> bool
+static Zorg.Pdf.SectionBreak.operator ==(Zorg.Pdf.SectionBreak? left, Zorg.Pdf.SectionBreak? right) -> bool
 Zorg.Pdf.SlotImageSource
 override Zorg.Pdf.SlotImageSource.<Clone>$() -> Zorg.Pdf.SlotImageSource!
 Zorg.Pdf.SlotImageSource.Deconstruct(out string! Slot) -> void

@@ -169,7 +169,7 @@ internal sealed partial class RenderEngine
     }
 
     /// <summary>Letters and numerals in lower case: ASCII only, so no culture can change them.</summary>
-    private static string AsciiLower(string text) => string.Create(text.Length, text, static (span, source) =>
+    internal static string AsciiLower(string text) => string.Create(text.Length, text, static (span, source) =>
     {
         for (int i = 0; i < source.Length; i++)
         {

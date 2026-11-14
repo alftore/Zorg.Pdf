@@ -36,6 +36,7 @@ internal static class DiagnosticCodes
     public const string BadOutline = "ZPDF-J026";
     public const string BadLink = "ZPDF-J027";
     public const string BadTableOfContents = "ZPDF-J028";
+    public const string BadSection = "ZPDF-J029";
 
     // B: binding a template to its model.
     public const string BindingMissing = "ZPDF-B001";

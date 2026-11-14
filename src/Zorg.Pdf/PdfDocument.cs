@@ -46,8 +46,8 @@ public sealed record PdfDocument
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, Watermark? watermark = null, StyleSheet? styles = null, ImmutableArray<Block> content = default, int outlineLevels = 3) =>
-        (Title, Schema, Language, Page, Header, Footer, Watermark, Styles, Content, OutlineLevels) = (title, schema, language, page ?? PageSettings.A4, header, footer, watermark, styles, content.IsDefault ? [] : content, outlineLevels);
+    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, Watermark? watermark = null, StyleSheet? styles = null, ImmutableArray<Block> content = default, int outlineLevels = 3, PageNumberStyle numbering = PageNumberStyle.Number) =>
+        (Title, Schema, Language, Page, Header, Footer, Watermark, Styles, Content, OutlineLevels, Numbering) = (title, schema, language, page ?? PageSettings.A4, header, footer, watermark, styles, content.IsDefault ? [] : content, outlineLevels, numbering);
 
     /// <summary>A document with a title.</summary>
     /// <param name="title">The title, shown by viewers in place of the file name and required for accessibility.</param>
@@ -88,6 +88,18 @@ public sealed record PdfDocument
     /// </code>
     /// </example>
     public int OutlineLevels { get; init; } = 3;
+
+    /// <summary>
+    /// How the pages are numbered until the first <see cref="SectionBreak"/>: 1, 2, 3 by default; roman for front
+    /// matter. The numbers are the viewer's page labels and what page number fields show.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// var thesis = document with { Numbering = PageNumberStyle.LowerRoman };
+    /// </code>
+    /// </example>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public PageNumberStyle Numbering { get; init; }
 
     /// <summary>Named styles, on top of <see cref="StyleSheet.Default"/>. Null: the defaults only.</summary>
     public StyleSheet? Styles { get; init; }

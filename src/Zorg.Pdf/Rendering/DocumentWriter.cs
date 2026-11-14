@@ -172,7 +172,7 @@ internal sealed class DocumentWriter
     }
 
     /// <summary>Writes the page tree, Info, XMP and catalog. Returns the Info dictionary for the trailer.</summary>
-    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot, IReadOnlyList<OutlineEntry> outline, IReadOnlyDictionary<string, (int Page, double Top)> destinations)
+    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot, IReadOnlyList<OutlineEntry> outline, IReadOnlyDictionary<string, (int Page, double Top)> destinations, IReadOnlyList<PageSection> labels)
     {
         PdfReference? outlines = outline.Count > 0 ? WriteOutline(outline) : null;
         _writer.BeginObject(PageTree);
@@ -246,6 +246,45 @@ internal sealed class DocumentWriter
             _writer.Reference(outlineRoot);
             _writer.Name("PageMode"u8);
             _writer.Name("UseOutlines"u8);
+        }
+
+        if (labels.Count > 0)
+        {
+            // A number tree with one node: where each section starts and how it counts (ISO 32000-1, 12.4.2).
+            _writer.Name("PageLabels"u8);
+            _writer.BeginDictionary();
+            _writer.Name("Nums"u8);
+            _writer.BeginArray();
+            foreach (PageSection section in labels)
+            {
+                _writer.Integer(section.FirstPage);
+                _writer.BeginDictionary();
+                _writer.Name("S"u8);
+                _writer.Name(section.Style switch
+                {
+                    PageNumberStyle.LowerRoman => "r"u8,
+                    PageNumberStyle.UpperRoman => "R"u8,
+                    PageNumberStyle.LowerLetter => "a"u8,
+                    PageNumberStyle.UpperLetter => "A"u8,
+                    _ => "D"u8,
+                });
+                if (section.Start != 1)
+                {
+                    _writer.Name("St"u8);
+                    _writer.Integer(section.Start);
+                }
+
+                if (section.Prefix is { } prefix)
+                {
+                    _writer.Name("P"u8);
+                    _writer.TextString(prefix);
+                }
+
+                _writer.EndDictionary();
+            }
+
+            _writer.EndArray();
+            _writer.EndDictionary();
         }
 
         if (destinations.Count > 0)

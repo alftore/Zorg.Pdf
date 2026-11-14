@@ -135,6 +135,7 @@ internal sealed partial class RenderEngine : IDisposable
     private async ValueTask RunAsync(CancellationToken cancellationToken)
     {
         PrepareTableOfContents();
+        StartSections();
         StartPage();
         for (int i = 0; i < _document.Content.Length; i++)
         {
@@ -167,6 +168,10 @@ internal sealed partial class RenderEngine : IDisposable
                     Arrived(list);
                     await PlaceListAsync(i, list, cancellationToken).ConfigureAwait(false);
                     break;
+                case SectionBreak section:
+                    await PlaceSectionBreakAsync(section, cancellationToken).ConfigureAwait(false);
+                    Arrived(section);
+                    break;
                 case TableOfContents toc:
                     Arrived(toc);
                     await PlaceTableOfContentsAsync(i, toc, cancellationToken).ConfigureAwait(false);
@@ -194,7 +199,7 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         _tagger.Finish(_documentWriter.Pages);
-        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot, _outline, _destinations);
+        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot, _outline, _destinations, PageLabels());
         await _writer.FinishAsync(_documentWriter.Catalog, info, cancellationToken).ConfigureAwait(false);
     }
 

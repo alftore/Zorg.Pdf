@@ -170,7 +170,7 @@ internal sealed partial class RenderEngine
             (_stroke, _strokeWidth, _renderingMode) = (null, 1, 0);
             foreach (TocNumber number in _tocNumbers.Where(n => n.Page == page))
             {
-                string text = (_headingPages.TryGetValue(number.Heading, out int target) ? target + 1 : 0).ToString(CultureInfo.InvariantCulture);
+                string text = _headingPages.TryGetValue(number.Heading, out int target) ? Label(target) : "";
                 PreparedText digits = LayoutText(new Paragraph(text), number.Style, "/", fields: null, report: false, width: 1e6);
                 if (digits.Lines is not [{ } line, ..])
                 {

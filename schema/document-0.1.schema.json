@@ -14,6 +14,7 @@
     "header": { "description": "Content at the top of every page.", "$ref": "#/$defs/pageBand" },
     "footer": { "description": "Content at the bottom of every page.", "$ref": "#/$defs/pageBand" },
     "watermark": { "description": "Text or an image across every page, such as DRAFT.", "$ref": "#/$defs/watermark" },
+    "numbering": { "description": "How pages are numbered until the first section break.", "$ref": "#/$defs/pageNumberStyle" },
     "outlineLevels": { "description": "Headings of level 1 to this one become the viewer's bookmarks; 0 for none.", "type": "integer", "minimum": 0, "maximum": 6, "default": 3 },
     "styles": { "$ref": "#/$defs/styleSheet" },
     "content": { "description": "The blocks, in reading order.", "type": "array", "items": { "$ref": "#/$defs/block" } }
@@ -153,7 +154,7 @@
       "description": "Something that flows down the page. The \"type\" property says which.",
       "type": "object",
       "required": ["type"],
-      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents"] } },
+      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents", "sectionBreak"] } },
       "oneOf": [
         { "$ref": "#/$defs/heading" },
         { "$ref": "#/$defs/paragraph" },
@@ -165,8 +166,25 @@
         { "$ref": "#/$defs/repeat" },
         { "$ref": "#/$defs/when" },
         { "$ref": "#/$defs/textBox" },
-        { "$ref": "#/$defs/tableOfContents" }
+        { "$ref": "#/$defs/tableOfContents" },
+        { "$ref": "#/$defs/sectionBreak" }
       ]
+    },
+    "pageNumberStyle": { "description": "How pages are numbered.", "enum": ["number", "lowerRoman", "upperRoman", "lowerLetter", "upperLetter"] },
+    "sectionBreak": {
+      "description": "Starts a new page and a new page numbering from there on: the viewer's page labels, page number fields and table of contents numbers.",
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "sectionBreak" },
+        "style": { "description": "A named style.", "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
+        "numbering": { "$ref": "#/$defs/pageNumberStyle" },
+        "startAt": { "description": "The number of the section's first page; by default 1 when the numbering changes, else the count continues.", "type": "integer", "minimum": 1 },
+        "prefix": { "description": "Text before each page number, such as A-.", "type": "string", "maxLength": 32 }
+      }
     },
     "tableOfContents": {
       "description": "One entry per top-level heading of levels 1 to maxLevel, indented by level, with dot leaders and page numbers filled in when the document is finished. Each entry links to its heading. Styles toc1 to toc6.",
