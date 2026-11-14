@@ -120,7 +120,13 @@
         }
       ],
       "rows": {
-        "$data": "invoices"
+        "repeat": "invoices",
+        "cells": [
+          { "bind": "number" },
+          { "bind": "date" },
+          { "bind": "due" },
+          { "bind": "amount", "format": "N2" }
+        ]
       }
     },
     {

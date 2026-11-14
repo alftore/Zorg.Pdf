@@ -361,6 +361,42 @@ internal sealed partial class DocumentValidator
 
                 break;
 
+            case RepeatedTableRows repeated:
+                if (string.IsNullOrWhiteSpace(repeated.Items))
+                {
+                    Error(DiagnosticCodes.BadTemplate, "Repeated rows need \"repeat\": the path of an array in the model.", $"{path}/rows/repeat");
+                }
+
+                if (repeated.Cells.IsDefaultOrEmpty)
+                {
+                    Error(DiagnosticCodes.BadTemplate, "Repeated rows need \"cells\": the cells of each row.", $"{path}/rows/cells");
+                    break;
+                }
+
+                int filled = 0;
+                for (int c = 0; c < repeated.Cells.Length; c++)
+                {
+                    if (repeated.Cells[c] is not { } cell)
+                    {
+                        Error(DiagnosticCodes.MissingProperty, "A cell is null. Use \"\" for an empty cell.", $"{path}/rows/cells/{c}");
+                        continue;
+                    }
+
+                    Inlines(cell.Inlines, $"{path}/rows/cells/{c}/inlines");
+                    filled += Math.Max(cell.ColumnSpan, 1);
+                    if (cell.ColumnSpan < 1 || cell.RowSpan != 1)
+                    {
+                        Error(DiagnosticCodes.CellCount, "A repeated row's cells span 1 or more columns and exactly 1 row: each row is made on its own.", $"{path}/rows/cells/{c}");
+                    }
+                }
+
+                if (filled != table.Columns.Length)
+                {
+                    Error(DiagnosticCodes.CellCount, Invariant($"The repeated row fills {filled} of the {table.Columns.Length} columns; every column needs a cell. Count each cell's columnSpan."), $"{path}/rows/cells");
+                }
+
+                break;
+
             case BoundTableRows bound when string.IsNullOrWhiteSpace(bound.Slot):
                 Error(DiagnosticCodes.EmptySlot, "A data slot needs a name.", $"{path}/rows/$data");
                 break;

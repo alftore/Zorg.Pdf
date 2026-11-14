@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -18,7 +19,8 @@ public sealed class TemplateTests
           "due": "2026-12-14",
           "overdue": false,
           "notes": [{ "text": "Hours are rounded to the half hour." }, { "text": "Travel is billed at cost." }],
-          "groups": [{ "name": "Oslo", "people": ["Kari", "Ola"] }, { "name": "Bergen", "people": [] }]
+          "groups": [{ "name": "Oslo", "people": ["Kari", "Ola"] }, { "name": "Bergen", "people": [] }],
+          "lines": [{ "item": "Consulting", "hours": 37.5, "amount": 46875 }, { "item": "Travel", "amount": 7500.5 }]
         }
         """;
 
@@ -154,6 +156,109 @@ public sealed class TemplateTests
         Assert.False(result.HasWarnings, string.Join(Environment.NewLine, result.Diagnostics));
         PdfFile.CheckStructure(file);
         Assert.Single(PdfInspect.Elements(file, "LI"));
+    }
+
+    [Fact]
+    public void RowTemplatesRoundTripThroughJsonWithTheCellShorthand()
+    {
+        string json = """{"title":"x","content":[{"type":"table","columns":[{"header":"Item"},{"header":"Amount"}],"rows":{"repeat":"lines","cells":[{"bind":"item"},{"bind":"amount","format":"N2","align":"right"}]}}]}""";
+        PdfDocument template = PdfDocument.ParseJson(json);
+
+        RepeatedTableRows rows = Assert.IsType<RepeatedTableRows>(((Table)template.Content[0]).Rows);
+        Assert.Equal("lines", rows.Items);
+        Assert.Equal(new Bind("amount") { Format = "N2" }, Assert.Single(rows.Cells[1].Inlines));
+        Assert.Equal(TextAlign.Right, rows.Cells[1].Align);
+        Assert.Equal(template.ToJson(), PdfDocument.ParseJson(template.ToJson()).ToJson());
+        Assert.True(template.Validate().IsValid);
+    }
+
+    [Theory]
+    [InlineData("""{"$data":"lines","repeat":"lines","cells":["x","y"]}""", "not both")]
+    [InlineData("""{"repeat":"lines"}""", "\"cells\"")]
+    [InlineData("""{"cells":["x","y"]}""", "\"repeat\"")]
+    [InlineData("""{"repeat":"lines","cells":[{"bind":"a","inlines":["b"]},"y"]}""", "not both")]
+    [InlineData("""{"repeat":"lines","cells":[{"format":"N2"},"y"]}""", "goes with")]
+    public void BrokenRowTemplatesAreJsonErrors(string rows, string message)
+    {
+        DocumentParseResult parsed = PdfDocument.TryParseJson($$"""{"title":"x","content":[{"type":"table","columns":[{"header":"A"},{"header":"B"}],"rows":{{rows}}}]}""");
+
+        Assert.Null(parsed.Document);
+        Assert.Contains(message, Assert.Single(parsed.Diagnostics).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RowTemplatesMakeOneRowPerItem()
+    {
+        PdfDocument bound = Bind(new PdfDocument("x")
+        {
+            Language = "nb-NO",
+            Content =
+            [
+                new Table([new Column("#"), new Column("Item"), new Column("Amount")])
+                {
+                    Rows = TableRows.Repeat("lines", [new Cell([new Bind("@number")]), new Cell([new Bind("item"), " for ", new Bind("customer.name")]), new Cell([new Bind("amount") { Format = "N2" }])]),
+                },
+            ],
+        });
+
+        ImmutableArray<ImmutableArray<Cell>> rows = Assert.IsType<InlineTableRows>(((Table)bound.Content[0]).Rows).Rows;
+        Assert.Equal(
+            [["1", "Consulting for Blåbær & Syltetøy AB", "46 875,00"], ["2", "Travel for Blåbær & Syltetøy AB", "7 500,50"]],
+            rows.Select(r => r.Select(c => string.Concat(c.Inlines.OfType<TextRun>().Select(t => t.Text))).ToArray()));
+    }
+
+    [Fact]
+    public void RowTemplateProblemsAreReportedOnceAtTheTemplatesPath()
+    {
+        var sink = new DiagnosticSink();
+        var template = new PdfDocument("x")
+        {
+            Content =
+            [
+                new Table([new Column("Item"), new Column("Hours")]) { Rows = TableRows.Repeat("lines", [new Cell([new Bind("item")]), new Cell([new Bind("hours")])]) },
+                new Table([new Column("Item")]) { Rows = TableRows.Repeat("customer", [new Cell([new Bind("item")])]) },
+            ],
+        };
+        using JsonDocument model = JsonDocument.Parse(Model);
+
+        PdfDocument bound = TemplateBinder.Bind(template, model.RootElement, sink);
+
+        Assert.Equal(["ZPDF-B001 /content/0/rows/cells/1/inlines/0/bind", "ZPDF-B002 /content/1/rows/repeat"], sink.ToImmutable().Select(d => $"{d.Code} {d.Path}"));
+        Assert.Empty(Assert.IsType<InlineTableRows>(((Table)bound.Content[1]).Rows).Rows);
+    }
+
+    [Fact]
+    public void RowTemplatesAreChecked()
+    {
+        var document = new PdfDocument("x")
+        {
+            Content =
+            [
+                new Table([new Column("A"), new Column("B")]) { Rows = TableRows.Repeat(" ", [new Cell("a"), new Cell("b") { RowSpan = 2 }]) },
+                new Table([new Column("A"), new Column("B")]) { Rows = TableRows.Repeat("lines", [new Cell("a")]) },
+                new Table([new Column("A")]) { Rows = TableRows.Repeat("lines", []) },
+            ],
+        };
+
+        Assert.Equal(
+            ["ZPDF-J023 /content/0/rows/repeat", "ZPDF-J012 /content/0/rows/cells/1", "ZPDF-J012 /content/1/rows/cells", "ZPDF-J023 /content/2/rows/cells"],
+            document.Validate().Diagnostics.Select(d => $"{d.Code} {d.Path}"));
+    }
+
+    [Fact]
+    public async Task ARowTemplateRendersAsTaggedRows()
+    {
+        var template = new PdfDocument("Lines")
+        {
+            Content = [new Table([new Column("Item"), new Column("Amount")]) { Rows = TableRows.Repeat("lines", [new Cell([new Bind("item")]), new Cell([new Bind("amount") { Format = "N2" }])]) }],
+        };
+        using JsonDocument model = JsonDocument.Parse(Model);
+
+        (byte[] file, RenderResult result) = await RenderTests.RenderAsync(template, new RenderOptions { Fonts = PdfInspect.Options().Fonts, Data = PdfData.Empty.WithModel(model.RootElement), Conformance = PdfConformance.PdfUA1 });
+
+        Assert.False(result.HasWarnings, string.Join(Environment.NewLine, result.Diagnostics));
+        PdfFile.CheckStructure(file);
+        Assert.Equal(3, PdfInspect.Elements(file, "TR").Count); // The header and two rows.
     }
 
     private static PdfDocument Bind(PdfDocument template)

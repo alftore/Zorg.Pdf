@@ -272,9 +272,21 @@
       }
     },
     "cell": {
-      "description": "A cell: a string, or inlines with an alignment and spans.",
+      "description": "A cell: a string, inlines with an alignment and spans, or one binding ({ \"bind\": \"amount\", \"format\": \"N2\" }).",
       "oneOf": [
         { "type": "string" },
+        {
+          "type": "object",
+          "required": ["bind"],
+          "additionalProperties": false,
+          "properties": {
+            "bind": { "description": "The path of a value in the template model.", "type": "string", "minLength": 1 },
+            "format": { "description": "A .NET format string for numbers and dates, in the document's language.", "type": "string" },
+            "align": { "$ref": "#/$defs/textAlign" },
+            "columnSpan": { "type": "integer", "minimum": 1, "default": 1 },
+            "rowSpan": { "type": "integer", "minimum": 1, "default": 1 }
+          }
+        },
         {
           "type": "object",
           "required": ["inlines"],
@@ -299,10 +311,20 @@
         "keepWithNext": { "type": "boolean", "default": false },
         "columns": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/column" } },
         "rows": {
-          "description": "Rows in the document (each one cell per column), or a slot filled when rendering.",
+          "description": "Rows in the document (each one cell per column), a slot filled when rendering, or one row per item of a model array.",
           "oneOf": [
             { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/cell" } } },
-            { "$ref": "#/$defs/slot" }
+            { "$ref": "#/$defs/slot" },
+            {
+              "description": "One row per element of the array at \"repeat\" in the model; inside, bindings name the element's fields.",
+              "type": "object",
+              "required": ["repeat", "cells"],
+              "additionalProperties": false,
+              "properties": {
+                "repeat": { "description": "The path of an array in the model.", "type": "string", "minLength": 1 },
+                "cells": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/cell" } }
+              }
+            }
           ]
         },
         "repeatHeader": { "type": "boolean", "default": true },

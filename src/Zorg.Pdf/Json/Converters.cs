@@ -424,6 +424,7 @@ internal sealed class CellJsonConverter : JsonConverter<Cell>
 
         ImmutableArray<Inline>? inlines = null;
         TextAlign? align = null;
+        string? bind = null, format = null;
         int columnSpan = 1, rowSpan = 1;
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
@@ -445,9 +446,21 @@ internal sealed class CellJsonConverter : JsonConverter<Cell>
                     break;
                 case "columnSpan" or "rowSpan":
                     throw new PdfJsonException(DiagnosticCodes.InvalidJson, $"\"{name}\" must be a whole number.") { Suffix = "/" + name };
+                case "bind" or "format":
+                    string text = reader.TokenType == JsonTokenType.String ? reader.GetString()! : throw new PdfJsonException(DiagnosticCodes.InvalidJson, $"\"{name}\" must be a string.") { Suffix = "/" + name };
+                    (bind, format) = name == "bind" ? (text, format) : (bind, text);
+                    break;
                 default:
-                    throw PdfJsonException.UnknownProperty(name, "inlines, align, columnSpan or rowSpan");
+                    throw PdfJsonException.UnknownProperty(name, "inlines, bind, format, align, columnSpan or rowSpan");
             }
+        }
+
+        if (bind is not null || format is not null)
+        {
+            // Shorthand for a cell holding one binding: { "bind": "amount", "format": "N2" }.
+            inlines = inlines is null && bind is not null
+                ? [new Bind(bind) { Format = format }]
+                : throw new PdfJsonException(DiagnosticCodes.InvalidJson, bind is null ? "\"format\" goes with \"bind\"." : "A cell has \"inlines\" or \"bind\", not both.");
         }
 
         return inlines is { } found
@@ -531,9 +544,11 @@ internal sealed class ListItemJsonConverter : JsonConverter<ListItem>
     }
 }
 
-/// <summary>Table rows: an array of rows, or <c>{ "$data": "slot" }</c>.</summary>
+/// <summary>Table rows: an array of rows, <c>{ "$data": "slot" }</c>, or <c>{ "repeat": "lines", "cells": [...] }</c>.</summary>
 internal sealed class TableRowsJsonConverter : JsonConverter<TableRows>
 {
+    private const string Expected = "Expected rows: an array of rows, { \"$data\": \"slot\" }, or { \"repeat\": \"lines\", \"cells\": [...] }.";
+
     public override TableRows Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.StartArray)
@@ -541,7 +556,40 @@ internal sealed class TableRowsJsonConverter : JsonConverter<TableRows>
             return new InlineTableRows(PdfJsonException.Read<ImmutableArray<ImmutableArray<Cell>>>(ref reader, options, ""));
         }
 
-        return new BoundTableRows(SlotJson.Read(ref reader, "rows"));
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw PdfJsonException.Invalid(Expected);
+        }
+
+        string? slot = null, items = null;
+        ImmutableArray<Cell>? cells = null;
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            string name = reader.GetString()!;
+            reader.Read();
+            switch (name)
+            {
+                case "$data" or "repeat":
+                    string text = reader.TokenType == JsonTokenType.String ? reader.GetString()! : throw new PdfJsonException(DiagnosticCodes.InvalidJson, $"\"{name}\" must be a string.") { Suffix = "/" + name };
+                    (slot, items) = name == "$data" ? (text, items) : (slot, text);
+                    break;
+                case "cells":
+                    cells = PdfJsonException.Read<ImmutableArray<Cell>>(ref reader, options, "cells");
+                    break;
+                default:
+                    throw PdfJsonException.UnknownProperty(name, "$data, or repeat and cells");
+            }
+        }
+
+        return (slot, items, cells) switch
+        {
+            ({ } found, null, null) => new BoundTableRows(found),
+            (null, { } path, { } template) => new RepeatedTableRows(path, template),
+            (null, { }, null) => throw new PdfJsonException(DiagnosticCodes.MissingProperty, "Repeated rows need \"cells\": the cells of each row.") { Suffix = "/cells" },
+            (null, null, { }) => throw new PdfJsonException(DiagnosticCodes.MissingProperty, "Repeated rows need \"repeat\": the path of an array in the model.") { Suffix = "/repeat" },
+            (null, null, null) => throw new PdfJsonException(DiagnosticCodes.MissingProperty, "A data slot needs \"$data\"."),
+            _ => throw PdfJsonException.Invalid("Rows come from a slot (\"$data\") or a repeat, not both."),
+        };
     }
 
     public override void Write(Utf8JsonWriter writer, TableRows value, JsonSerializerOptions options)
@@ -553,6 +601,13 @@ internal sealed class TableRowsJsonConverter : JsonConverter<TableRows>
                 break;
             case BoundTableRows bound:
                 SlotJson.Write(writer, bound.Slot);
+                break;
+            case RepeatedTableRows repeated:
+                writer.WriteStartObject();
+                writer.WriteString("repeat", repeated.Items);
+                writer.WritePropertyName("cells");
+                JsonSerializer.Serialize(writer, repeated.Cells, (JsonTypeInfo<ImmutableArray<Cell>>)options.GetTypeInfo(typeof(ImmutableArray<Cell>)));
+                writer.WriteEndObject();
                 break;
             default:
                 throw new NotSupportedException($"Row source {value?.GetType().Name ?? "null"} can't be written as JSON.");

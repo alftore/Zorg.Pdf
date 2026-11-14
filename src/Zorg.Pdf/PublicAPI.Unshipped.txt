@@ -63,6 +63,7 @@ Zorg.Pdf.Cell.<Clone>$() -> Zorg.Pdf.Cell!
 Zorg.Pdf.Cell.Align.get -> Zorg.Pdf.TextAlign?
 Zorg.Pdf.Cell.Align.init -> void
 Zorg.Pdf.Cell.Cell() -> void
+Zorg.Pdf.Cell.Cell(System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Inline!> inlines) -> void
 Zorg.Pdf.Cell.Cell(string! text) -> void
 Zorg.Pdf.Cell.ColumnSpan.get -> int
 Zorg.Pdf.Cell.ColumnSpan.init -> void
@@ -173,9 +174,12 @@ Zorg.Pdf.FontWeight.Bold = 1 -> Zorg.Pdf.FontWeight
 Zorg.Pdf.FontWeight.Normal = 0 -> Zorg.Pdf.FontWeight
 Zorg.Pdf.Fonts.FontCollection
 Zorg.Pdf.Fonts.FontCollection.Add(Zorg.Pdf.Fonts.FontFamily! family) -> Zorg.Pdf.Fonts.FontCollection!
+Zorg.Pdf.Fonts.FontCollection.AddRange(Zorg.Pdf.Fonts.FontCollection! other) -> Zorg.Pdf.Fonts.FontCollection!
 Zorg.Pdf.Fonts.FontCollection.DefaultFamily.get -> string?
 static Zorg.Pdf.Fonts.FontCollection.Empty.get -> Zorg.Pdf.Fonts.FontCollection!
 Zorg.Pdf.Fonts.FontCollection.Families.get -> System.Collections.Immutable.ImmutableDictionary<string!, Zorg.Pdf.Fonts.FontFamily!>!
+static Zorg.Pdf.Fonts.FontCollection.FromFiles(System.Collections.Generic.IEnumerable<string!>! paths) -> Zorg.Pdf.Fonts.FontCollection!
+static Zorg.Pdf.Fonts.FontCollection.FromFolder(string! folder) -> Zorg.Pdf.Fonts.FontCollection!
 Zorg.Pdf.Fonts.FontCollection.WithDefault(string! familyName) -> Zorg.Pdf.Fonts.FontCollection!
 Zorg.Pdf.Fonts.FontFamily
 Zorg.Pdf.Fonts.FontFamily.<Clone>$() -> Zorg.Pdf.Fonts.FontFamily!
@@ -634,6 +638,21 @@ Zorg.Pdf.Repeat.Repeat(string! items, System.Collections.Immutable.ImmutableArra
 override Zorg.Pdf.Repeat.ToString() -> string!
 static Zorg.Pdf.Repeat.operator !=(Zorg.Pdf.Repeat? left, Zorg.Pdf.Repeat? right) -> bool
 static Zorg.Pdf.Repeat.operator ==(Zorg.Pdf.Repeat? left, Zorg.Pdf.Repeat? right) -> bool
+Zorg.Pdf.RepeatedTableRows
+override Zorg.Pdf.RepeatedTableRows.<Clone>$() -> Zorg.Pdf.RepeatedTableRows!
+Zorg.Pdf.RepeatedTableRows.Cells.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Cell!>
+Zorg.Pdf.RepeatedTableRows.Cells.init -> void
+Zorg.Pdf.RepeatedTableRows.Deconstruct(out string! Items, out System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Cell!> Cells) -> void
+Zorg.Pdf.RepeatedTableRows.Equals(Zorg.Pdf.RepeatedTableRows? other) -> bool
+override sealed Zorg.Pdf.RepeatedTableRows.Equals(Zorg.Pdf.TableRows? other) -> bool
+override Zorg.Pdf.RepeatedTableRows.Equals(object? obj) -> bool
+override Zorg.Pdf.RepeatedTableRows.GetHashCode() -> int
+Zorg.Pdf.RepeatedTableRows.Items.get -> string!
+Zorg.Pdf.RepeatedTableRows.Items.init -> void
+Zorg.Pdf.RepeatedTableRows.RepeatedTableRows(string! Items, System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Cell!> Cells) -> void
+override Zorg.Pdf.RepeatedTableRows.ToString() -> string!
+static Zorg.Pdf.RepeatedTableRows.operator !=(Zorg.Pdf.RepeatedTableRows? left, Zorg.Pdf.RepeatedTableRows? right) -> bool
+static Zorg.Pdf.RepeatedTableRows.operator ==(Zorg.Pdf.RepeatedTableRows? left, Zorg.Pdf.RepeatedTableRows? right) -> bool
 Zorg.Pdf.SlotImageSource
 override Zorg.Pdf.SlotImageSource.<Clone>$() -> Zorg.Pdf.SlotImageSource!
 Zorg.Pdf.SlotImageSource.Deconstruct(out string! Slot) -> void
@@ -701,6 +720,7 @@ override Zorg.Pdf.TableRows.Equals(object? obj) -> bool
 override Zorg.Pdf.TableRows.GetHashCode() -> int
 static Zorg.Pdf.TableRows.Inline(System.Collections.Immutable.ImmutableArray<System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Cell!>> rows) -> Zorg.Pdf.TableRows!
 virtual Zorg.Pdf.TableRows.PrintMembers(System.Text.StringBuilder! builder) -> bool
+static Zorg.Pdf.TableRows.Repeat(string! items, System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Cell!> cells) -> Zorg.Pdf.TableRows!
 Zorg.Pdf.TableRows.TableRows() -> void
 Zorg.Pdf.TableRows.TableRows(Zorg.Pdf.TableRows! original) -> void
 override Zorg.Pdf.TableRows.ToString() -> string!
@@ -828,6 +848,3 @@ Zorg.Pdf.WatermarkLayer.Over = 0 -> Zorg.Pdf.WatermarkLayer
 ~override Zorg.Pdf.RenderProgress.ToString() -> string
 ~override Zorg.Pdf.Thickness.Equals(object obj) -> bool
 ~override Zorg.Pdf.Thickness.ToString() -> string
-static Zorg.Pdf.Fonts.FontCollection.FromFiles(System.Collections.Generic.IEnumerable<string!>! paths) -> Zorg.Pdf.Fonts.FontCollection!
-static Zorg.Pdf.Fonts.FontCollection.FromFolder(string! folder) -> Zorg.Pdf.Fonts.FontCollection!
-Zorg.Pdf.Fonts.FontCollection.AddRange(Zorg.Pdf.Fonts.FontCollection! other) -> Zorg.Pdf.Fonts.FontCollection!

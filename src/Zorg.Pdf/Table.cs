@@ -174,6 +174,16 @@ public sealed record Cell
     [SetsRequiredMembers]
     public Cell(string text) => Inlines = [new TextRun(text)];
 
+    /// <summary>A cell of inlines: styled runs, line breaks or template bindings.</summary>
+    /// <param name="inlines">The inlines.</param>
+    /// <example>
+    /// <code>
+    /// var amount = new Cell([new Bind("amount") { Format = "N2" }]) { Align = TextAlign.Right };
+    /// </code>
+    /// </example>
+    [SetsRequiredMembers]
+    public Cell(ImmutableArray<Inline> inlines) => Inlines = inlines;
+
     /// <summary>The text.</summary>
     public required ImmutableArray<Inline> Inlines { get; init; }
 
@@ -197,8 +207,8 @@ public sealed record Cell
 }
 
 /// <summary>
-/// Where a table's rows come from. In JSON an array of rows (each an array of cells), or <c>{ "$data": "slot" }</c> for
-/// rows supplied when rendering.
+/// Where a table's rows come from. In JSON an array of rows (each an array of cells), <c>{ "$data": "slot" }</c> for
+/// rows supplied when rendering, or <c>{ "repeat": "lines", "cells": [...] }</c> for one row per item of a model array.
 /// </summary>
 [JsonConverter(typeof(TableRowsJsonConverter))]
 public abstract record TableRows
@@ -215,6 +225,20 @@ public abstract record TableRows
     /// <param name="slot">The slot name.</param>
     /// <returns>The rows.</returns>
     public static TableRows Bound(string slot) => new BoundTableRows(slot);
+
+    /// <summary>
+    /// One row per element of an array in the template model, made from <paramref name="cells"/> with each element as
+    /// the scope of their <see cref="Bind"/> inlines. For rows from a database or another stream, use a slot instead.
+    /// </summary>
+    /// <param name="items">The path of the array in the model, such as <c>"lines"</c>.</param>
+    /// <param name="cells">The row's cells. They may span columns, not rows.</param>
+    /// <returns>The rows.</returns>
+    /// <example>
+    /// <code>
+    /// Rows = TableRows.Repeat("lines", [new Cell([new Bind("description")]), new Cell([new Bind("amount") { Format = "N2" }])]),
+    /// </code>
+    /// </example>
+    public static TableRows Repeat(string items, ImmutableArray<Cell> cells) => new RepeatedTableRows(items, cells);
 }
 
 /// <summary>Rows written in the document.</summary>
@@ -224,3 +248,8 @@ public sealed record InlineTableRows(ImmutableArray<ImmutableArray<Cell>> Rows) 
 /// <summary>Rows supplied when rendering, under a slot name.</summary>
 /// <param name="Slot">The slot name.</param>
 public sealed record BoundTableRows(string Slot) : TableRows;
+
+/// <summary>One row per element of an array in the template model.</summary>
+/// <param name="Items">The path of the array in the model.</param>
+/// <param name="Cells">The cells of each row, bound with the element as their scope.</param>
+public sealed record RepeatedTableRows(string Items, ImmutableArray<Cell> Cells) : TableRows;

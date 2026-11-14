@@ -17,7 +17,7 @@ public sealed partial class ConsistencyTests
 {
     /// <summary>Property names the custom converters read, which the source-generated metadata doesn't list.</summary>
     private static readonly HashSet<string> ConverterProperties =
-        ["top", "right", "bottom", "left", "width", "height", "size", "orientation", "margin", "text", "style", "field", "lineBreak", "inlines", "align", "base64", "$data", "$schema", "type", "columnSpan", "rowSpan", "bind", "format"];
+        ["top", "right", "bottom", "left", "width", "height", "size", "orientation", "margin", "text", "style", "field", "lineBreak", "inlines", "align", "base64", "$data", "$schema", "type", "columnSpan", "rowSpan", "bind", "format", "repeat", "cells"];
 
     [Fact]
     public void EveryDiagnosticCodeIsDocumentedAndEveryDocumentedCodeExists()

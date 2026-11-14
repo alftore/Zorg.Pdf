@@ -26,7 +26,7 @@ internal sealed class TemplateBinder
 
     /// <summary>True when the document uses any template feature, so plain documents skip binding.</summary>
     public static bool IsTemplate(PdfDocument document) =>
-        Blocks(document).Any(b => b is Repeat or Conditional || Inlines(b).Any(i => i is Bind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
+        Blocks(document).Any(b => b is Repeat or Conditional or Table { Rows: RepeatedTableRows } || Inlines(b).Any(i => i is Bind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
 
     public static PdfDocument Bind(PdfDocument template, JsonElement? model, DiagnosticSink sink)
     {
@@ -148,6 +148,10 @@ internal sealed class TemplateBinder
 
                 return;
 
+            case Table { Rows: RepeatedTableRows repeated } table:
+                output.Add(table with { Rows = TableRows.Inline(RepeatRows(repeated, $"{path}/rows")) });
+                return;
+
             case Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } table:
                 output.Add(table with
                 {
@@ -182,6 +186,33 @@ internal sealed class TemplateBinder
             items.Add(new ListItem(ExpandAll(repeat.Content.IsDefault ? [] : repeat.Content, $"{path}/content")));
             _scopes.RemoveAt(_scopes.Count - 1);
         }
+    }
+
+    /// <summary>One row per element of the array, each made from the row's cells with the element as scope.</summary>
+    private ImmutableArray<ImmutableArray<Cell>> RepeatRows(RepeatedTableRows repeated, string path)
+    {
+        JsonElement? found = Resolve(repeated.Items, $"{path}/repeat", out bool exists);
+        if (found is not { ValueKind: JsonValueKind.Array } array)
+        {
+            if (exists && found is { ValueKind: not JsonValueKind.Null })
+            {
+                Report(DiagnosticCodes.RepeatNotArray, $"\"{repeated.Items}\" is a {Kind(found.Value)}, not an array, so the table has no rows.", $"{path}/repeat");
+            }
+
+            return [];
+        }
+
+        ImmutableArray<Cell> cells = repeated.Cells.IsDefault ? [] : repeated.Cells;
+        var rows = ImmutableArray.CreateBuilder<ImmutableArray<Cell>>(array.GetArrayLength());
+        int index = 0;
+        foreach (JsonElement element in array.EnumerateArray())
+        {
+            _scopes.Add(new Scope(element, index++));
+            rows.Add([.. cells.Select((cell, c) => cell is null || cell.Inlines.IsDefault ? cell! : cell with { Inlines = BindInlines(cell.Inlines, $"{path}/cells/{c}/inlines") })]);
+            _scopes.RemoveAt(_scopes.Count - 1);
+        }
+
+        return rows.MoveToImmutable();
     }
 
     private ImmutableArray<Block> ExpandAll(ImmutableArray<Block> blocks, string path)
