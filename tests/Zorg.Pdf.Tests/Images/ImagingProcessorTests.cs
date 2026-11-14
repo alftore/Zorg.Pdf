@@ -34,6 +34,17 @@ public sealed class ImagingProcessorTests
     }
 
     [Fact]
+    public async Task AnAlphaChannelNothingUsesGetsNoSoftMask()
+    {
+        byte[] webp = Encode(80, 40, (x, y) => [(byte)(x * 3), (byte)(y * 6), 90, 255], image => image.SaveAsWebp);
+        (byte[] file, _) = await RenderAsync(webp, width: null);
+
+        string pdf = PdfInspect.Text(file);
+        Assert.Contains("/Width 80 /Height 40 /ColorSpace /DeviceRGB", pdf, StringComparison.Ordinal);
+        Assert.DoesNotContain("/SMask", pdf, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ACameraJpegIsTurnedTheRightWayUp()
     {
         byte[] sideways = WithOrientation(TestImages.Jpeg(40, 24), 6); // Stored landscape, shown portrait.

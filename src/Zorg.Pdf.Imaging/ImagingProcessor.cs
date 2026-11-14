@@ -61,7 +61,7 @@ public sealed class ImagingProcessor : IImageProcessor
 
     private PdfImage? Process(ImageRequest request)
     {
-        byte[] bytes = request.Bytes.ToArray();
+        ReadOnlyMemory<byte> bytes = request.Bytes; // Read in place: no copy.
         IdentifyResult identified = ZorgImage.Identify(bytes, new IdentifyOptions { Limits = Limits });
         if (!identified.Succeeded || identified.Info is not { } info)
         {
@@ -79,10 +79,12 @@ public sealed class ImagingProcessor : IImageProcessor
             return null; // Zorg.Pdf embeds it as it is.
         }
 
-        // Grey, RGB or RGBA go into a PDF image directly; anything else (16-bit, BGRA) is decoded again as RGBA.
-        using ZorgImage decoded = Decode(bytes, PixelFormat.None) is var native && native.PixelFormat is PixelFormat.L8 or PixelFormat.Rgb24 or PixelFormat.Rgba32
+        // A JPEG larger than it's drawn decodes at 1/2, 1/4 or 1/8 size straight away (still at least twice the target).
+        // Grey, RGB or RGBA go into a PDF image directly; anything else (16-bit, BGRA) is converted to RGBA.
+        ZorgImage native = ZorgImage.Decode(bytes, new DecodeOptions { Limits = Limits, ApplyOrientation = true, ShrinkTo = tooLarge ? (targetWidth, targetHeight) : null });
+        using ZorgImage decoded = native.PixelFormat is PixelFormat.L8 or PixelFormat.Rgb24 or PixelFormat.Rgba32
             ? native
-            : Replace(native, Decode(bytes, PixelFormat.Rgba32));
+            : Replace(native, native.Convert(PixelFormat.Rgba32));
         ZorgImage image = decoded;
         try
         {
@@ -102,7 +104,9 @@ public sealed class ImagingProcessor : IImageProcessor
                 image = fitted;
             }
 
-            PdfImage result = info.Format == ImageFormat.Jpeg && !info.HasAlpha ? Jpeg(image) : Pixels(image, info.HasAlpha);
+            // An alpha channel every pixel leaves opaque (common in exported PNG and WebP) needs no soft mask.
+            bool transparent = image.PixelFormat == PixelFormat.Rgba32 && !image.IsOpaque();
+            PdfImage result = info.Format == ImageFormat.Jpeg && !transparent ? Jpeg(image) : Pixels(image, transparent);
 
             // Drawn at the size of the original, the right way up, when the block doesn't set one.
             return result with { NaturalWidth = info.DisplayWidth, NaturalHeight = info.DisplayHeight };
@@ -115,9 +119,6 @@ public sealed class ImagingProcessor : IImageProcessor
             }
         }
     }
-
-    private ZorgImage Decode(byte[] bytes, PixelFormat format) =>
-        ZorgImage.Decode(bytes, new DecodeOptions { Limits = Limits, ApplyOrientation = true, PixelFormat = format });
 
     private static ZorgImage Replace(ZorgImage old, ZorgImage replacement)
     {
