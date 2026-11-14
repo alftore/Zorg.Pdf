@@ -19,6 +19,7 @@ internal enum StructureRole
     TR,
     TH,
     TD,
+    Figure,
 }
 
 /// <summary>
@@ -29,7 +30,7 @@ internal enum StructureRole
 internal sealed class Tagger
 {
     private static readonly byte[][] RoleNames =
-        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
+        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD", "Figure" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
 
     private readonly PdfObjectWriter _writer;
     private readonly List<List<PdfReference>> _parentTree = []; // Per page, the element that owns each MCID.
@@ -122,6 +123,29 @@ internal sealed class Tagger
         _writer.Name(Name(element.Role));
         _writer.Name("P"u8);
         _writer.Reference(element.Parent);
+        if (element.Alt is { } alt)
+        {
+            _writer.Name("Alt"u8);
+            _writer.TextString(alt);
+        }
+
+        if (element.BBox is { } box)
+        {
+            // Where the figure is on its page (ISO 32000-1, 14.8.5.4.3), for tools that reflow or crop.
+            _writer.Name("A"u8);
+            _writer.BeginDictionary();
+            _writer.Name("O"u8);
+            _writer.Name("Layout"u8);
+            _writer.Name("BBox"u8);
+            _writer.BeginArray();
+            _writer.Real(box.Left);
+            _writer.Real(box.Bottom);
+            _writer.Real(box.Right);
+            _writer.Real(box.Top);
+            _writer.EndArray();
+            _writer.EndDictionary();
+        }
+
         if (element.ColumnHeader)
         {
             // Header cells say what they head (PDF/UA-1 7.5): every header here heads its column.
@@ -196,6 +220,12 @@ internal sealed class Tagger
 
         /// <summary>A TH that heads its column.</summary>
         public bool ColumnHeader { get; init; }
+
+        /// <summary>Replacement text, for a figure.</summary>
+        public string? Alt { get; set; }
+
+        /// <summary>The bounding box on the page, for a figure.</summary>
+        public (double Left, double Bottom, double Right, double Top)? BBox { get; set; }
 
         public List<object> Kids { get; } = [];
     }

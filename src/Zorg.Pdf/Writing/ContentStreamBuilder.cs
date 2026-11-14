@@ -37,6 +37,17 @@ internal sealed class ContentStreamBuilder
         return Operator("cm"u8);
     }
 
+    /// <summary><c>cm</c>: scales the unit square to <paramref name="width"/> × <paramref name="height"/> at (x, y), to draw an image.</summary>
+    public ContentStreamBuilder Place(double x, double y, double width, double height)
+    {
+        Number(width);
+        Write("0 0 "u8);
+        Number(height);
+        Number(x);
+        Number(y);
+        return Operator("cm"u8);
+    }
+
     /// <summary><c>Tm</c> with a slant: places the next line at (x, y), sheared by <paramref name="shear"/> (tan of the angle).</summary>
     public ContentStreamBuilder SetTextMatrix(double shear, double x, double y)
     {
@@ -124,7 +135,7 @@ internal sealed class ContentStreamBuilder
         return Operator("S"u8);
     }
 
-    /// <summary><c>Do</c>: draws a form XObject from the page resources.</summary>
+    /// <summary><c>Do</c>: draws an XObject (an image or a form) from the page resources.</summary>
     public ContentStreamBuilder DrawXObject(ReadOnlySpan<byte> resourceName)
     {
         PdfFormat.WriteName(_buffer, resourceName);

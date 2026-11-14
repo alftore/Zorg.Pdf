@@ -35,6 +35,8 @@ internal sealed partial class RenderEngine : IDisposable
     private readonly RenderOptions _options;
     private readonly StyleResolver _styles;
     private readonly FontSet _fonts;
+    private readonly ImageSet _images;
+    private readonly HashSet<ImageSet.Entry> _pageImages = [];
     private readonly string? _defaultFamily;
     private readonly DiagnosticSink _sink;
     private readonly PdfObjectWriter _writer;
@@ -57,8 +59,9 @@ internal sealed partial class RenderEngine : IDisposable
     private EmbeddedFont? _textFont;
     private double _textSize;
 
-    private RenderEngine(PdfDocument document, RenderOptions options, StyleResolver styles, FontSet fonts, string? defaultFamily, DiagnosticSink sink, Stream output, bool synchronous)
+    private RenderEngine(PdfDocument document, RenderOptions options, StyleResolver styles, FontSet fonts, ImageSet images, string? defaultFamily, DiagnosticSink sink, Stream output, bool synchronous)
     {
+        _images = images;
         _document = document;
         _options = options;
         _styles = styles;
@@ -93,13 +96,14 @@ internal sealed partial class RenderEngine : IDisposable
 
         Dictionary<FaceKey, string> needed = sink.HasErrors ? [] : Preflight.NeededFaces(document, styles, defaultFamily, sink);
         FontSet fonts = await FontSet.LoadAsync(options, needed, sink, synchronous, cancellationToken).ConfigureAwait(false);
+        ImageSet images = await ImageSet.LoadAsync(document, options, sink, synchronous, cancellationToken).ConfigureAwait(false);
         Preflight.Check(document, styles, fonts, defaultFamily, options, synchronous, sink);
         if (sink.HasErrors)
         {
             throw new PdfDocumentException(sink.ToImmutable());
         }
 
-        using var engine = new RenderEngine(document, options, styles, fonts, defaultFamily, sink, output, synchronous);
+        using var engine = new RenderEngine(document, options, styles, fonts, images, defaultFamily, sink, output, synchronous);
         if (sink.HasErrors)
         {
             throw new PdfDocumentException(sink.ToImmutable()); // The bands leave no room; nothing has been written yet.
@@ -136,6 +140,9 @@ internal sealed partial class RenderEngine : IDisposable
                 case Table table:
                     await PlaceTableAsync(i, table, cancellationToken).ConfigureAwait(false);
                     break;
+                case Image image:
+                    await PlaceImageAsync(i, image, cancellationToken).ConfigureAwait(false);
+                    break;
             }
 
             _prepared.Remove(i);
@@ -161,9 +168,9 @@ internal sealed partial class RenderEngine : IDisposable
     private async ValueTask PlaceTextAsync(int index, CancellationToken cancellationToken)
     {
         PreparedText text = Prepare(index);
-        if (text.Keep && !_pageEmpty && NextText(index) is { } next)
+        if (text.Keep && !_pageEmpty && NextFirstHeight(index) is { } next)
         {
-            double needed = text.Height + text.SpaceAfter + next.FirstLineHeight;
+            double needed = text.Height + text.SpaceAfter + next;
             if (_y - needed < _geometry.Bottom && needed <= _geometry.ContentHeight)
             {
                 await NewPageAsync(cancellationToken).ConfigureAwait(false);
@@ -288,15 +295,20 @@ internal sealed partial class RenderEngine : IDisposable
         _content.EndText().EndMarkedContent();
     }
 
-    /// <summary>The next block, if it's text with nothing but spacers before it; null otherwise.</summary>
-    private PreparedText? NextText(int index)
+    /// <summary>
+    /// The height of the next block's first line (or of the next image), if nothing but spacers comes before it;
+    /// null for anything else. What a heading or a <see cref="Block.KeepWithNext"/> block keeps with.
+    /// </summary>
+    private double? NextFirstHeight(int index)
     {
         for (int i = index + 1; i < _document.Content.Length; i++)
         {
             switch (_document.Content[i])
             {
                 case Heading or Paragraph:
-                    return Prepare(i);
+                    return Prepare(i).FirstLineHeight;
+                case Image { Source: { } source } image when _images.TryGet(source, out ImageSet.Entry entry):
+                    return ImageSize(image, entry, _geometry.ContentWidth, _geometry.ContentHeight).Height;
                 case Spacer:
                     continue;
                 default:
@@ -416,6 +428,7 @@ internal sealed partial class RenderEngine : IDisposable
         _tagger.StartPage();
         _content = new ContentStreamBuilder();
         _pageFonts.Clear();
+        _pageImages.Clear();
         _y = _geometry.Top;
         _pageEmpty = true;
         _fill = Color.Black;
@@ -440,7 +453,22 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         fonts.Sort((a, b) => a.Font.Number.CompareTo(b.Font.Number)); // Deterministic order.
-        _documentWriter.WritePage(_page, _content.WrittenSpan, fonts, BandStream());
+        var images = new List<(byte[] Name, PdfReference Image)>();
+        foreach (ImageSet.Entry image in _pageImages)
+        {
+            images.Add(_images.Use(image, _writer));
+        }
+
+        foreach (ImageSet.Entry image in _bandImages)
+        {
+            if (!_pageImages.Contains(image))
+            {
+                images.Add(_images.Use(image, _writer));
+            }
+        }
+
+        images.Sort((a, b) => a.Image.Number.CompareTo(b.Image.Number));
+        _documentWriter.WritePage(_page, _content.WrittenSpan, fonts, images, BandStream());
         await _writer.FlushIfNeededAsync(cancellationToken).ConfigureAwait(false);
         _options.Progress?.Report(new RenderProgress(_page + 1, _writer.Position));
     }

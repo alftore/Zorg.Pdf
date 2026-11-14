@@ -114,7 +114,6 @@ public sealed class RenderDiagnosticsTests
             [
                 new Paragraph(["Total ", new TextRun("12") { Style = TextStyle.Bold }, " on page ", Field.PageNumber]),
                 new Table([new Column("A")]),
-                new Image(ImageSource.FromSlot("logo")) { Alt = "Logo" },
             ],
         };
 
@@ -125,7 +124,6 @@ public sealed class RenderDiagnosticsTests
             [
                 "Info ZPDF-F003 /content/0/inlines/1/style",
                 "Warning ZPDF-R001 /content/0/inlines/3",
-                "Warning ZPDF-R001 /content/2",
             ],
             result.Diagnostics.Select(d => $"{d.Severity} {d.Code} {d.Path}"));
         Assert.True(result.HasWarnings);

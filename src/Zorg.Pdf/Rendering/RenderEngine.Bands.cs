@@ -24,6 +24,7 @@ internal sealed partial class RenderEngine
 
     private readonly List<EmbeddedFont> _bandFonts = [];
     private readonly List<PdfReference> _bandStreams = [];
+    private readonly List<ImageSet.Entry> _bandImages = [];
     private Band? _header;
     private Band? _footer;
     private PdfReference? _sharedBandStream;
@@ -44,9 +45,14 @@ internal sealed partial class RenderEngine
 
             // Three digits for the height; every digit once to find the fonts that may draw them.
             band.Height = Height(LayoutBand(band, _ => "000", report: true));
-            foreach ((PreparedText? text, _) in LayoutBand(band, _ => "0123456789", report: false))
+            foreach (BandItem item in LayoutBand(band, _ => "0123456789", report: false))
             {
-                foreach (LayoutLine line in text?.Lines ?? [])
+                if (item.Image is { } image && !_bandImages.Contains(image))
+                {
+                    _bandImages.Add(image);
+                }
+
+                foreach (LayoutLine line in item.Text?.Lines ?? [])
                 {
                     foreach (LineRun run in line.Runs)
                     {
@@ -129,11 +135,18 @@ internal sealed partial class RenderEngine
         _writer.EndStreamObject(_content.WrittenSpan, compress: true);
     }
 
-    private void DrawBand(Band band, List<(PreparedText? Text, double Space)> items, double y)
+    private void DrawBand(Band band, List<BandItem> items, double y)
     {
         for (int i = 0; i < items.Count; i++)
         {
-            (PreparedText? text, double space) = items[i];
+            (PreparedText? text, double space, ImageSet.Entry? image, double x, double width) = items[i];
+            if (image is not null)
+            {
+                _content.BeginArtifact("Pagination"u8, band.Subtype.Span);
+                DrawImage(image, x, y - space, width, space);
+                _content.EndMarkedContent();
+            }
+
             if (text is null)
             {
                 y -= space;
@@ -158,19 +171,29 @@ internal sealed partial class RenderEngine
         }
     }
 
-    /// <summary>The band's paragraphs laid out with the given field text, and its spacers as space.</summary>
-    private List<(PreparedText? Text, double Space)> LayoutBand(Band band, Func<FieldKind, string> fields, bool report)
+    /// <summary>The band's paragraphs laid out with the given field text, its images sized to the text width, and its spacers as space.</summary>
+    private List<BandItem> LayoutBand(Band band, Func<FieldKind, string> fields, bool report)
     {
-        var items = new List<(PreparedText?, double)>();
+        var items = new List<BandItem>();
         for (int i = 0; i < band.Model.Content.Length; i++)
         {
             switch (band.Model.Content[i])
             {
                 case Paragraph paragraph:
-                    items.Add((LayoutText(paragraph, _styles.ForBand(paragraph, band.StyleName), $"{band.Path}/content/{i}", fields, report), 0));
+                    items.Add(new BandItem(LayoutText(paragraph, _styles.ForBand(paragraph, band.StyleName), $"{band.Path}/content/{i}", fields, report), 0, null, 0, 0));
                     break;
                 case Spacer spacer:
-                    items.Add((null, spacer.Height.Points));
+                    items.Add(new BandItem(null, spacer.Height.Points, null, 0, 0));
+                    break;
+                case Image { Source: { } source } image when _images.TryGet(source, out ImageSet.Entry entry):
+                    (double width, double height) = ImageSize(image, entry, _pageGeometry.ContentWidth, double.MaxValue);
+                    double x = image.Align switch
+                    {
+                        TextAlign.Center => _pageGeometry.Left + ((_pageGeometry.ContentWidth - width) / 2),
+                        TextAlign.Right => _pageGeometry.Right - width,
+                        _ => _pageGeometry.Left,
+                    };
+                    items.Add(new BandItem(null, height, entry, x, width));
                     break;
             }
         }
@@ -179,17 +202,19 @@ internal sealed partial class RenderEngine
     }
 
     /// <summary>A band's height: its blocks and the space between them, but not the space after the last.</summary>
-    private static double Height(List<(PreparedText? Text, double Space)> items)
+    private static double Height(List<BandItem> items)
     {
         double height = 0;
         for (int i = 0; i < items.Count; i++)
         {
-            (PreparedText? text, double space) = items[i];
-            height += text is null ? space : text.Height + (i < items.Count - 1 ? text.SpaceAfter : 0);
+            height += items[i].Text is { } text ? text.Height + (i < items.Count - 1 ? text.SpaceAfter : 0) : items[i].Space;
         }
 
         return height;
     }
+
+    /// <summary>One block of a band: laid-out text, or a height of space, with an image drawn in it at x and width.</summary>
+    private readonly record struct BandItem(PreparedText? Text, double Space, ImageSet.Entry? Image, double X, double Width);
 
     /// <summary>A header or footer and what's known about it before the first page.</summary>
     private sealed class Band(PageBand model, string path, string styleName, ReadOnlyMemory<byte> subtype)

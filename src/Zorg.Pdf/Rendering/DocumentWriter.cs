@@ -64,7 +64,7 @@ internal sealed class DocumentWriter
     /// stream, <paramref name="overlay"/>, is drawn after the first and may be written later (the header and footer,
     /// which need the page count).
     /// </summary>
-    public void WritePage(int index, ReadOnlySpan<byte> content, IEnumerable<(byte[] Name, PdfReference Font)> fonts, PdfReference? overlay = null)
+    public void WritePage(int index, ReadOnlySpan<byte> content, IEnumerable<(byte[] Name, PdfReference Font)> fonts, IReadOnlyCollection<(byte[] Name, PdfReference Image)> images, PdfReference? overlay = null)
     {
         PdfReference stream = _writer.Allocate();
         _writer.BeginStreamObject(stream);
@@ -94,6 +94,19 @@ internal sealed class DocumentWriter
         }
 
         _writer.EndDictionary();
+        if (images.Count > 0)
+        {
+            _writer.Name("XObject"u8);
+            _writer.BeginDictionary();
+            foreach ((byte[] name, PdfReference image) in images)
+            {
+                _writer.Name(name);
+                _writer.Reference(image);
+            }
+
+            _writer.EndDictionary();
+        }
+
         _writer.EndDictionary();
         _writer.Name("Contents"u8);
         if (overlay is { } second)

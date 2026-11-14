@@ -81,16 +81,17 @@ public sealed class BandRenderTests
     }
 
     [Fact]
-    public async Task FieldsInTheContentAreLeftOutWithAWarningAndBandImagesToo()
+    public async Task FieldsInTheContentAreLeftOutWithAWarning()
     {
         PdfDocument document = new("x")
         {
             Header = new PageBand([new Image(ImageSource.FromSlot("logo")) { Alt = "Logo" }, new Paragraph(["Page ", Field.PageNumber])]),
             Content = [new Paragraph(["On page ", Field.PageNumber])],
         };
-        (_, RenderResult result) = await RenderTests.RenderAsync(document);
+        var options = new RenderOptions { Fonts = PdfInspect.Options().Fonts, Data = PdfData.Empty.WithImage("logo", Images.TestImages.Jpeg(16, 16)) };
+        (_, RenderResult result) = await RenderTests.RenderAsync(document, options);
 
-        Assert.Equal(["ZPDF-R001 /header/content/0", "ZPDF-R001 /content/0/inlines/1"], result.Diagnostics.Select(d => $"{d.Code} {d.Path}"));
+        Assert.Equal(["ZPDF-R001 /content/0/inlines/1"], result.Diagnostics.Select(d => $"{d.Code} {d.Path}"));
     }
 
     [Fact]

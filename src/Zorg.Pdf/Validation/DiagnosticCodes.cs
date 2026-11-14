@@ -53,6 +53,10 @@ internal static class DiagnosticCodes
     public const string ColumnsTooWide = "ZPDF-L003";
     public const string BandsTooTall = "ZPDF-L004";
 
+    // I: images.
+    public const string ImageUnreadable = "ZPDF-I001";
+    public const string ImageTooLarge = "ZPDF-I002";
+
     // R: rendering and limits.
     public const string NotDrawnYet = "ZPDF-R001";
     public const string AsyncRowsInSyncRender = "ZPDF-R002";

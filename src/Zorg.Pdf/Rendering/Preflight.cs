@@ -126,9 +126,6 @@ internal static class Preflight
                 case Table table:
                     Table(table, path);
                     break;
-                case Image:
-                    sink.Warning(DiagnosticCodes.NotDrawnYet, "Images aren't drawn yet in this version; the image is left out.", path);
-                    break;
             }
         }
 
@@ -140,9 +137,6 @@ internal static class Preflight
                 {
                     case Paragraph paragraph:
                         Inlines(paragraph.Inlines, styles.ForBand(paragraph, name), $"{path}/content/{i}/inlines", inBand: true);
-                        break;
-                    case Image:
-                        sink.Warning(DiagnosticCodes.NotDrawnYet, "Images aren't drawn yet in this version; the image is left out.", $"{path}/content/{i}");
                         break;
                 }
             }

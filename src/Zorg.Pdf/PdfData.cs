@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 namespace Zorg.Pdf;
 
 /// <summary>
-/// Data for a render, by slot name: the rows of tables bound with <see cref="TableRows.Bound(string)"/>. Rows are
-/// read once, as the table is laid out, so a source can stream a million rows without holding them.
+/// Data for a render, by slot name: the rows of tables bound with <see cref="TableRows.Bound(string)"/>, and the
+/// bytes of images that name a slot with <see cref="ImageSource.FromSlot(string)"/>. Rows are read once, as the table
+/// is laid out, so a source can stream a million rows without holding them. Images are loaded before the first page,
+/// so a missing or damaged image stops the render before anything is written.
 /// </summary>
 /// <remarks>
 /// An <see cref="IAsyncEnumerable{T}"/> source needs <see cref="PdfDocument.RenderAsync"/>; the synchronous
@@ -25,12 +27,47 @@ namespace Zorg.Pdf;
 /// </example>
 public sealed class PdfData
 {
-    private PdfData(ImmutableDictionary<string, RowSource> rows) => Rows = rows;
+    private PdfData(ImmutableDictionary<string, RowSource> rows, ImmutableDictionary<string, ImageSlot> images) => (Rows, Images) = (rows, images);
 
     /// <summary>No data.</summary>
-    public static PdfData Empty { get; } = new(ImmutableDictionary<string, RowSource>.Empty.WithComparers(StringComparer.Ordinal));
+    public static PdfData Empty { get; } = new(
+        ImmutableDictionary<string, RowSource>.Empty.WithComparers(StringComparer.Ordinal),
+        ImmutableDictionary<string, ImageSlot>.Empty.WithComparers(StringComparer.Ordinal));
 
     internal ImmutableDictionary<string, RowSource> Rows { get; }
+
+    internal ImmutableDictionary<string, ImageSlot> Images { get; }
+
+    /// <summary>The bytes of a JPEG or PNG for a slot.</summary>
+    /// <param name="slot">The slot name an image's source names.</param>
+    /// <param name="bytes">The file's bytes.</param>
+    /// <returns>The data with the slot set; this instance is unchanged.</returns>
+    /// <example>
+    /// <code>
+    /// var data = PdfData.Empty.WithImage("logo", await File.ReadAllBytesAsync("logo.png", cancellationToken));
+    /// </code>
+    /// </example>
+    public PdfData WithImage(string slot, ReadOnlyMemory<byte> bytes)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(slot);
+        return new PdfData(Rows, Images.SetItem(slot, new ImageSlot(bytes, null)));
+    }
+
+    /// <summary>A JPEG or PNG for a slot, loaded when the render starts, such as from blob storage.</summary>
+    /// <param name="slot">The slot name an image's source names.</param>
+    /// <param name="load">Loads the bytes. It's called once per render, before the first page, and only when the document uses the slot.</param>
+    /// <returns>The data with the slot set; this instance is unchanged.</returns>
+    /// <example>
+    /// <code>
+    /// var data = PdfData.Empty.WithImage("logo", async ct => (await blobs.DownloadContentAsync(ct)).Value.Content.ToMemory());
+    /// </code>
+    /// </example>
+    public PdfData WithImage(string slot, Func<CancellationToken, ValueTask<ReadOnlyMemory<byte>>> load)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(slot);
+        ArgumentNullException.ThrowIfNull(load);
+        return new PdfData(Rows, Images.SetItem(slot, new ImageSlot(null, load)));
+    }
 
     /// <summary>Rows for a slot, each a list of cells (strings convert to cells).</summary>
     /// <param name="slot">The slot name a table's rows are bound to.</param>
@@ -40,7 +77,7 @@ public sealed class PdfData
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(slot);
         ArgumentNullException.ThrowIfNull(rows);
-        return new PdfData(Rows.SetItem(slot, new RowSource(new SyncRows(rows), IsAsync: false)));
+        return new PdfData(Rows.SetItem(slot, new RowSource(new SyncRows(rows), IsAsync: false)), Images);
     }
 
     /// <summary>Rows for a slot from an asynchronous source, such as a database query.</summary>
@@ -51,7 +88,7 @@ public sealed class PdfData
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(slot);
         ArgumentNullException.ThrowIfNull(rows);
-        return new PdfData(Rows.SetItem(slot, new RowSource(rows, IsAsync: true)));
+        return new PdfData(Rows.SetItem(slot, new RowSource(rows, IsAsync: true)), Images);
     }
 
     /// <summary>Rows for a slot from items, with a function that makes each item's cells.</summary>
@@ -95,6 +132,9 @@ public sealed class PdfData
             yield return cells(item);
         }
     }
+
+    /// <summary>A slot's image: its bytes, or a function that loads them (which a synchronous render can't wait for).</summary>
+    internal sealed record ImageSlot(ReadOnlyMemory<byte>? Bytes, Func<CancellationToken, ValueTask<ReadOnlyMemory<byte>>>? Load);
 
     /// <summary>A slot's rows, and whether reading them can wait on I/O.</summary>
     internal sealed record RowSource(IAsyncEnumerable<IReadOnlyList<Cell>> Rows, bool IsAsync);

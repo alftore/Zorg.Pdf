@@ -73,6 +73,15 @@ public sealed record PdfLimits
 
     /// <summary>The most body rows one table may have.</summary>
     public int MaxTableRows { get; init; } = 1_000_000;
+
+    /// <summary>The largest image file, in bytes: 50 MB.</summary>
+    public long MaxImageBytes { get; init; } = 50_000_000;
+
+    /// <summary>
+    /// The most pixels one image may have: 50 million. A PNG with transparency is decoded, at one byte per channel
+    /// per pixel, so this bounds the memory a render needs for it.
+    /// </summary>
+    public long MaxImagePixels { get; init; } = 50_000_000;
 }
 
 /// <summary>Progress of a render: pages and bytes written so far.</summary>

@@ -383,6 +383,8 @@ Zorg.Pdf.PdfConformance.None = 0 -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfConformance.PdfUA1 = 1 -> Zorg.Pdf.PdfConformance
 Zorg.Pdf.PdfData
 static Zorg.Pdf.PdfData.Empty.get -> Zorg.Pdf.PdfData!
+Zorg.Pdf.PdfData.WithImage(string! slot, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.ReadOnlyMemory<byte>>>! load) -> Zorg.Pdf.PdfData!
+Zorg.Pdf.PdfData.WithImage(string! slot, System.ReadOnlyMemory<byte> bytes) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithRows(string! slot, System.Collections.Generic.IAsyncEnumerable<System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! rows) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithRows(string! slot, System.Collections.Generic.IEnumerable<System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! rows) -> Zorg.Pdf.PdfData!
 Zorg.Pdf.PdfData.WithRows<T>(string! slot, System.Collections.Generic.IAsyncEnumerable<T>! items, System.Func<T, System.Collections.Generic.IReadOnlyList<Zorg.Pdf.Cell!>!>! cells) -> Zorg.Pdf.PdfData!
@@ -463,6 +465,10 @@ static Zorg.Pdf.PdfLimits.Default.get -> Zorg.Pdf.PdfLimits!
 Zorg.Pdf.PdfLimits.Equals(Zorg.Pdf.PdfLimits? other) -> bool
 override Zorg.Pdf.PdfLimits.Equals(object? obj) -> bool
 override Zorg.Pdf.PdfLimits.GetHashCode() -> int
+Zorg.Pdf.PdfLimits.MaxImageBytes.get -> long
+Zorg.Pdf.PdfLimits.MaxImageBytes.init -> void
+Zorg.Pdf.PdfLimits.MaxImagePixels.get -> long
+Zorg.Pdf.PdfLimits.MaxImagePixels.init -> void
 Zorg.Pdf.PdfLimits.MaxPages.get -> int
 Zorg.Pdf.PdfLimits.MaxPages.init -> void
 Zorg.Pdf.PdfLimits.MaxTableRows.get -> int

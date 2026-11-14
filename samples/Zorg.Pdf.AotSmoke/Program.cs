@@ -180,7 +180,93 @@ byte[] font = File.ReadAllBytes(fontPath);
     }
 }
 
+// 0.1 slice 6: images. A PNG with transparency (decoded, with a soft mask) as a figure, an opaque PNG (passed
+// through) as decoration, and the same logo from a data slot in the header.
+{
+    byte[] logo = Png(96, 48, (x, y) => [(byte)(x * 2), (byte)(y * 5), 160, (byte)(x < 48 ? 255 : 96)], alpha: true);
+    byte[] stripe = Png(200, 8, (x, y) => [(byte)x, 90, (byte)(255 - x)], alpha: false);
+    var imageDocument = new PdfDocument("Images")
+    {
+        Header = new PageBand([new Image(ImageSource.FromSlot("logo")) { Alt = "Zorg logo", Height = Length.Cm(1) }]),
+        Content =
+        [
+            new Heading("Images"),
+            new Image(ImageSource.FromSlot("logo")) { Alt = "The Zorg logo, larger", Width = Length.Cm(8), Align = TextAlign.Center },
+            new Image(ImageSource.FromBytes(stripe)) { Decorative = true, Width = Length.Cm(17) },
+            new Paragraph("Text after the images."),
+        ],
+    };
+    var imageOptions = new RenderOptions
+    {
+        Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }),
+        Conformance = PdfConformance.PdfUA1,
+        Data = PdfData.Empty.WithImage("logo", logo),
+    };
+    using var images = new MemoryStream();
+    RenderResult drawn = imageDocument.RenderAsync(images, imageOptions).AsTask().GetAwaiter().GetResult();
+    string imageText = Encoding.Latin1.GetString(images.ToArray());
+    Check("images", !drawn.HasWarnings && imageText.Contains("/S /Figure", StringComparison.Ordinal) && imageText.Contains("/SMask", StringComparison.Ordinal) && imageText.Contains("/Predictor 15", StringComparison.Ordinal));
+    if (saveTo is not null)
+    {
+        File.WriteAllBytes(Path.Combine(saveTo, "images.pdf"), images.ToArray());
+    }
+}
+
 return failures == 0 ? 0 : 1;
+
+// A PNG made in code, 8-bit RGB or RGBA, every row unfiltered.
+static byte[] Png(int width, int height, Func<int, int, byte[]> pixel, bool alpha)
+{
+    int channels = alpha ? 4 : 3;
+    var raw = new MemoryStream();
+    for (int y = 0; y < height; y++)
+    {
+        raw.WriteByte(0);
+        for (int x = 0; x < width; x++)
+        {
+            raw.Write(pixel(x, y), 0, channels);
+        }
+    }
+
+    var compressed = new MemoryStream();
+    using (var zlib = new System.IO.Compression.ZLibStream(compressed, System.IO.Compression.CompressionLevel.Optimal, leaveOpen: true))
+    {
+        raw.Position = 0;
+        raw.CopyTo(zlib);
+    }
+
+    var png = new MemoryStream();
+    png.Write([0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A]);
+    byte[] header = new byte[13];
+    System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(header, width);
+    System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(4), height);
+    (header[8], header[9]) = (8, (byte)(alpha ? 6 : 2));
+    Chunk(png, "IHDR"u8, header);
+    Chunk(png, "IDAT"u8, compressed.ToArray());
+    Chunk(png, "IEND"u8, []);
+    return png.ToArray();
+
+    static void Chunk(MemoryStream png, ReadOnlySpan<byte> type, byte[] body)
+    {
+        byte[] length = new byte[4];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(length, body.Length);
+        png.Write(length);
+        byte[] typed = [.. type, .. body];
+        png.Write(typed);
+        uint crc = 0xFFFFFFFF;
+        foreach (byte b in typed)
+        {
+            crc ^= b;
+            for (int k = 0; k < 8; k++)
+            {
+                crc = (crc & 1) != 0 ? 0xEDB88320 ^ (crc >> 1) : crc >> 1;
+            }
+        }
+
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(length, ~crc);
+        png.Write(length);
+    }
+}
 
 static async System.Collections.Generic.IAsyncEnumerable<int> InvoiceLines(int count)
 {
