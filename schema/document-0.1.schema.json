@@ -91,7 +91,7 @@
       }
     },
     "inline": {
-      "description": "A piece of text: a plain string, a styled run, a value bound from the model, a line break, or a page number field.",
+      "description": "A piece of text: a plain string, a styled run, a value bound from the model, a line break, a page number field, or a link.",
       "oneOf": [
         { "type": "string" },
         {
@@ -121,6 +121,17 @@
           "required": ["lineBreak"],
           "additionalProperties": false,
           "properties": { "lineBreak": { "const": true } }
+        },
+        {
+          "description": "Text that opens a web page, starts an e-mail, or jumps to a block with that id.",
+          "type": "object",
+          "required": ["link", "inlines"],
+          "additionalProperties": false,
+          "properties": {
+            "link": { "description": "https://..., http://..., mailto:..., or # and a block's id.", "type": "string", "pattern": "^(https?://|mailto:|#).+" },
+            "inlines": { "$ref": "#/$defs/inlines" },
+            "description": { "description": "What the link does, for screen readers, when its text doesn't say it.", "type": "string", "minLength": 1 }
+          }
         }
       ]
     },

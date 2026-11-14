@@ -26,7 +26,7 @@ internal sealed class TemplateBinder
 
     /// <summary>True when the document uses any template feature, so plain documents skip binding.</summary>
     public static bool IsTemplate(PdfDocument document) =>
-        Blocks(document).Any(b => b is Repeat or Conditional or Table { Rows: RepeatedTableRows } || Inlines(b).Any(i => i is Bind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
+        Blocks(document).Any(b => b is Repeat or Conditional or Table { Rows: RepeatedTableRows } || Inlines(b).Any(HasBind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
 
     public static PdfDocument Bind(PdfDocument template, JsonElement? model, DiagnosticSink sink)
     {
@@ -232,7 +232,7 @@ internal sealed class TemplateBinder
 
     private ImmutableArray<Inline> BindInlines(ImmutableArray<Inline> inlines, string path)
     {
-        if (inlines.IsDefault || !inlines.Any(i => i is Bind))
+        if (inlines.IsDefault || !inlines.Any(HasBind))
         {
             return inlines;
         }
@@ -240,7 +240,12 @@ internal sealed class TemplateBinder
         var bound = ImmutableArray.CreateBuilder<Inline>(inlines.Length);
         for (int i = 0; i < inlines.Length; i++)
         {
-            bound.Add(inlines[i] is Bind bind ? new TextRun(Text(bind, $"{path}/{i}")) { Style = bind.Style } : inlines[i]);
+            bound.Add(inlines[i] switch
+            {
+                Bind bind => new TextRun(Text(bind, $"{path}/{i}")) { Style = bind.Style },
+                Link link when !link.Inlines.IsDefault => link with { Inlines = BindInlines(link.Inlines, $"{path}/{i}/inlines") },
+                Inline other => other,
+            });
         }
 
         return bound.MoveToImmutable();
@@ -403,6 +408,8 @@ internal sealed class TemplateBinder
             }
         }
     }
+
+    private static bool HasBind(Inline inline) => inline is Bind || (inline is Link { Inlines.IsDefault: false } link && link.Inlines.Any(HasBind));
 
     private static ImmutableArray<Inline> Inlines(Block block) => block switch
     {

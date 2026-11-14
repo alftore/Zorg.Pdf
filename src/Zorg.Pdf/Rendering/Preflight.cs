@@ -120,6 +120,12 @@ internal static class Preflight
                 {
                     Need(RunStyle(block, inlines[j]), $"{path}/{j}/style");
                 }
+                else if (inlines[j] is Link { Inlines.IsDefault: false } link)
+                {
+                    TextStyle linked = block.Merge(styles.LinkStyle);
+                    Need(linked, $"{path}/{j}");
+                    Runs(link.Inlines, linked, $"{path}/{j}/inlines");
+                }
             }
         }
 
@@ -228,6 +234,9 @@ internal static class Preflight
                 {
                     case TextRun run:
                         Characters(run.Text, Chain(RunStyle(block, run)), $"{path}/{j}");
+                        break;
+                    case Link { Inlines.IsDefault: false } link:
+                        Inlines(link.Inlines, block.Merge(styles.LinkStyle), $"{path}/{j}/inlines", inBand);
                         break;
                     case Field when inBand:
                         Characters("0123456789", Chain(block), $"{path}/{j}"); // Any digit may be drawn.

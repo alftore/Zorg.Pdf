@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Zorg.Pdf.Json;
 
@@ -55,6 +57,37 @@ public sealed record Field(FieldKind Kind) : Inline
 
     /// <summary>The number of pages in the document.</summary>
     public static Field PageCount { get; } = new(FieldKind.PageCount);
+}
+
+/// <summary>
+/// Text that opens a web page, starts an e-mail, or jumps to a block in the document: <c>https://</c>, <c>http://</c>,
+/// <c>mailto:</c>, or <c>#</c> and a block's <see cref="Block.Id"/>. Drawn in the built-in <c>link</c> style (blue),
+/// tagged as a Link with its annotation, as PDF/UA requires. In JSON
+/// <c>{ "link": "https://example.com", "inlines": ["our site"], "description": "Example's home page" }</c>.
+/// </summary>
+/// <example>
+/// <code>
+/// new Paragraph(["See ", new Link(["Appendix B"]) { Target = "#appendix-b" }, " or ", new Link(["our terms"]) { Target = "https://example.com/terms" }, "."])
+/// </code>
+/// </example>
+public sealed record Link : Inline
+{
+    /// <summary>A link with the given text.</summary>
+    /// <param name="inlines">The link's text: runs and line breaks.</param>
+    [SetsRequiredMembers]
+    public Link(ImmutableArray<Inline> inlines) => (Inlines, Target) = (inlines, "");
+
+    /// <summary>The link's text: runs and line breaks.</summary>
+    public ImmutableArray<Inline> Inlines { get; init; }
+
+    /// <summary>Where it goes: <c>https://...</c>, <c>http://...</c>, <c>mailto:...</c>, or <c>#</c> and a block's id.</summary>
+    public required string Target { get; init; }
+
+    /// <summary>
+    /// What a screen reader says the link does, when the text alone doesn't say it (PDF/UA's <c>/Contents</c>). Null:
+    /// the link's text.
+    /// </summary>
+    public string? Description { get; init; }
 }
 
 /// <summary>The values a <see cref="Field"/> can show. In JSON <c>"pageNumber"</c> or <c>"pageCount"</c>.</summary>

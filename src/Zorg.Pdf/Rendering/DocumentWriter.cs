@@ -75,7 +75,8 @@ internal sealed class DocumentWriter
         IReadOnlyCollection<(byte[] Name, PdfReference Image)> images,
         IReadOnlyList<PdfReference> under,
         IReadOnlyList<PdfReference> over,
-        (byte[] Name, PdfReference State)? state = null)
+        (byte[] Name, PdfReference State)? state = null,
+        IReadOnlyList<PdfReference>? annotations = null)
     {
         PdfReference stream = _writer.Allocate();
         _writer.BeginStreamObject(stream);
@@ -148,6 +149,18 @@ internal sealed class DocumentWriter
         else
         {
             _writer.Reference(stream);
+        }
+
+        if (annotations is { Count: > 0 })
+        {
+            _writer.Name("Annots"u8);
+            _writer.BeginArray();
+            foreach (PdfReference annotation in annotations)
+            {
+                _writer.Reference(annotation);
+            }
+
+            _writer.EndArray();
         }
 
         _writer.Name("StructParents"u8);

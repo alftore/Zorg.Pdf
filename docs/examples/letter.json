@@ -108,8 +108,18 @@
       ]
     },
     {
+      "type": "paragraph",
+      "inlines": [
+        "Vilkårene står på ",
+        { "link": "https://example.com/vilkar", "inlines": ["nettsidene våre"], "description": "Leveringsvilkår på example.com" },
+        ", og spørsmål kan sendes til ",
+        { "link": "mailto:post@example.com", "inlines": ["post@example.com"] },
+        "."
+      ]
+    },
+    {
       "type": "spacer",
-      "height": "1.5cm"
+      "height": "1cm"
     },
     {
       "type": "paragraph",

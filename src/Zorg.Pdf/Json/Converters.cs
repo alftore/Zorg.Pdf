@@ -306,6 +306,8 @@ internal sealed class InlineJsonConverter : JsonConverter<Inline>
 
         string? bind = null, format = null;
         string? text = null;
+        string? link = null, description = null;
+        ImmutableArray<Inline>? linkInlines = null;
         TextStyle? style = null;
         FieldKind? field = null;
         bool lineBreak = false;
@@ -333,9 +335,25 @@ internal sealed class InlineJsonConverter : JsonConverter<Inline>
                 case "format":
                     format = reader.TokenType == JsonTokenType.String ? reader.GetString() : throw PdfJsonException.Invalid("\"format\" must be a format string, such as \"N2\".");
                     break;
+                case "link":
+                    link = reader.TokenType == JsonTokenType.String ? reader.GetString() : throw PdfJsonException.Invalid("\"link\" must be a target: https://..., mailto:... or #id.");
+                    break;
+                case "inlines":
+                    linkInlines = PdfJsonException.Read<ImmutableArray<Inline>>(ref reader, options, "inlines");
+                    break;
+                case "description":
+                    description = reader.TokenType == JsonTokenType.String ? reader.GetString() : throw PdfJsonException.Invalid("\"description\" must be a string.");
+                    break;
                 default:
-                    throw PdfJsonException.UnknownProperty(name, "text, bind, format, style, field or lineBreak");
+                    throw PdfJsonException.UnknownProperty(name, "text, bind, format, style, field, lineBreak, or link, inlines and description");
             }
+        }
+
+        if (link is not null || linkInlines is not null || description is not null)
+        {
+            return link is not null && linkInlines is { } content && text is null && bind is null && field is null && !lineBreak && style is null && format is null
+                ? new Link(content) { Target = link, Description = description }
+                : throw PdfJsonException.Invalid("A link is { \"link\": \"https://...\", \"inlines\": [...] }, with an optional \"description\" and nothing else.");
         }
 
         int kinds = (text is not null ? 1 : 0) + (bind is not null ? 1 : 0) + (field is not null ? 1 : 0) + (lineBreak ? 1 : 0);
@@ -386,6 +404,18 @@ internal sealed class InlineJsonConverter : JsonConverter<Inline>
                 {
                     writer.WritePropertyName("style");
                     JsonSerializer.Serialize(writer, style, (JsonTypeInfo<TextStyle>)options.GetTypeInfo(typeof(TextStyle)));
+                }
+
+                writer.WriteEndObject();
+                break;
+            case Link link:
+                writer.WriteStartObject();
+                writer.WriteString("link", link.Target);
+                writer.WritePropertyName("inlines");
+                JsonSerializer.Serialize(writer, link.Inlines, (JsonTypeInfo<ImmutableArray<Inline>>)options.GetTypeInfo(typeof(ImmutableArray<Inline>)));
+                if (link.Description is { } linkDescription)
+                {
+                    writer.WriteString("description", linkDescription);
                 }
 
                 writer.WriteEndObject();

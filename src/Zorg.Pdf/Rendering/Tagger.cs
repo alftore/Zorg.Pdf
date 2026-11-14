@@ -25,6 +25,7 @@ internal enum StructureRole
     Lbl,
     LBody,
     Div,
+    Link,
 }
 
 /// <summary>
@@ -35,7 +36,7 @@ internal enum StructureRole
 internal sealed class Tagger
 {
     private static readonly byte[][] RoleNames =
-        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD", "Figure", "L", "LI", "Lbl", "LBody", "Div" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
+        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD", "Figure", "L", "LI", "Lbl", "LBody", "Div", "Link" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
 
     private readonly PdfObjectWriter _writer;
     private readonly List<List<PdfReference>> _pageOwners = []; // Per page, the element that owns each MCID.
@@ -98,6 +99,12 @@ internal sealed class Tagger
         owners.Add(element.Reference);
         return owners.Count - 1;
     }
+
+    /// <summary>
+    /// Adds an object reference to the element: an annotation that is part of its content, in reading order, after the
+    /// marked content so far (ISO 32000-1, 14.7.4.3).
+    /// </summary>
+    public static void AddObject(Element element, PdfReference annotation, int page) => element.Kids.Add(new ObjectReference(annotation, page));
 
     /// <summary>Writes a finished element; after this only its reference is kept.</summary>
     public void End(Element element, IReadOnlyList<PdfReference> pages) => Write(element, pages);
@@ -265,6 +272,16 @@ internal sealed class Tagger
                 case MarkedContent mark when onePage:
                     _writer.Integer(mark.Mcid);
                     break;
+                case ObjectReference objr:
+                    _writer.BeginDictionary();
+                    _writer.Name("Type"u8);
+                    _writer.Name("OBJR"u8);
+                    _writer.Name("Pg"u8);
+                    _writer.Reference(pages[objr.Page]);
+                    _writer.Name("Obj"u8);
+                    _writer.Reference(objr.Annotation);
+                    _writer.EndDictionary();
+                    break;
                 case MarkedContent mark:
                     _writer.BeginDictionary();
                     _writer.Name("Type"u8);
@@ -285,6 +302,9 @@ internal sealed class Tagger
     }
 
     internal readonly record struct MarkedContent(int Page, int Mcid);
+
+    /// <summary>An object, such as a link annotation, that's part of an element's content.</summary>
+    internal readonly record struct ObjectReference(PdfReference Annotation, int Page);
 
     /// <summary>A structure element. Its kids are child references and marked content, in reading order.</summary>
     internal sealed class Element(StructureRole role, PdfReference reference, PdfReference parent)

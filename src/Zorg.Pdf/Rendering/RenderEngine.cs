@@ -227,7 +227,9 @@ internal sealed partial class RenderEngine : IDisposable
     private async ValueTask PlaceLinesAsync(PreparedText text, double left, Tagger.Element? parent, Action<double>? firstLine, CancellationToken cancellationToken)
     {
         Tagger.Element? element = null;
+        Dictionary<int, Tagger.Element>? linkElements = null;
         bool open = false;
+        int current = -1; // The link the open marked content belongs to, or -1 for the block's own.
         foreach (LayoutLine line in text.Lines)
         {
             if (_y - line.Height < _geometry.Bottom && !_pageEmpty)
@@ -247,17 +249,42 @@ internal sealed partial class RenderEngine : IDisposable
                 firstLine = null;
             }
 
-            if (line.Runs.Count > 0)
+            for (int r = 0; r < line.Runs.Count; r++)
             {
-                if (!open)
+                LineRun run = line.Runs[r];
+                if (!open || run.Link != current)
                 {
+                    // Link text is marked content of its own, under a Link element inside the block's (PDF/UA 7.18.5).
+                    if (open)
+                    {
+                        EndText();
+                    }
+
                     element ??= _tagger.Begin(text.Role, parent, text.Language);
-                    _content.BeginMarkedContent(Tagger.Name(text.Role), _tagger.Mark(element, _page));
+                    Tagger.Element owner = element;
+                    if (run.Link >= 0)
+                    {
+                        linkElements ??= [];
+                        if (!linkElements.TryGetValue(run.Link, out Tagger.Element? linkElement))
+                        {
+                            linkElements[run.Link] = linkElement = _tagger.Begin(StructureRole.Link, element);
+                        }
+
+                        owner = linkElement;
+                    }
+
+                    _content.BeginMarkedContent(Tagger.Name(owner.Role), _tagger.Mark(owner, _page));
                     BeginText();
-                    open = true;
+                    (open, current) = (true, run.Link);
                 }
 
-                DrawRuns(line, left + line.Offset, _y - line.Ascent);
+                double x = left + line.Offset;
+                DrawRun(run, x, _y - line.Ascent);
+                if (run.Link >= 0)
+                {
+                    double width = (r + 1 < line.Runs.Count ? line.Runs[r + 1].X : line.Width) - run.X;
+                    LinkArea(text.Links[run.Link], linkElements![run.Link], x + run.X, _y - line.Height, width, line.Height);
+                }
             }
 
             _y -= line.Height;
@@ -267,6 +294,14 @@ internal sealed partial class RenderEngine : IDisposable
         if (open)
         {
             EndText();
+        }
+
+        if (linkElements is not null)
+        {
+            foreach (Tagger.Element linkElement in linkElements.Values)
+            {
+                _tagger.End(linkElement, _documentWriter.Pages);
+            }
         }
 
         if (element is not null)
@@ -298,7 +333,7 @@ internal sealed partial class RenderEngine : IDisposable
         var title = new System.Text.StringBuilder();
         foreach (Inline inline in inlines.IsDefault ? [] : inlines)
         {
-            title.Append(inline switch { TextRun run => run.Text, LineBreak => " ", _ => "" });
+            title.Append(inline switch { TextRun run => run.Text, LineBreak => " ", Link { Inlines.IsDefault: false } link => OutlineTitle(link.Inlines), _ => "" });
         }
 
         return title.ToString().Trim();
@@ -319,53 +354,59 @@ internal sealed partial class RenderEngine : IDisposable
     {
         foreach (LineRun run in line.Runs)
         {
-            if (run.Language is { } language)
-            {
-                _content.BeginSpan(language); // A passage in another language, inside the element's marked content.
-            }
+            DrawRun(run, x, baseline);
+        }
+    }
 
-            if (!ReferenceEquals(run.Font, _textFont) || run.Size != _textSize)
-            {
-                _content.SetFont(_fonts.Use(run.Font, _writer), run.Size);
-                (_textFont, _textSize) = (run.Font, run.Size);
-                _pageFonts.Add(run.Font);
-            }
+    /// <summary>Draws one run in an open text object; see <see cref="DrawRuns"/>.</summary>
+    private void DrawRun(LineRun run, double x, double baseline)
+    {
+        if (run.Language is { } language)
+        {
+            _content.BeginSpan(language); // A passage in another language, inside the element's marked content.
+        }
 
-            Color color = run.Color ?? Color.Black;
-            if (color != _fill)
-            {
-                _content.SetFillRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0);
-                _fill = color;
-            }
+        if (!ReferenceEquals(run.Font, _textFont) || run.Size != _textSize)
+        {
+            _content.SetFont(_fonts.Use(run.Font, _writer), run.Size);
+            (_textFont, _textSize) = (run.Font, run.Size);
+            _pageFonts.Add(run.Font);
+        }
 
-            // A synthetic bold face fills and strokes the outline in the text colour; mode 0 is plain fill.
-            int mode = run.SyntheticBold ? 2 : 0;
-            if (run.SyntheticBold && (_stroke != color || _strokeWidth != run.Size * SyntheticBoldStroke))
-            {
-                _content.SetStrokeRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0).SetLineWidth(run.Size * SyntheticBoldStroke);
-                (_stroke, _strokeWidth) = (color, run.Size * SyntheticBoldStroke);
-            }
+        Color color = run.Color ?? Color.Black;
+        if (color != _fill)
+        {
+            _content.SetFillRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0);
+            _fill = color;
+        }
 
-            if (mode != _renderingMode)
-            {
-                _content.SetTextRenderingMode(mode);
-                _renderingMode = mode;
-            }
+        // A synthetic bold face fills and strokes the outline in the text colour; mode 0 is plain fill.
+        int mode = run.SyntheticBold ? 2 : 0;
+        if (run.SyntheticBold && (_stroke != color || _strokeWidth != run.Size * SyntheticBoldStroke))
+        {
+            _content.SetStrokeRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0).SetLineWidth(run.Size * SyntheticBoldStroke);
+            (_stroke, _strokeWidth) = (color, run.Size * SyntheticBoldStroke);
+        }
 
-            if (run.SyntheticItalic)
-            {
-                _content.SetTextMatrix(SyntheticItalicShear, x + run.X, baseline);
-            }
-            else
-            {
-                _content.SetTextPosition(x + run.X, baseline);
-            }
+        if (mode != _renderingMode)
+        {
+            _content.SetTextRenderingMode(mode);
+            _renderingMode = mode;
+        }
 
-            _content.ShowGlyphs(run.Glyphs, run.ExtraAfter);
-            if (run.Language is not null)
-            {
-                _content.EndMarkedContent();
-            }
+        if (run.SyntheticItalic)
+        {
+            _content.SetTextMatrix(SyntheticItalicShear, x + run.X, baseline);
+        }
+        else
+        {
+            _content.SetTextPosition(x + run.X, baseline);
+        }
+
+        _content.ShowGlyphs(run.Glyphs, run.ExtraAfter);
+        if (run.Language is not null)
+        {
+            _content.EndMarkedContent();
         }
     }
 
@@ -437,7 +478,8 @@ internal sealed partial class RenderEngine : IDisposable
             _ => throw new InvalidOperationException($"Block {block.GetType().Name} isn't text."),
         };
 
-        List<TextSegment> segments = Segments(inlines, style, out List<(int Offset, int Inline)> starts, fields);
+        var links = new List<Link>();
+        List<TextSegment> segments = Segments(inlines, style, out List<(int Offset, int Inline)> starts, fields, links);
         double textWidth = width ?? _geometry.ContentWidth;
         ParagraphLayout layout = ParagraphLayout.Create(segments, textWidth, align, style.LineHeight ?? 1.2);
         foreach (TextDiagnostic diagnostic in report ? layout.Diagnostics : [])
@@ -449,7 +491,7 @@ internal sealed partial class RenderEngine : IDisposable
                 $"{path}/inlines/{inline}");
         }
 
-        return new PreparedText(role, layout.Lines, before, after, block is Heading || block.KeepWithNext) { Language = BlockLanguage(style) };
+        return new PreparedText(role, layout.Lines, before, after, block is Heading || block.KeepWithNext) { Language = BlockLanguage(style), Links = links };
     }
 
     /// <summary>The style's language when it differs from the document's, for /Lang on the block's element.</summary>
@@ -462,25 +504,45 @@ internal sealed partial class RenderEngine : IDisposable
     /// isn't known before the render) uses the block's face. A field takes its text from <paramref name="fields"/>
     /// in the block's style, or is left out without it. A run in another language than its block carries it.
     /// </summary>
-    private List<TextSegment> Segments(ImmutableArray<Inline> inlines, TextStyle style, out List<(int Offset, int Inline)> starts, Func<FieldKind, string>? fields = null)
+    private List<TextSegment> Segments(ImmutableArray<Inline> inlines, TextStyle style, out List<(int Offset, int Inline)> starts, Func<FieldKind, string>? fields = null, List<Link>? links = null)
     {
         double size = style.Size?.Points ?? 10;
         var segments = new List<TextSegment>();
-        starts = [];
+        List<(int Offset, int Inline)> found = [];
         int offset = 0;
         for (int j = 0; j < inlines.Length; j++)
         {
-            starts.Add((offset, j));
-            (string? text, TextStyle runStyle) = inlines[j] switch
+            found.Add((offset, j));
+            Add(inlines[j], style, -1);
+        }
+
+        starts = found;
+        void Add(Inline inline, TextStyle outer, int link)
+        {
+            if (inline is Link { Inlines.IsDefault: false } linked && link < 0)
             {
-                TextRun run => (run.Text, Preflight.RunStyle(style, run)),
-                LineBreak => ("\n", style),
-                Field field when fields is not null => (fields(field.Kind), style),
-                _ => (null, style),
+                // A link's text in the link style, marked with its index so layout keeps it in runs of its own.
+                int index = links?.Count ?? -1;
+                links?.Add(linked);
+                TextStyle linkStyle = outer.Merge(_styles.LinkStyle);
+                foreach (Inline inner in linked.Inlines)
+                {
+                    Add(inner, linkStyle, index);
+                }
+
+                return;
+            }
+
+            (string? text, TextStyle runStyle) = inline switch
+            {
+                TextRun run => (run.Text, Preflight.RunStyle(outer, run)),
+                LineBreak => ("\n", outer),
+                Field field when fields is not null => (fields(field.Kind), outer),
+                _ => (null, outer),
             };
             if (text is not null)
             {
-                segments.Add(Segment(text, runStyle));
+                segments.Add(Segment(text, runStyle) with { Link = link });
                 offset += text.Length;
             }
         }
@@ -563,7 +625,8 @@ internal sealed partial class RenderEngine : IDisposable
 
         images.Sort((a, b) => a.Image.Number.CompareTo(b.Image.Number));
         PdfReference? band = BandStream();
-        _documentWriter.WritePage(_page, _tagger.PageKey(_page), _content.WrittenSpan, fonts, images, WatermarkUnder(), [.. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState());
+        PdfReference[] annotations = WriteLinkAnnotations();
+        _documentWriter.WritePage(_page, _tagger.PageKey(_page), _content.WrittenSpan, fonts, images, WatermarkUnder(), [.. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState(), annotations);
         await _writer.FlushIfNeededAsync(cancellationToken).ConfigureAwait(false);
         _options.Progress?.Report(new RenderProgress(_page + 1, _writer.Position));
     }
@@ -573,6 +636,9 @@ internal sealed partial class RenderEngine : IDisposable
     {
         /// <summary>The block's language when its style sets one other than the document's: /Lang on its element.</summary>
         public string? Language { get; init; }
+
+        /// <summary>The links in the text, by the index on their runs.</summary>
+        public List<Link> Links { get; init; } = [];
 
         public double Height => SpaceBefore + Lines.Sum(l => l.Height);
 

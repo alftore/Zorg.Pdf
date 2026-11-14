@@ -15,6 +15,9 @@ internal sealed partial class DocumentValidator
     private readonly List<PdfDiagnostic> _diagnostics = [];
     private readonly Dictionary<string, string> _ids = new(StringComparer.Ordinal); // Id to the path that has it.
     private readonly HashSet<string> _anchorPaths = new(StringComparer.Ordinal); // Where a block may have an Id.
+    private readonly List<(string Id, string Path)> _internalLinks = []; // Checked against the ids at the end.
+    private string? _noLinksIn; // Where links can't go yet, while validating it.
+    private bool _inLink;
     private readonly ImmutableDictionary<string, TextStyle> _styles;
 
     private DocumentValidator(PdfDocument document)
@@ -27,6 +30,14 @@ internal sealed partial class DocumentValidator
         ArgumentNullException.ThrowIfNull(document);
         var validator = new DocumentValidator(document);
         validator.Document(document);
+        foreach ((string id, string path) in validator._internalLinks)
+        {
+            if (!validator._ids.ContainsKey(id))
+            {
+                validator.Error(DiagnosticCodes.BadLink, $"The link goes to \"#{id}\", but no block has that id. Give the block \"id\": \"{id}\".", path);
+            }
+        }
+
         return [.. validator._diagnostics];
     }
 
@@ -439,6 +450,47 @@ internal sealed partial class DocumentValidator
         }
     }
 
+    private void Link(Link link, string path)
+    {
+        string? where = _noLinksIn ?? (path.Contains("/rows/", StringComparison.Ordinal) ? "table cells"
+            : path.StartsWith("/header", StringComparison.Ordinal) || path.StartsWith("/footer", StringComparison.Ordinal) ? "headers and footers"
+            : null);
+        if (where is not null)
+        {
+            Error(DiagnosticCodes.BadLink, $"Links in {where} aren't supported yet; put the link in a paragraph.", path);
+        }
+
+        if (_inLink)
+        {
+            Error(DiagnosticCodes.BadLink, "A link can't hold another link.", path);
+        }
+
+        string target = link.Target ?? "";
+        if (target.StartsWith('#'))
+        {
+            _internalLinks.Add((target[1..], $"{path}/link"));
+        }
+        else if (!Uri.TryCreate(target, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("https" or "http" or "mailto"))
+        {
+            Error(DiagnosticCodes.BadLink, $"\"{target}\" isn't a link target: use https://..., http://..., mailto:... or # and a block's id.", $"{path}/link");
+        }
+
+        if (link.Description is { } description && string.IsNullOrWhiteSpace(description))
+        {
+            Error(DiagnosticCodes.BadLink, "A link's description says what it does; leave it out to use the link's text.", $"{path}/description");
+        }
+
+        if (link.Inlines.IsDefaultOrEmpty)
+        {
+            Error(DiagnosticCodes.BadLink, "A link needs \"inlines\": the text to click.", $"{path}/inlines");
+            return;
+        }
+
+        _inLink = true;
+        Inlines(link.Inlines, $"{path}/inlines");
+        _inLink = false;
+    }
+
     private void Id(string id, string path)
     {
         if (!IdPattern().IsMatch(id))
@@ -502,6 +554,7 @@ internal sealed partial class DocumentValidator
             return;
         }
 
+        _noLinksIn = "text boxes";
         for (int b = 0; b < box.Content.Length; b++)
         {
             string blockPath = $"{path}/content/{b}";
@@ -513,6 +566,8 @@ internal sealed partial class DocumentValidator
 
             Block(box.Content[b], blockPath);
         }
+
+        _noLinksIn = null;
     }
 
     private void Image(Image image, string path)
@@ -559,6 +614,12 @@ internal sealed partial class DocumentValidator
                     break;
                 case TextRun { Style: { } style }:
                     Style(style, $"{path}/{i}/style");
+                    break;
+                case Link link:
+                    Link(link, $"{path}/{i}");
+                    break;
+                case Field when _inLink:
+                    Error(DiagnosticCodes.BadLink, "A link holds text and line breaks, not page number fields.", $"{path}/{i}");
                     break;
                 case Bind bind:
                     if (string.IsNullOrWhiteSpace(bind.Path))

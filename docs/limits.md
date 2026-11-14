@@ -28,6 +28,7 @@ Fonts come from the caller, never from a document; a damaged font is ZPDF-F005.
 - **Fallback fonts work per character**, with pair kerning only within one font; shaping (ligatures, Arabic joining, Indic) isn't done.
 - **No widow and orphan control** yet: a paragraph can leave one line at the foot or top of a page. Headings and blocks with `KeepWithNext` stay with the next block's first line.
 - **Lengths come back from JSON in points.** `"2cm"` is read as 56.6929 points, and `ToJson` writes 56.6929.
+- **Links** work in headings, paragraphs and list items; not yet in table cells, text boxes, headers or footers. They're coloured, not underlined.
 - **Ids and bookmarks:** ids work on top-level blocks only; a table, image or list that moves to the next page whole is found a page early by its destination. Headings in lists, tables and boxes don't become bookmarks.
 - **PDF/A-2 only** (2b, 2u, 2a), with an sRGB output intent: no PDF/A-3 (attachments) or PDF/A-4 yet, and CMYK images must be converted to RGB (`ImagingProcessor` does).
 - **Page previews read only Zorg.Pdf's own PDFs** (`PdfPreview` refuses others), draw DeviceCMYK images with a plain conversion rather than a colour profile, and depend on Zorg.Imaging's experimental canvas.

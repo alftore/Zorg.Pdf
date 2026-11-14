@@ -75,6 +75,9 @@ internal sealed class StyleResolver
     public TextStyle ForBand(Block block, string band) =>
         block.Style is { } name && _styles.TryGetValue(name, out TextStyle? own) ? Named(band).Merge(own) : Named(band);
 
+    /// <summary>The <c>link</c> style's own settings, laid over the text a link sits in.</summary>
+    public TextStyle LinkStyle => _styles.TryGetValue("link", out TextStyle? link) ? link : new TextStyle();
+
     public TextStyle Named(string name) => _styles.TryGetValue(name, out TextStyle? style) ? _styles["body"].Merge(style) : _styles["body"];
 
     /// <summary>A table's header cells: <c>body</c>, then <c>tableHeader</c>.</summary>

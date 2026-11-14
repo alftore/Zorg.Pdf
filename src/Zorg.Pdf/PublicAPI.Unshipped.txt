@@ -356,6 +356,22 @@ override Zorg.Pdf.LineBreak.ToString() -> string!
 static Zorg.Pdf.LineBreak.Value.get -> Zorg.Pdf.LineBreak!
 static Zorg.Pdf.LineBreak.operator !=(Zorg.Pdf.LineBreak? left, Zorg.Pdf.LineBreak? right) -> bool
 static Zorg.Pdf.LineBreak.operator ==(Zorg.Pdf.LineBreak? left, Zorg.Pdf.LineBreak? right) -> bool
+Zorg.Pdf.Link
+override Zorg.Pdf.Link.<Clone>$() -> Zorg.Pdf.Link!
+Zorg.Pdf.Link.Description.get -> string?
+Zorg.Pdf.Link.Description.init -> void
+override sealed Zorg.Pdf.Link.Equals(Zorg.Pdf.Inline? other) -> bool
+Zorg.Pdf.Link.Equals(Zorg.Pdf.Link? other) -> bool
+override Zorg.Pdf.Link.Equals(object? obj) -> bool
+override Zorg.Pdf.Link.GetHashCode() -> int
+Zorg.Pdf.Link.Inlines.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Inline!>
+Zorg.Pdf.Link.Inlines.init -> void
+Zorg.Pdf.Link.Link(System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Inline!> inlines) -> void
+Zorg.Pdf.Link.Target.get -> string!
+Zorg.Pdf.Link.Target.init -> void
+override Zorg.Pdf.Link.ToString() -> string!
+static Zorg.Pdf.Link.operator !=(Zorg.Pdf.Link? left, Zorg.Pdf.Link? right) -> bool
+static Zorg.Pdf.Link.operator ==(Zorg.Pdf.Link? left, Zorg.Pdf.Link? right) -> bool
 Zorg.Pdf.List
 override Zorg.Pdf.List.<Clone>$() -> Zorg.Pdf.List!
 override sealed Zorg.Pdf.List.Equals(Zorg.Pdf.Block? other) -> bool

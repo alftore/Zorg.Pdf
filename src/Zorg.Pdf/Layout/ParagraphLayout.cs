@@ -52,6 +52,9 @@ internal sealed record TextSegment(string Text, FontChain Fonts, double Size, Co
 {
     /// <summary>The language, when it differs from the paragraph's; null otherwise.</summary>
     public string? Language { get; init; }
+
+    /// <summary>The index of the link this text belongs to, or -1.</summary>
+    public int Link { get; init; } = -1;
 }
 
 /// <summary>
@@ -65,6 +68,9 @@ internal sealed record LineRun(EmbeddedFont Font, double Size, Color? Color, ush
 
     /// <summary>The run's language, when it differs from its paragraph's; drawn as a Span with /Lang.</summary>
     public string? Language { get; init; }
+
+    /// <summary>The index of the link the run belongs to, or -1.</summary>
+    public int Link { get; init; } = -1;
 
     /// <summary>Drawn slanted, because the family has no italic face.</summary>
     public bool SyntheticItalic { get; init; }
@@ -164,6 +170,7 @@ internal sealed class ParagraphLayout
         public double Size;
         public Color? Color;
         public string? Language;
+        public int Link;
         public bool Bold;
         public bool Italic;
         public bool Space;
@@ -261,6 +268,7 @@ internal sealed class ParagraphLayout
                         Size = segment.Size,
                         Color = segment.Color,
                         Language = segment.Language,
+                        Link = segment.Link,
                         Bold = segment.Fonts.SyntheticBold,
                         Italic = segment.Fonts.SyntheticItalic,
                         Space = space,
@@ -457,7 +465,7 @@ internal sealed class ParagraphLayout
                 bool split = k == placed.Count
                     || !ReferenceEquals(placed[k].Font, placed[start].Font) || placed[k].Size != placed[start].Size || placed[k].Color != placed[start].Color
                     || placed[k].Bold != placed[start].Bold || placed[k].Italic != placed[start].Italic
-                    || !string.Equals(placed[k].Language, placed[start].Language, StringComparison.Ordinal);
+                    || !string.Equals(placed[k].Language, placed[start].Language, StringComparison.Ordinal) || placed[k].Link != placed[start].Link;
                 if (!split)
                 {
                     continue;
@@ -475,7 +483,7 @@ internal sealed class ParagraphLayout
                     x += placed[start + g].Advance + extra[start + g];
                 }
 
-                runs.Add(new LineRun(first.Font, first.Size, first.Color, glyphs, after, runX) { SyntheticBold = first.Bold, SyntheticItalic = first.Italic, Language = first.Language });
+                runs.Add(new LineRun(first.Font, first.Size, first.Color, glyphs, after, runX) { SyntheticBold = first.Bold, SyntheticItalic = first.Italic, Language = first.Language, Link = first.Link });
                 start = k;
             }
 
