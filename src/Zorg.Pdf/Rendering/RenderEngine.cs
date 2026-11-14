@@ -45,6 +45,12 @@ internal sealed partial class RenderEngine : IDisposable
     private readonly PageGeometry _geometry; // The content area: the page inside its margins, less the header and footer.
     private readonly PageGeometry _pageGeometry; // The page inside its margins.
     private readonly Dictionary<int, PreparedText> _prepared = [];
+
+    /// <summary>Headings for the outline, in order: title, level, page and top.</summary>
+    private readonly List<OutlineEntry> _outline = [];
+
+    /// <summary>Named destinations: each block Id, at its page and top.</summary>
+    private readonly Dictionary<string, (int Page, double Top)> _destinations = new(StringComparer.Ordinal);
     private readonly HashSet<EmbeddedFont> _pageFonts = [];
     private readonly HashSet<int> _missingInData = []; // Characters already reported for rows from data slots.
 
@@ -149,15 +155,23 @@ internal sealed partial class RenderEngine : IDisposable
                     await NewPageAsync(cancellationToken).ConfigureAwait(false);
                     break;
                 case Table table:
+                    Arrived(table); // Its top: a table that moves to the next page whole is found a page early.
                     await PlaceTableAsync(i, table, cancellationToken).ConfigureAwait(false);
                     break;
                 case Image image:
+                    Arrived(image);
                     await PlaceImageAsync(i, image, cancellationToken).ConfigureAwait(false);
                     break;
                 case List list:
+                    Arrived(list);
                     await PlaceListAsync(i, list, cancellationToken).ConfigureAwait(false);
                     break;
                 case TextBox box:
+                    if (box.Id is { } boxId && box.Resolve() is { } place)
+                    {
+                        _destinations[boxId] = (_page, _pageGeometry.Height - place.Y);
+                    }
+
                     PlaceTextBox(i, box);
                     break;
             }
@@ -174,7 +188,7 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         _tagger.Finish(_documentWriter.Pages);
-        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot);
+        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot, _outline, _destinations);
         await _writer.FinishAsync(_documentWriter.Catalog, info, cancellationToken).ConfigureAwait(false);
     }
 
@@ -200,7 +214,8 @@ internal sealed partial class RenderEngine : IDisposable
             _y -= text.SpaceBefore;
         }
 
-        await PlaceLinesAsync(text, _geometry.Left, parent: null, firstLine: null, cancellationToken).ConfigureAwait(false);
+        Block block = _document.Content[index];
+        await PlaceLinesAsync(text, _geometry.Left, parent: null, firstLine: _ => Arrived(block), cancellationToken).ConfigureAwait(false);
         _y -= text.SpaceAfter;
     }
 
@@ -258,6 +273,35 @@ internal sealed partial class RenderEngine : IDisposable
         {
             _tagger.End(element, _documentWriter.Pages);
         }
+    }
+
+    /// <summary>
+    /// Records where a top-level block starts, at the current position: a named destination for its Id, and an outline
+    /// entry for a heading within <see cref="PdfDocument.OutlineLevels"/>.
+    /// </summary>
+    private void Arrived(Block block)
+    {
+        if (block.Id is { } id)
+        {
+            _destinations[id] = (_page, _y);
+        }
+
+        if (block is Heading heading && heading.Level <= _document.OutlineLevels)
+        {
+            _outline.Add(new OutlineEntry(OutlineTitle(heading.Inlines), heading.Level, _page, _y));
+        }
+    }
+
+    /// <summary>A heading's text for its bookmark: its runs, with line breaks as spaces and fields left out.</summary>
+    private static string OutlineTitle(ImmutableArray<Inline> inlines)
+    {
+        var title = new System.Text.StringBuilder();
+        foreach (Inline inline in inlines.IsDefault ? [] : inlines)
+        {
+            title.Append(inline switch { TextRun run => run.Text, LineBreak => " ", _ => "" });
+        }
+
+        return title.ToString().Trim();
     }
 
     /// <summary>Starts a text object; the font is set again by the first run in it.</summary>

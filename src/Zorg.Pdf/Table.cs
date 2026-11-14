@@ -26,8 +26,8 @@ public sealed record Table : Block
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal Table(ImmutableArray<Column> columns, TableRows? rows = null, bool repeatHeader = true, TableStyle? tableStyle = null, string? style = null, bool keepWithNext = false) =>
-        (Columns, Rows, RepeatHeader, TableStyle, Style, KeepWithNext) = (columns, rows ?? TableRows.Empty, repeatHeader, tableStyle, style, keepWithNext);
+    internal Table(ImmutableArray<Column> columns, TableRows? rows = null, bool repeatHeader = true, TableStyle? tableStyle = null, string? style = null, bool keepWithNext = false, string? id = null) =>
+        (Columns, Rows, RepeatHeader, TableStyle, Style, KeepWithNext, Id) = (columns, rows ?? TableRows.Empty, repeatHeader, tableStyle, style, keepWithNext, id);
 
     /// <summary>A table with the given columns.</summary>
     /// <param name="columns">The columns, left to right.</param>

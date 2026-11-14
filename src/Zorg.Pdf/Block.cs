@@ -28,6 +28,19 @@ public abstract record Block
     /// <summary>Keeps the block on the same page as the next one. Headings keep with their next block anyway.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool KeepWithNext { get; init; }
+
+    /// <summary>
+    /// A name other parts of the document, and other documents, can link to: <c>"#appendix-b"</c>. Letters, digits,
+    /// <c>-</c>, <c>_</c>, <c>.</c> and <c>:</c>, unique in the document. Written as a named destination at the block's
+    /// top, so a viewer opens <c>file.pdf#appendix-b</c> there.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// new Heading("Appendix B") { Id = "appendix-b" }
+    /// </code>
+    /// </example>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Id { get; init; }
 }
 
 /// <summary>A heading, tagged H1 to H6 for screen readers and outlines.</summary>
@@ -45,8 +58,8 @@ public sealed record Heading : Block
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal Heading(ImmutableArray<Inline> inlines, int level = 1, TextAlign align = TextAlign.Left, string? style = null, bool keepWithNext = false) =>
-        (Inlines, Level, Align, Style, KeepWithNext) = (inlines, level, align, style, keepWithNext);
+    internal Heading(ImmutableArray<Inline> inlines, int level = 1, TextAlign align = TextAlign.Left, string? style = null, bool keepWithNext = false, string? id = null) =>
+        (Inlines, Level, Align, Style, KeepWithNext, Id) = (inlines, level, align, style, keepWithNext, id);
 
     /// <summary>A heading of plain text.</summary>
     /// <param name="text">The text.</param>
@@ -85,8 +98,8 @@ public sealed record Paragraph : Block
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal Paragraph(ImmutableArray<Inline> inlines, TextAlign align = TextAlign.Left, Length? spaceAfter = null, string? style = null, bool keepWithNext = false) =>
-        (Inlines, Align, SpaceAfter, Style, KeepWithNext) = (inlines, align, spaceAfter, style, keepWithNext);
+    internal Paragraph(ImmutableArray<Inline> inlines, TextAlign align = TextAlign.Left, Length? spaceAfter = null, string? style = null, bool keepWithNext = false, string? id = null) =>
+        (Inlines, Align, SpaceAfter, Style, KeepWithNext, Id) = (inlines, align, spaceAfter, style, keepWithNext, id);
 
     /// <summary>A paragraph of plain text. Line feeds break the line.</summary>
     /// <param name="text">The text.</param>
@@ -124,8 +137,8 @@ public sealed record Spacer : Block
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal Spacer(Length height, string? style = null, bool keepWithNext = false) =>
-        (Height, Style, KeepWithNext) = (height, style, keepWithNext);
+    internal Spacer(Length height, string? style = null, bool keepWithNext = false, string? id = null) =>
+        (Height, Style, KeepWithNext, Id) = (height, style, keepWithNext, id);
 
     /// <summary>A spacer of the given height.</summary>
     /// <param name="height">The height.</param>

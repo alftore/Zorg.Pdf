@@ -44,8 +44,8 @@ public sealed record Repeat : Block
     /// <summary>For the JSON serializer only.</summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal Repeat(string items, ImmutableArray<Block> content, string? style = null, bool keepWithNext = false) =>
-        (Items, Content, Style, KeepWithNext) = (items, content, style, keepWithNext);
+    internal Repeat(string items, ImmutableArray<Block> content, string? style = null, bool keepWithNext = false, string? id = null) =>
+        (Items, Content, Style, KeepWithNext, Id) = (items, content, style, keepWithNext, id);
 
     /// <summary>Content repeated for each item of the array at <paramref name="items"/>.</summary>
     /// <param name="items">The array's path in the model.</param>
@@ -77,8 +77,8 @@ public sealed record Conditional : Block
     /// <summary>For the JSON serializer only.</summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal Conditional(string test, ImmutableArray<Block> content, bool not = false, string? style = null, bool keepWithNext = false) =>
-        (Test, Content, Not, Style, KeepWithNext) = (test, content, not, style, keepWithNext);
+    internal Conditional(string test, ImmutableArray<Block> content, bool not = false, string? style = null, bool keepWithNext = false, string? id = null) =>
+        (Test, Content, Not, Style, KeepWithNext, Id) = (test, content, not, style, keepWithNext, id);
 
     /// <summary>Content shown when the value at <paramref name="test"/> is set.</summary>
     /// <param name="test">The value's path in the model.</param>

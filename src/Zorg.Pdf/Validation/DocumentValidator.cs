@@ -13,6 +13,8 @@ namespace Zorg.Pdf.Validation;
 internal sealed partial class DocumentValidator
 {
     private readonly List<PdfDiagnostic> _diagnostics = [];
+    private readonly Dictionary<string, string> _ids = new(StringComparer.Ordinal); // Id to the path that has it.
+    private readonly HashSet<string> _anchorPaths = new(StringComparer.Ordinal); // Where a block may have an Id.
     private readonly ImmutableDictionary<string, TextStyle> _styles;
 
     private DocumentValidator(PdfDocument document)
@@ -42,6 +44,15 @@ internal sealed partial class DocumentValidator
 
         Page(document.Page ?? PageSettings.A4, "/page");
         _page = Rendering.PageGeometry.From(document.Page ?? PageSettings.A4);
+        if (document.OutlineLevels is < 0 or > 6)
+        {
+            Error(DiagnosticCodes.BadOutline, Invariant($"outlineLevels is 0 (no bookmarks) to 6; {document.OutlineLevels} isn't."), "/outlineLevels");
+        }
+
+        for (int i = 0; i < (document.Content.IsDefault ? 0 : document.Content.Length); i++)
+        {
+            _anchorPaths.Add($"/content/{i}");
+        }
 
         if (document.Styles is { } sheet)
         {
@@ -154,6 +165,20 @@ internal sealed partial class DocumentValidator
         {
             Error(DiagnosticCodes.MissingProperty, "A block is null.", path);
             return;
+        }
+
+        if (block.Id is { } id)
+        {
+            Id(id, path);
+        }
+
+        if (block is Conditional { Content.IsDefault: false } shown && _anchorPaths.Contains(path))
+        {
+            // A top-level when's blocks end up at the top level, so they can be linked to.
+            for (int b = 0; b < shown.Content.Length; b++)
+            {
+                _anchorPaths.Add($"{path}/content/{b}");
+            }
         }
 
         if (block.Style is { } style && !_styles.ContainsKey(style))
@@ -414,6 +439,26 @@ internal sealed partial class DocumentValidator
         }
     }
 
+    private void Id(string id, string path)
+    {
+        if (!IdPattern().IsMatch(id))
+        {
+            Error(DiagnosticCodes.BadId, $"\"{id}\" isn't an id: use letters, digits, -, _, . and :, starting with a letter or digit, up to 128 characters.", $"{path}/id");
+        }
+        else if (_ids.TryGetValue(id, out string? first))
+        {
+            Error(DiagnosticCodes.BadId, $"The id \"{id}\" is also used at {first}; an id names one block.", $"{path}/id");
+        }
+        else if (!_anchorPaths.Contains(path))
+        {
+            Error(DiagnosticCodes.BadId, "Ids work on top-level blocks, and blocks in a top-level when, so far: a repeat would repeat the id, and blocks in lists, tables, boxes and bands have no destination yet.", $"{path}/id");
+        }
+        else
+        {
+            _ids[id] = path;
+        }
+    }
+
     private void TextBox(TextBox box, string path)
     {
         if (box.Resolve() is not { } place)
@@ -581,4 +626,7 @@ internal sealed partial class DocumentValidator
 
     [GeneratedRegex(@"^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$")]
     private static partial Regex LanguageTag();
+
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")]
+    private static partial Regex IdPattern();
 }

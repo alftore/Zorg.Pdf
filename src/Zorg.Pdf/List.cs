@@ -25,8 +25,8 @@ public sealed record List : Block
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal List(ImmutableArray<ListItem> items, ListMarker marker = ListMarker.Bullet, int start = 1, Length? indent = null, string? style = null, bool keepWithNext = false) =>
-        (Items, Marker, Start, Indent, Style, KeepWithNext) = (items, marker, start, indent, style, keepWithNext);
+    internal List(ImmutableArray<ListItem> items, ListMarker marker = ListMarker.Bullet, int start = 1, Length? indent = null, string? style = null, bool keepWithNext = false, string? id = null) =>
+        (Items, Marker, Start, Indent, Style, KeepWithNext, Id) = (items, marker, start, indent, style, keepWithNext, id);
 
     /// <summary>A list of items. Strings convert to items of one paragraph.</summary>
     /// <param name="items">The items.</param>

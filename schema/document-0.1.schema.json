@@ -14,6 +14,7 @@
     "header": { "description": "Content at the top of every page.", "$ref": "#/$defs/pageBand" },
     "footer": { "description": "Content at the bottom of every page.", "$ref": "#/$defs/pageBand" },
     "watermark": { "description": "Text or an image across every page, such as DRAFT.", "$ref": "#/$defs/watermark" },
+    "outlineLevels": { "description": "Headings of level 1 to this one become the viewer's bookmarks; 0 for none.", "type": "integer", "minimum": 0, "maximum": 6, "default": 3 },
     "styles": { "$ref": "#/$defs/styleSheet" },
     "content": { "description": "The blocks, in reading order.", "type": "array", "items": { "$ref": "#/$defs/block" } }
   },
@@ -136,6 +137,7 @@
       "additionalProperties": false,
       "properties": { "$data": { "type": "string", "minLength": 1 } }
     },
+    "id": { "description": "A name links and viewers can jump to (file.pdf#name): letters, digits, -, _, . and :, unique in the document.", "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" },
     "block": {
       "description": "Something that flows down the page. The \"type\" property says which.",
       "type": "object",
@@ -163,6 +165,7 @@
         "type": { "const": "textBox" },
         "style": { "description": "A named style.", "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
         "content": { "description": "Paragraphs, or repeat and when blocks that make them.", "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/block" } },
         "preset": { "description": "din5008A: 85 x 45 mm at 20 mm from the left and 27 mm from the top; din5008B: the same at 45 mm from the top. Text starts 5 mm in.", "enum": ["none", "din5008A", "din5008B"] },
         "x": { "$ref": "#/$defs/length" },
@@ -185,6 +188,7 @@
         "type": { "const": "heading" },
         "style": { "description": "A named style.", "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
         "level": { "type": "integer", "minimum": 1, "maximum": 6, "default": 1 },
         "inlines": { "$ref": "#/$defs/inlines" },
         "align": { "$ref": "#/$defs/textAlign" }
@@ -199,6 +203,7 @@
         "type": { "const": "paragraph" },
         "style": { "description": "A named style.", "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
         "inlines": { "$ref": "#/$defs/inlines" },
         "align": { "$ref": "#/$defs/textAlign" },
         "spaceAfter": { "$ref": "#/$defs/length" }
@@ -228,6 +233,7 @@
         "type": { "const": "repeat" },
         "style": { "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
         "items": { "description": "The path of an array in the model.", "type": "string", "minLength": 1 },
         "content": { "type": "array", "items": { "$ref": "#/$defs/block" } }
       }
@@ -241,6 +247,7 @@
         "type": { "const": "when" },
         "style": { "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
         "test": { "description": "The path of a value in the model.", "type": "string", "minLength": 1 },
         "not": { "type": "boolean", "default": false },
         "content": { "type": "array", "items": { "$ref": "#/$defs/block" } }
@@ -255,6 +262,7 @@
         "type": { "const": "list" },
         "style": { "description": "A named style for the items' text.", "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
         "items": { "type": "array", "items": { "$ref": "#/$defs/listItem" } },
         "marker": {
           "description": "What marks each item. Nested bullet lists use other bullet shapes.",
@@ -333,6 +341,7 @@
         "type": { "const": "table" },
         "style": { "description": "A named style.", "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
         "columns": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/column" } },
         "rows": {
           "description": "Rows in the document (each one cell per column), a slot filled when rendering, or one row per item of a model array.",
@@ -382,6 +391,7 @@
         "type": { "const": "image" },
         "style": { "description": "A named style.", "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
         "source": { "$ref": "#/$defs/imageSource" },
         "alt": { "description": "What the image shows, for screen readers.", "type": "string" },
         "decorative": { "description": "The image adds nothing to the text; screen readers skip it.", "type": "boolean", "default": false },
@@ -399,6 +409,7 @@
         "type": { "const": "spacer" },
         "style": { "description": "A named style.", "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" },
         "height": { "$ref": "#/$defs/length" }
       }
     },
@@ -410,7 +421,8 @@
       "properties": {
         "type": { "const": "pageBreak" },
         "style": { "description": "A named style.", "type": "string" },
-        "keepWithNext": { "type": "boolean", "default": false }
+        "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" }
       }
     },
     "pageBand": {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Security;
 using System.Text;
 using Zorg.Pdf.Writing;
@@ -158,8 +159,9 @@ internal sealed class DocumentWriter
     }
 
     /// <summary>Writes the page tree, Info, XMP and catalog. Returns the Info dictionary for the trailer.</summary>
-    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot)
+    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot, IReadOnlyList<OutlineEntry> outline, IReadOnlyDictionary<string, (int Page, double Top)> destinations)
     {
+        PdfReference? outlines = outline.Count > 0 ? WriteOutline(outline) : null;
         _writer.BeginObject(PageTree);
         _writer.BeginDictionary();
         _writer.Name("Type"u8);
@@ -225,6 +227,34 @@ internal sealed class DocumentWriter
         _writer.EndDictionary();
         _writer.Name("Metadata"u8);
         _writer.Reference(metadata);
+        if (outlines is { } outlineRoot)
+        {
+            _writer.Name("Outlines"u8);
+            _writer.Reference(outlineRoot);
+            _writer.Name("PageMode"u8);
+            _writer.Name("UseOutlines"u8);
+        }
+
+        if (destinations.Count > 0)
+        {
+            // A name tree with one node: every destination, sorted by name as the tree requires (ISO 32000-1, 7.9.6).
+            _writer.Name("Names"u8);
+            _writer.BeginDictionary();
+            _writer.Name("Dests"u8);
+            _writer.BeginDictionary();
+            _writer.Name("Names"u8);
+            _writer.BeginArray();
+            foreach ((string name, (int page, double top)) in destinations.OrderBy(d => d.Key, StringComparer.Ordinal))
+            {
+                _writer.TextString(name);
+                Destination(page, top);
+            }
+
+            _writer.EndArray();
+            _writer.EndDictionary();
+            _writer.EndDictionary();
+        }
+
         if (options.Archive != PdfArchive.None)
         {
             // PDF/A: colour is defined by an sRGB output intent (ISO 19005-2, 6.2.3), the ICC's own profile.
@@ -259,6 +289,102 @@ internal sealed class DocumentWriter
         _writer.EndDictionary();
         _writer.EndObject();
         return info;
+    }
+
+    /// <summary><c>[page /XYZ null top null]</c>: the page, scrolled so <paramref name="top"/> is at the top, at any zoom.</summary>
+    private void Destination(int page, double top)
+    {
+        _writer.BeginArray();
+        _writer.Reference(_pages[page]);
+        _writer.Name("XYZ"u8);
+        _writer.Null();
+        _writer.Real(top);
+        _writer.Null();
+        _writer.EndArray();
+    }
+
+    /// <summary>
+    /// The outline (bookmarks): one item per heading, nested by level, every item open (ISO 32000-1, 12.3.3). A level
+    /// that skips nests under the nearest shallower heading.
+    /// </summary>
+    private PdfReference WriteOutline(IReadOnlyList<OutlineEntry> entries)
+    {
+        PdfReference root = _writer.Allocate();
+        var references = new PdfReference[entries.Count];
+        var parents = new int[entries.Count];
+        var children = new List<int>[entries.Count + 1]; // Index entries.Count is the root.
+        for (int i = 0; i <= entries.Count; i++)
+        {
+            children[i] = [];
+        }
+
+        var open = new Stack<int>();
+        for (int i = 0; i < entries.Count; i++)
+        {
+            references[i] = _writer.Allocate();
+            while (open.Count > 0 && entries[open.Peek()].Level >= entries[i].Level)
+            {
+                open.Pop();
+            }
+
+            parents[i] = open.Count > 0 ? open.Peek() : entries.Count;
+            children[parents[i]].Add(i);
+            open.Push(i);
+        }
+
+        int Descendants(int i) => children[i].Sum(c => 1 + Descendants(c));
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            List<int> siblings = children[parents[i]];
+            int at = siblings.IndexOf(i);
+            _writer.BeginObject(references[i]);
+            _writer.BeginDictionary();
+            _writer.Name("Title"u8);
+            _writer.TextString(entries[i].Title.Length > 0 ? entries[i].Title : "Untitled");
+            _writer.Name("Parent"u8);
+            _writer.Reference(parents[i] == entries.Count ? root : references[parents[i]]);
+            if (at > 0)
+            {
+                _writer.Name("Prev"u8);
+                _writer.Reference(references[siblings[at - 1]]);
+            }
+
+            if (at < siblings.Count - 1)
+            {
+                _writer.Name("Next"u8);
+                _writer.Reference(references[siblings[at + 1]]);
+            }
+
+            if (children[i].Count > 0)
+            {
+                _writer.Name("First"u8);
+                _writer.Reference(references[children[i][0]]);
+                _writer.Name("Last"u8);
+                _writer.Reference(references[children[i][^1]]);
+                _writer.Name("Count"u8);
+                _writer.Integer(Descendants(i));
+            }
+
+            _writer.Name("Dest"u8);
+            Destination(entries[i].Page, entries[i].Top);
+            _writer.EndDictionary();
+            _writer.EndObject();
+        }
+
+        _writer.BeginObject(root);
+        _writer.BeginDictionary();
+        _writer.Name("Type"u8);
+        _writer.Name("Outlines"u8);
+        _writer.Name("First"u8);
+        _writer.Reference(references[children[entries.Count][0]]);
+        _writer.Name("Last"u8);
+        _writer.Reference(references[children[entries.Count][^1]]);
+        _writer.Name("Count"u8);
+        _writer.Integer(entries.Count);
+        _writer.EndDictionary();
+        _writer.EndObject();
+        return root;
     }
 
     /// <summary>The ICC's sRGB profile (sRGB2014.icc), embedded unchanged as PDF/A's output intent.</summary>
@@ -341,3 +467,6 @@ internal sealed class DocumentWriter
         return string.Create(CultureInfo.InvariantCulture, $"D:{date:yyyyMMddHHmmss}{sign}{offset.Hours:00}'{offset.Minutes:00}'");
     }
 }
+
+/// <summary>A heading in the outline: its text, level, page index and top in points from the page's bottom.</summary>
+internal readonly record struct OutlineEntry(string Title, int Level, int Page, double Top);

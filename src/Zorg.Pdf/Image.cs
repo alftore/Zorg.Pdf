@@ -21,8 +21,8 @@ public sealed record Image : Block
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal Image(ImageSource source, string? alt = null, bool decorative = false, Length? width = null, Length? height = null, TextAlign align = TextAlign.Left, string? style = null, bool keepWithNext = false) =>
-        (Source, Alt, Decorative, Width, Height, Align, Style, KeepWithNext) = (source, alt, decorative, width, height, align, style, keepWithNext);
+    internal Image(ImageSource source, string? alt = null, bool decorative = false, Length? width = null, Length? height = null, TextAlign align = TextAlign.Left, string? style = null, bool keepWithNext = false, string? id = null) =>
+        (Source, Alt, Decorative, Width, Height, Align, Style, KeepWithNext, Id) = (source, alt, decorative, width, height, align, style, keepWithNext, id);
 
     /// <summary>An image from a source.</summary>
     /// <param name="source">The bytes, or a data slot.</param>

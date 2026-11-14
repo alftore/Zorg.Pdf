@@ -24,6 +24,8 @@ virtual Zorg.Pdf.Block.EqualityContract.get -> System.Type!
 virtual Zorg.Pdf.Block.Equals(Zorg.Pdf.Block? other) -> bool
 override Zorg.Pdf.Block.Equals(object? obj) -> bool
 override Zorg.Pdf.Block.GetHashCode() -> int
+Zorg.Pdf.Block.Id.get -> string?
+Zorg.Pdf.Block.Id.init -> void
 Zorg.Pdf.Block.KeepWithNext.get -> bool
 Zorg.Pdf.Block.KeepWithNext.init -> void
 virtual Zorg.Pdf.Block.PrintMembers(System.Text.StringBuilder! builder) -> bool
@@ -520,6 +522,8 @@ Zorg.Pdf.PdfDocument.Header.get -> Zorg.Pdf.PageBand?
 Zorg.Pdf.PdfDocument.Header.init -> void
 Zorg.Pdf.PdfDocument.Language.get -> string!
 Zorg.Pdf.PdfDocument.Language.init -> void
+Zorg.Pdf.PdfDocument.OutlineLevels.get -> int
+Zorg.Pdf.PdfDocument.OutlineLevels.init -> void
 Zorg.Pdf.PdfDocument.Page.get -> Zorg.Pdf.PageSettings!
 Zorg.Pdf.PdfDocument.Page.init -> void
 static Zorg.Pdf.PdfDocument.ParseJson(System.ReadOnlySpan<byte> utf8Json) -> Zorg.Pdf.PdfDocument!

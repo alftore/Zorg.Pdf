@@ -45,9 +45,10 @@ public sealed record TextBox : Block
         TextOverflow overflow = TextOverflow.ShrinkToFit,
         Length? minSize = null,
         string? style = null,
-        bool keepWithNext = false) =>
-        (Content, Preset, X, Y, Width, Height, Padding, BorderColor, BorderWidth, Overflow, MinSize, Style, KeepWithNext) =
-        (content, preset, x, y, width, height, padding, borderColor, borderWidth, overflow, minSize, style, keepWithNext);
+        bool keepWithNext = false,
+        string? id = null) =>
+        (Content, Preset, X, Y, Width, Height, Padding, BorderColor, BorderWidth, Overflow, MinSize, Style, KeepWithNext, Id) =
+        (content, preset, x, y, width, height, padding, borderColor, borderWidth, overflow, minSize, style, keepWithNext, id);
 
     /// <summary>A box of paragraphs. Set its place with <see cref="Preset"/>, or <see cref="X"/>, <see cref="Y"/>, <see cref="Width"/> and <see cref="Height"/>.</summary>
     /// <param name="content">Paragraphs, or template parts that make paragraphs.</param>

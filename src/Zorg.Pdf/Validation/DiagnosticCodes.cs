@@ -32,6 +32,8 @@ internal static class DiagnosticCodes
     public const string BadWatermark = "ZPDF-J022";
     public const string BadTemplate = "ZPDF-J023";
     public const string BadTextBox = "ZPDF-J024";
+    public const string BadId = "ZPDF-J025";
+    public const string BadOutline = "ZPDF-J026";
 
     // B: binding a template to its model.
     public const string BindingMissing = "ZPDF-B001";

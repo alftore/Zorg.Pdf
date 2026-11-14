@@ -46,8 +46,8 @@ public sealed record PdfDocument
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, Watermark? watermark = null, StyleSheet? styles = null, ImmutableArray<Block> content = default) =>
-        (Title, Schema, Language, Page, Header, Footer, Watermark, Styles, Content) = (title, schema, language, page ?? PageSettings.A4, header, footer, watermark, styles, content.IsDefault ? [] : content);
+    internal PdfDocument(string title, string? schema = null, string language = "en", PageSettings? page = null, PageBand? header = null, PageBand? footer = null, Watermark? watermark = null, StyleSheet? styles = null, ImmutableArray<Block> content = default, int outlineLevels = 3) =>
+        (Title, Schema, Language, Page, Header, Footer, Watermark, Styles, Content, OutlineLevels) = (title, schema, language, page ?? PageSettings.A4, header, footer, watermark, styles, content.IsDefault ? [] : content, outlineLevels);
 
     /// <summary>A document with a title.</summary>
     /// <param name="title">The title, shown by viewers in place of the file name and required for accessibility.</param>
@@ -77,6 +77,17 @@ public sealed record PdfDocument
 
     /// <summary>Text or an image across every page, such as DRAFT; an artifact screen readers skip.</summary>
     public Watermark? Watermark { get; init; }
+
+    /// <summary>
+    /// How deep the outline (the viewer's bookmarks) goes: headings of level 1 to this one become bookmarks, nested by
+    /// level. 3 by default; 0 for no outline.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// var report = document with { OutlineLevels = 2 };
+    /// </code>
+    /// </example>
+    public int OutlineLevels { get; init; } = 3;
 
     /// <summary>Named styles, on top of <see cref="StyleSheet.Default"/>. Null: the defaults only.</summary>
     public StyleSheet? Styles { get; init; }
