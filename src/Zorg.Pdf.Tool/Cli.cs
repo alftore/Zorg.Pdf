@@ -5,7 +5,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -14,6 +17,7 @@ using System.Threading.Tasks;
 using Zorg.Pdf.Fonts;
 using Zorg.Pdf.Imaging;
 using Zorg.Pdf.Markdown;
+using Zorg.Pdf.Signing;
 
 namespace Zorg.Pdf.Tool;
 
@@ -57,6 +61,7 @@ internal static class Cli
           zorg-pdf merge <a.pdf> <b.pdf:2-4>... -o out  Put pages of several PDFs into one
           zorg-pdf extract <in.pdf> --pages 1-3 -o out  Take some pages out, or rewrite with new metadata
           zorg-pdf split <in.pdf> [-o folder]           Write each page as its own PDF
+          zorg-pdf sign <in.pdf> --certificate <signer.pfx> [-o out]  Sign a PDF, keeping earlier signatures
           zorg-pdf schema                               Print the document JSON Schema
 
         Options:
@@ -80,6 +85,12 @@ internal static class Cli
               --title, --author, --subject, --keywords, --lang <text>
                                      merge and extract: new metadata (default: the first file's)
               --dpi <n>                  The PNG's resolution, 18 to 600 (default 96)
+              --certificate <file.pfx>  sign: the signer's certificate and key. Its password is read from the
+                                     ZORG_PDF_CERTIFICATE_PASSWORD environment variable, never the command line
+              --field <name>         sign: the empty signature field to sign (default Signature1, added if missing)
+              --reason, --location, --name, --contact <text>  sign: shown with the signature
+              --timestamp <url>      sign: a timestamp authority, for a PAdES B-T signature
+                                     (sign also takes --font for the text drawn into the field)
           -v, --verbose              Also print information, such as images that were shrunk
           -h, --help                 Show this help
               --version              Show the version
@@ -119,6 +130,8 @@ internal static class Cli
                 return await PreviewAsync(parsed, console, cancellationToken).ConfigureAwait(false);
             case "info":
                 return await InfoAsync(parsed, console, cancellationToken).ConfigureAwait(false);
+            case "sign":
+                return await SignAsync(parsed, console, cancellationToken).ConfigureAwait(false);
             case "merge" or "extract" or "split":
                 return await PagesAsync(parsed, console, cancellationToken).ConfigureAwait(false);
             default:
@@ -217,6 +230,61 @@ internal static class Cli
     }
 
     /// <summary>merge, extract and split: pages of existing PDFs into new files.</summary>
+    /// <summary>Signs a PDF by incremental update, with a .pfx file's key; the password comes from the environment.</summary>
+    private static async Task<int> SignAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken)
+    {
+        string target = args.Output ?? Path.ChangeExtension(args.Input, null) + "-signed.pdf";
+        string temporary = target + ".tmp";
+        try
+        {
+            string password = Environment.GetEnvironmentVariable("ZORG_PDF_CERTIFICATE_PASSWORD") ?? "";
+            using X509Certificate2 certificate = X509CertificateLoader.LoadPkcs12FromFile(args.Certificate!, password, X509KeyStorageFlags.EphemeralKeySet);
+            var options = new PdfSignatureOptions(PdfSigners.FromCertificate(certificate))
+            {
+                FieldName = args.Field ?? "Signature1",
+                Reason = args.Reason,
+                Location = args.Location,
+                Name = args.SignerName,
+                ContactInfo = args.Contact,
+                Timestamp = args.Timestamp is { } url ? new Rfc3161TimestampClient(new Uri(url)) : null,
+                AppearanceFont = args.FontFiles.Count > 0 ? FontSource.FromFile(args.FontFiles[0]) : null,
+            };
+            FileStream input = File.OpenRead(args.Input);
+            await using (input.ConfigureAwait(false))
+            {
+                FileStream output = File.Create(temporary);
+                await using (output.ConfigureAwait(false))
+                {
+                    await PdfSigning.SignAsync(input, output, options, cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            File.Move(temporary, target, overwrite: true);
+            await console.Out.WriteLineAsync($"{target}: signed in field \"{options.FieldName}\" by {certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: false)}{(options.Timestamp is null ? "" : ", with a timestamp")}").ConfigureAwait(false);
+            return Ok;
+        }
+        catch (CryptographicException)
+        {
+            // The message could echo nothing secret, but say only what to check.
+            await console.Error.WriteLineAsync($"zorg-pdf sign: couldn't open {args.Certificate} as a .pfx file with the password in ZORG_PDF_CERTIFICATE_PASSWORD. Check the file and the password.").ConfigureAwait(false);
+            return Usage;
+        }
+        catch (Exception ex) when (ex is PdfException or ArgumentException)
+        {
+            await console.Error.WriteLineAsync($"zorg-pdf sign: {ex.Message}").ConfigureAwait(false);
+            return ex is PdfReadException or PdfException ? Problems : Usage;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
+        {
+            await console.Error.WriteLineAsync($"zorg-pdf sign: {ex.Message}").ConfigureAwait(false);
+            return Usage;
+        }
+        finally
+        {
+            TryDelete(temporary);
+        }
+    }
+
     private static async Task<int> PagesAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken)
     {
         var options = new PdfFileOptions { Title = args.Title, Author = args.Author, Subject = args.Subject, Keywords = args.Keywords, Language = args.Language };

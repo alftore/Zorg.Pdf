@@ -327,6 +327,35 @@ public sealed class CliTests : IDisposable
         PdfFile.CheckStructure(await File.ReadAllBytesAsync(Path.ChangeExtension(document, ".pdf"), TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task SignSignsAnEmptyFieldAndKeepsThePasswordOffTheCommandLine()
+    {
+        var contract = new PdfDocument("Contract") { Content = [new Paragraph("The parties agree."), new SignatureField("customer")] };
+        string input = Path.Combine(_folder, "contract.pdf");
+        await File.WriteAllBytesAsync(input, (await Rendering.RenderTests.RenderAsync(contract)).File, TestContext.Current.CancellationToken);
+        string pfx = Path.Combine(_folder, "signer.pfx"), locked = Path.Combine(_folder, "locked.pfx");
+        await File.WriteAllBytesAsync(pfx, Rendering.SignatureTests.Pki.Value.Rsa.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs12, ""), TestContext.Current.CancellationToken);
+        await File.WriteAllBytesAsync(locked, Rendering.SignatureTests.Pki.Value.Rsa.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs12, "not-on-the-command-line"), TestContext.Current.CancellationToken);
+
+        (int code, string output, _) = await RunAsync("sign", input, "--certificate", pfx, "--field", "customer", "--reason", "Countersigned", "--font", TestFonts.RequirePath());
+        string signed = Path.Combine(_folder, "contract-signed.pdf");
+        Assert.Equal((Cli.Ok, true), (code, output.Contains("signed in field \"customer\" by Kari Nordmann", StringComparison.Ordinal)));
+        byte[] file = await File.ReadAllBytesAsync(signed, TestContext.Current.CancellationToken);
+        Assert.Equal(await File.ReadAllBytesAsync(input, TestContext.Current.CancellationToken), file[..(int)new FileInfo(input).Length]);
+        Rendering.SignatureTests.Verify(file);
+        Assert.DoesNotContain(Directory.GetFiles(_folder), f => f.EndsWith(".tmp", StringComparison.Ordinal));
+
+        (int wrong, _, string error) = await RunAsync("sign", input, "--certificate", locked, "-o", Path.Combine(_folder, "never.pdf"));
+        Assert.Equal(Cli.Usage, wrong);
+        Assert.Contains("ZORG_PDF_CERTIFICATE_PASSWORD", error, StringComparison.Ordinal);
+        Assert.DoesNotContain("not-on-the-command-line", error, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(_folder, "never.pdf")));
+
+        (int missing, _, string usage) = await RunAsync("sign", input);
+        Assert.Equal(Cli.Usage, missing);
+        Assert.Contains("--certificate", usage, StringComparison.Ordinal);
+    }
+
     private async Task<(int Code, string Output, string Error)> RunAsync(params string[] args)
     {
         var output = new StringWriter();

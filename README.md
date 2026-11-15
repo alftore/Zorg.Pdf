@@ -49,7 +49,7 @@ Most apps need `Zorg.Pdf` alone. The others each bring a dependency, a framework
 | `Zorg.Pdf.Hyphenation` | You justify text or set narrow columns | Hyphenation for English, German, French, Norwegian and Danish (600 KB of patterns) |
 | `Zorg.Pdf.AspNetCore` | You serve PDFs from ASP.NET Core | `PdfResults.Pdf`: streams a PDF response, with a 422 ProblemDetails for a document that can't render |
 | `Zorg.Pdf.Extensions.AI` | An AI agent writes your documents | Tools that let an agent validate and render documents |
-| `Zorg.Pdf.Tool` | You work from the command line or a build script | The `zorg-pdf` tool: render, watch, preview, info, merge, extract, split |
+| `Zorg.Pdf.Tool` | You work from the command line or a build script | The `zorg-pdf` tool: render, watch, preview, info, merge, extract, split, sign |
 
 ## Examples
 

@@ -16,6 +16,7 @@ dotnet tool install --global Zorg.Pdf.Tool
 | `zorg-pdf merge a.pdf b.pdf:2-4 -o out.pdf` | Puts pages of several PDFs into one |
 | `zorg-pdf extract in.pdf --pages 1-3 -o out.pdf` | Takes pages out, or rewrites with new metadata |
 | `zorg-pdf split in.pdf -o folder` | Writes each page as its own PDF |
+| `zorg-pdf sign in.pdf --certificate signer.pfx -o out.pdf` | Signs a PDF, keeping earlier signatures valid. The password is in `ZORG_PDF_CERTIFICATE_PASSWORD`. See [signatures](signatures.md#signing-existing-pdfs) |
 | `zorg-pdf schema` | Prints the JSON Schema |
 
 ## Common options

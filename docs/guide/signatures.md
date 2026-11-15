@@ -56,9 +56,15 @@ await using FileStream output = File.Create("contract-signed-by-both.pdf");
 await PdfSigning.SignAsync(input, output, new PdfSignatureOptions(signer) { FieldName = "customer" }, cancellationToken: cancellationToken);
 ```
 
-If the file has an empty signature field named `FieldName`, that field is signed. It keeps the appearance it had, and viewers show the signature's details when it's clicked. Otherwise an invisible field is added to the first page. A field that's signed already is refused, so pick another name for a new field. Readers show earlier signatures as valid with changes since, which is what an added signature is.
+If the file has an empty signature field named `FieldName`, that field is signed, and who signed, when, why and where are drawn into it, as when signing while rendering. The text needs a font, and the file's own fonts are subsets that may lack the letters, so a subset of another font is embedded with the signature. Set it with `AppearanceFont`. Without it, the first installed of Arial, Liberation Sans, DejaVu Sans, Noto Sans or Segoe UI is used, and if none is installed the field keeps the look it had. Otherwise an invisible field is added to the first page. A field that's signed already is refused, so pick another name for a new field. Readers show earlier signatures as valid with changes since, which is what an added signature is.
 
 The update uses the same kind of cross-reference section as the file's last one, a table or a stream. Files that are encrypted, or whose cross-reference data is damaged, are refused with a `PdfException` rather than signed into something that would break. Save them again first.
+
+On the command line, `zorg-pdf sign` does the same with a `.pfx` file. Its password is read from the `ZORG_PDF_CERTIFICATE_PASSWORD` environment variable, never from the command line, where it would show in the shell's history and the process list:
+
+```bash
+zorg-pdf sign contract.pdf --certificate signer.pfx --field customer --reason "Countersigned" --timestamp http://timestamp.digicert.com -o contract-signed.pdf
+```
 
 ## Timestamps (PAdES B-T)
 
@@ -105,8 +111,8 @@ Signed files are checked in the tests with .NET's `SignedCms` and `Rfc3161Timest
 
 ## What isn't there yet
 
-- **An image in a signature's appearance**, such as a scanned handwritten signature, and the signer's details drawn into an empty field when it's signed later.
-- **Signing encrypted files**, and signing from the `zorg-pdf` tool.
+- **An image in a signature's appearance**, such as a scanned handwritten signature.
+- **Signing encrypted files.**
 - **Long-term validation (B-LT, B-LTA):** revocation data and archive timestamps embedded in the file.
 
 The key is only ever given in code, so a JSON document can't carry a signature.

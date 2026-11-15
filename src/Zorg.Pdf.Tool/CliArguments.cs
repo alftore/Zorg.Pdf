@@ -8,7 +8,7 @@ namespace Zorg.Pdf.Tool;
 /// <summary>A parsed command line. Options take <c>--name value</c> or <c>--name=value</c>.</summary>
 internal sealed class CliArguments
 {
-    private static readonly string[] Commands = ["render", "validate", "watch", "preview", "info", "merge", "extract", "split", "schema"];
+    private static readonly string[] Commands = ["render", "validate", "watch", "preview", "info", "merge", "extract", "split", "sign", "schema"];
 
     /// <summary>render, validate, watch, schema, help or version.</summary>
     public string Command { get; private set; } = "help";
@@ -67,6 +67,27 @@ internal sealed class CliArguments
 
     public string? Language { get; private set; }
 
+    /// <summary>sign: the .pfx (PKCS #12) file with the signer's certificate and key.</summary>
+    public string? Certificate { get; private set; }
+
+    /// <summary>sign: the signature field's name.</summary>
+    public string? Field { get; private set; }
+
+    /// <summary>sign: why it's signed.</summary>
+    public string? Reason { get; private set; }
+
+    /// <summary>sign: where it's signed.</summary>
+    public string? Location { get; private set; }
+
+    /// <summary>sign: the signer's name as readers show it.</summary>
+    public string? SignerName { get; private set; }
+
+    /// <summary>sign: how to reach the signer.</summary>
+    public string? Contact { get; private set; }
+
+    /// <summary>sign: a timestamp authority's URL, for a PAdES B-T signature.</summary>
+    public string? Timestamp { get; private set; }
+
     public static bool TryParse(string[] args, [NotNullWhen(true)] out CliArguments? parsed, [NotNullWhen(false)] out string? error)
     {
         var result = new CliArguments();
@@ -92,7 +113,7 @@ internal sealed class CliArguments
                 inline = arg[(equals + 1)..];
             }
 
-            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--file" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi" or "--pdfa" or "--pages" or "--facturx" or "--title" or "--author" or "--subject" or "--keywords" or "--lang";
+            bool takesValue = name is "-o" or "--output" or "-d" or "--data" or "--image" or "--file" or "--fonts" or "--font" or "--default-font" or "--page" or "--dpi" or "--pdfa" or "--pages" or "--facturx" or "--title" or "--author" or "--subject" or "--keywords" or "--lang" or "--certificate" or "--field" or "--reason" or "--location" or "--name" or "--contact" or "--timestamp";
             string? value = inline;
             if (takesValue && value is null)
             {
@@ -195,6 +216,33 @@ internal sealed class CliArguments
                 case "--lang":
                     result.Language = value;
                     break;
+                case "--certificate":
+                    result.Certificate = value;
+                    break;
+                case "--field":
+                    result.Field = value;
+                    break;
+                case "--reason":
+                    result.Reason = value;
+                    break;
+                case "--location":
+                    result.Location = value;
+                    break;
+                case "--name":
+                    result.SignerName = value;
+                    break;
+                case "--contact":
+                    result.Contact = value;
+                    break;
+                case "--timestamp":
+                    if (!Uri.TryCreate(value, UriKind.Absolute, out Uri? tsa) || tsa.Scheme is not ("http" or "https"))
+                    {
+                        error = $"--timestamp takes a timestamp authority's http or https URL, not \"{value}\".";
+                        return false;
+                    }
+
+                    result.Timestamp = value;
+                    break;
                 case "--page":
                     if (value == "all")
                     {
@@ -238,7 +286,7 @@ internal sealed class CliArguments
         result.Command = positional[0];
         if (Array.IndexOf(Commands, result.Command) < 0)
         {
-            error = $"Unknown command \"{result.Command}\". The commands are render, validate, watch, preview, info, merge, extract, split and schema.";
+            error = $"Unknown command \"{result.Command}\". The commands are render, validate, watch, preview, info, merge, extract, split, sign and schema.";
             return false;
         }
 
@@ -280,6 +328,12 @@ internal sealed class CliArguments
             }
         }
 
+        if (result.Command == "sign" && result.Certificate is null)
+        {
+            error = "sign needs --certificate: zorg-pdf sign contract.pdf --certificate signer.pfx -o signed.pdf. The .pfx file's password goes in the ZORG_PDF_CERTIFICATE_PASSWORD environment variable.";
+            return false;
+        }
+
         // Options that do nothing for the command are mistakes worth naming.
         string[] allowed = result.Command switch
         {
@@ -287,6 +341,7 @@ internal sealed class CliArguments
             "info" => ["--json"],
             "merge" or "extract" => ["-o", "--output", "--pages", "--title", "--author", "--subject", "--keywords", "--lang", "--json"],
             "split" => ["-o", "--output", "--json"],
+            "sign" => ["-o", "--output", "--certificate", "--field", "--reason", "--location", "--name", "--contact", "--timestamp", "--font"],
             "validate" => ["-d", "--data", "--image", "--warnaserror", "--json", "-v", "--verbose"],
             _ => [],
         };
