@@ -133,6 +133,61 @@ public sealed class SwissQrBillTests
         Assert.Contains(error.Diagnostics, d => d is { Code: "ZPDF-J035", Path: "/content/0/reference" });
     }
 
+    [Theory]
+    [InlineData("\"793,00\"", "isn't a number like 793.00")]
+    [InlineData("\"1'949.75\"", "isn't a number like 793.00")]
+    [InlineData("\"CHF 793.00\"", "isn't a number like 793.00")]
+    [InlineData("true", "isn't a number like 793.00")]
+    [InlineData("793.00, \"debtor\": \"Simon Muster\"", "must be an object")]
+    public async Task ABoundValueThatCantBeUsedIsAnErrorNotABlank(string fields, string message)
+    {
+        PdfDocument document = PdfDocument.ParseJson("""
+            {"title":"Invoice","content":[{"type":"swissQrBill","account":"CH4431999123000889012","reference":"210000000003139471430009017",
+             "creditor":{"name":"Max Muster & Söhne","postalCode":"8000","town":"Seldwyla"},"bind":"bill"}]}
+            """);
+        RenderOptions options = PdfInspect.Options() with { Data = PdfData.ParseJson("""{"bill":{"amount":""" + fields + "}}") };
+
+        PdfDocumentException error = await Assert.ThrowsAsync<PdfDocumentException>(async () => await RenderTests.RenderAsync(document, options));
+        PdfDiagnostic diagnostic = Assert.Single(error.Diagnostics, d => d.Code == "ZPDF-J035");
+        Assert.Equal("/content/0/bind", diagnostic.Path);
+        Assert.Contains(message, diagnostic.Message, StringComparison.Ordinal);
+
+        RenderOptions plain = PdfInspect.Options() with { Data = PdfData.ParseJson("""{"bill":{"amount":"1949.75"}}""") };
+        (_, RenderResult result) = await RenderTests.RenderAsync(document, plain);
+        Assert.Equal(1, result.PageCount);
+    }
+
+    [Fact]
+    public void TheCodeMustFitVersion25AndElementsAreTrimmed()
+    {
+        // Every field at its longest, in letters that take two bytes in UTF-8: under 997 characters, over version 25.
+        string Long(int n) => new('é', n);
+        var longest = new SwissQrAddress(Long(70), Long(16), Long(35)) { Street = Long(70), HouseNumber = Long(16) };
+        SwissQrBill big = Example() with { Creditor = longest, Debtor = longest, Message = Long(140), BillInformation = null };
+        PdfDiagnostic tooBig = Assert.Single(new PdfDocument("x") { Content = [big] }.Validate().Diagnostics);
+        Assert.Contains("version 25", tooBig.Message, StringComparison.Ordinal);
+
+        // Blank-only elements aren't padding in the code.
+        string trimmed = (Example() with { Debtor = Debtor with { Street = "   ", HouseNumber = " 1 " }, Message = "  Order  " }).ToPayload();
+        Assert.Contains("\nS\nSimon Muster\n\n1\n8000\n", trimmed, StringComparison.Ordinal);
+        Assert.Contains("\nOrder\nEPD", trimmed, StringComparison.Ordinal);
+
+        // Billing information alone over the limit is reported where it is.
+        PdfDiagnostic billing = Assert.Single(new PdfDocument("x") { Content = [Example() with { Message = null, BillInformation = "//S1/10/" + new string('1', 140) }] }.Validate().Diagnostics);
+        Assert.Equal("/content/0/billInformation", billing.Path);
+    }
+
+    [Fact]
+    public async Task LongValuesAreCutToFitAndItsDiagnosticsNameTheBlock()
+    {
+        var longest = new SwissQrAddress("Pia-Maria Rutschmann-Schnyder & Söhne, Kaffeerösterei & Feinkost AG", "9400", "Rorschach am Bodensee") { Street = "Grosse Marktgasse beim alten Bahnhof gleich neben der Post", HouseNumber = "28a-28c" };
+        SwissQrBill bill = Example() with { Creditor = longest, Debtor = longest, Message = new string('x', 80), BillInformation = null };
+        (_, RenderResult result) = await RenderTests.RenderAsync(new PdfDocument("Invoice") { Content = [new Paragraph("Text"), bill] });
+
+        Assert.Equal(1, result.PageCount);
+        Assert.All(result.Diagnostics.Where(d => d.Code != "ZPDF-F003"), d => Assert.StartsWith("/content/1", d.Path, StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task TheSlipTakesThePageBottomAndWhatFollowsGoesOn()
     {

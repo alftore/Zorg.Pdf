@@ -23,6 +23,9 @@ internal sealed partial class RenderEngine
     private const double StripHeight = 105 * Mm;
     private const double ReceiptWidth = 62 * Mm;
 
+    /// <summary>The bill being drawn, for diagnostics' paths.</summary>
+    private string _slipPath = "/";
+
     /// <summary>Pages with a QR-bill: their footer is left out, as the strip takes the page's bottom.</summary>
     private readonly HashSet<int> _slipPages = [];
 
@@ -58,6 +61,7 @@ internal sealed partial class RenderEngine
         }
 
         _slipPages.Add(_page);
+        _slipPath = string.Create(CultureInfo.InvariantCulture, $"/content/{index}");
         string own = _document.Language.Split('-')[0];
         string language = bill.Language ?? SlipTexts.Keys.FirstOrDefault(k => string.Equals(k, own, StringComparison.OrdinalIgnoreCase)) ?? "en";
         string[] t = SlipTexts[language];
@@ -74,12 +78,14 @@ internal sealed partial class RenderEngine
 
         // The receipt: headings 6 pt bold, values 8 pt, 9 pt apart.
         SlipLines([(t[1], 11, true)], style, 5, 5, 52, 11, slip);
+        // Long names are cut to two lines and other lines to one, with "...", as the guidelines allow (3.5.4).
         var account = new List<(string, double, bool)> { (t[2], 6, true), (Iban(bill.Account), 8, false) };
-        account.AddRange(AddressLines(bill.Creditor, 8));
-        double baseline = SlipBlocks(style, 5, 12, 52, 9, slip, account, Reference(bill) is { } reference ? [(t[3], 6, true), (reference, 8, false)] : null, bill.Debtor is { } debtor ? [(t[5], 6, true), .. AddressLines(debtor, 8)] : [(t[6], 6, true)]);
+        account.AddRange(AddressLines(bill.Creditor, 8, 52, style));
+        double baseline = SlipBlocks(style, 5, 12, 52, 9, 66, slip, account, Reference(bill) is { } reference ? [(t[3], 6, true), (reference, 8, false)] : null, bill.Debtor is { } debtor ? [(t[5], 6, true), .. AddressLines(debtor, 8, 52, style)] : [(t[6], 6, true)]);
         if (bill.Debtor is null)
         {
-            CornerMarks(5, MmFromTop(baseline) + 1, 52, 20);
+            double boxTop = MmFromTop(baseline) + 1;
+            CornerMarks(5, boxTop, 52, Math.Clamp(66 - boxTop, 8, 20));
         }
 
         SlipAmount(bill, t, style, 5, 27, 6, 8, 11, 30, 10, slip);
@@ -91,23 +97,28 @@ internal sealed partial class RenderEngine
         SlipCode(payload, P + 5, 17, slip);
         SlipAmount(bill, t, style, P + 5, P + 20, 8, 10, 13, 40, 15, slip);
         var payable = new List<(string, double, bool)> { (t[2], 8, true), (Iban(bill.Account), 10, false) };
-        payable.AddRange(AddressLines(bill.Creditor, 10));
-        string? information = (bill.Message, bill.BillInformation) switch
+        payable.AddRange(AddressLines(bill.Creditor, 10, 87, style));
+        var information = new List<(string, double, bool)>();
+        if (bill.Message?.Trim() is { Length: > 0 } message)
         {
-            ({ Length: > 0 } message, { Length: > 0 } billing) => message + "\n" + billing,
-            ({ Length: > 0 } message, _) => message,
-            (_, { Length: > 0 } billing) => billing,
-            _ => null,
-        };
+            information.Add((Fit(message, style, 10, false, 87, 2), 10, false));
+        }
+
+        if (bill.BillInformation?.Trim() is { Length: > 0 } billing)
+        {
+            information.Add((Fit(billing, style, 10, false, 87, 2), 10, false));
+        }
+
         baseline = SlipBlocks(
-            style, P + 56, 5, 87, 11, slip,
+            style, P + 56, 5, 87, 11, 100, slip,
             payable,
             Reference(bill) is { } paymentReference ? [(t[3], 8, true), (paymentReference, 10, false)] : null,
-            information is null ? null : [(t[4], 8, true), (information, 10, false)],
-            bill.Debtor is { } paymentDebtor ? [(t[5], 8, true), .. AddressLines(paymentDebtor, 10)] : [(t[6], 8, true)]);
+            information.Count == 0 ? null : [(t[4], 8, true), .. information],
+            bill.Debtor is { } paymentDebtor ? [(t[5], 8, true), .. AddressLines(paymentDebtor, 10, 87, style)] : [(t[6], 8, true)]);
         if (bill.Debtor is null)
         {
-            CornerMarks(P + 56, MmFromTop(baseline) + 1, 65, 25);
+            double boxTop = MmFromTop(baseline) + 1;
+            CornerMarks(P + 56, boxTop, 65, Math.Clamp(100 - boxTop, 10, 25));
         }
 
         _tagger.End(slip, _documentWriter.Pages);
@@ -127,10 +138,13 @@ internal sealed partial class RenderEngine
         _content.BeginArtifact("Layout"u8, default).SaveState().SetStrokeGray(0).SetLineWidth(0.5)
             .StrokeLine(0, StripHeight, pageWidth, StripHeight)
             .StrokeLine(ReceiptWidth, 0, ReceiptWidth, StripHeight)
-            .RestoreState().EndMarkedContent();
+            .RestoreState();
+        Scissors(5 * Mm, StripHeight, 0); // On each line, as the guidelines ask (3.7), besides the note above.
+        Scissors(ReceiptWidth, StripHeight - (5 * Mm), -Math.PI / 2);
+        _content.EndMarkedContent();
         _stroke = null;
         TextStyle small = style.Merge(new TextStyle { Size = Length.Pt(7) });
-        if (LayoutText(new Paragraph(note), small, "/", null, report: true, width: pageWidth).Lines is [{ } line, ..])
+        if (LayoutText(new Paragraph(note), small, _slipPath, null, report: true, width: pageWidth).Lines is [{ } line, ..])
         {
             Tagger.Element p = _tagger.Begin(StructureRole.P, parent);
             _content.BeginMarkedContent(Tagger.Name(StructureRole.P), _tagger.Mark(p, _page));
@@ -142,10 +156,61 @@ internal sealed partial class RenderEngine
     }
 
     /// <summary>
+    /// A scissors symbol drawn as vectors on a cut line, pointing along it from (<paramref name="x"/>, <paramref name="y"/>),
+    /// on a white ground that breaks the line: two rings and two crossed blades, about 5 mm long.
+    /// </summary>
+    private void Scissors(double x, double y, double angle)
+    {
+        double cos = Math.Cos(angle), sin = Math.Sin(angle), r = 0.6 * Mm, k = 0.5523 * r;
+        _content.SaveState().Transform(cos, sin, -sin, cos, x, y)
+            .SetFillGray(1).FillRectangle(-0.3 * Mm, -1.5 * Mm, 5.6 * Mm, 3 * Mm)
+            .SetStrokeGray(0).SetLineWidth(0.5);
+        foreach (double cy in (double[])[0.75 * Mm, -0.75 * Mm])
+        {
+            double cx = 0.7 * Mm;
+            _content.MoveTo(cx + r, cy).CurveTo(cx + r, cy + k, cx + k, cy + r, cx, cy + r).CurveTo(cx - k, cy + r, cx - r, cy + k, cx - r, cy)
+                .CurveTo(cx - r, cy - k, cx - k, cy - r, cx, cy - r).CurveTo(cx + k, cy - r, cx + r, cy - k, cx + r, cy).ClosePath();
+        }
+
+        _content.MoveTo(1.2 * Mm, 0.45 * Mm).LineTo(5 * Mm, -0.7 * Mm).MoveTo(1.2 * Mm, -0.45 * Mm).LineTo(5 * Mm, 0.7 * Mm).Stroke().RestoreState();
+        _fill = Color.Black;
+    }
+
+    /// <summary>
+    /// The text cut, with "...", to the longest start that fits in <paramref name="maxLines"/> lines of the width, or
+    /// the whole text when it fits.
+    /// </summary>
+    private string Fit(string text, TextStyle style, double size, bool bold, double widthMm, int maxLines)
+    {
+        TextStyle lineStyle = style.Merge(new TextStyle { Size = Length.Pt(size), Weight = bold ? FontWeight.Bold : FontWeight.Normal });
+        int Lines(string candidate) => LayoutText(new Paragraph(candidate), lineStyle, _slipPath, null, report: false, width: widthMm * Mm).Lines.Count;
+        if (Lines(text) <= maxLines)
+        {
+            return text;
+        }
+
+        int low = 0, high = text.Length;
+        while (low < high)
+        {
+            int middle = (low + high + 1) / 2;
+            if (Lines(text[..middle].TrimEnd() + "...") <= maxLines)
+            {
+                low = middle;
+            }
+            else
+            {
+                high = middle - 1;
+            }
+        }
+
+        return text[..low].TrimEnd() + "...";
+    }
+
+    /// <summary>
     /// Draws the information blocks one under another, a blank line between them; each block is a heading and its
     /// value lines. Returns the last baseline, in page points.
     /// </summary>
-    private double SlipBlocks(TextStyle style, double left, double top, double width, double spacing, Tagger.Element parent, params List<(string Text, double Size, bool Bold)>?[] blocks)
+    private double SlipBlocks(TextStyle style, double left, double top, double width, double spacing, double bottom, Tagger.Element parent, params List<(string Text, double Size, bool Bold)>?[] blocks)
     {
         double baseline = 0;
         foreach (List<(string Text, double Size, bool Bold)>? block in blocks)
@@ -155,7 +220,7 @@ internal sealed partial class RenderEngine
                 continue;
             }
 
-            baseline = SlipLines(block, style, left, top, width, spacing, parent);
+            baseline = SlipLines(block, style, left, top, width, spacing, parent, bottom: bottom);
             top = MmFromTop(baseline) + (spacing / Mm); // A blank line before the next block.
         }
 
@@ -163,7 +228,7 @@ internal sealed partial class RenderEngine
     }
 
     /// <summary>One paragraph of lines, wrapped to the width, from <paramref name="top"/> (mm below the strip's top). Returns the last baseline.</summary>
-    private double SlipLines(List<(string Text, double Size, bool Bold)> lines, TextStyle style, double left, double top, double width, double spacing, Tagger.Element parent, bool alignRight = false)
+    private double SlipLines(List<(string Text, double Size, bool Bold)> lines, TextStyle style, double left, double top, double width, double spacing, Tagger.Element parent, bool alignRight = false, double bottom = 100)
     {
         Tagger.Element p = _tagger.Begin(StructureRole.P, parent);
         _content.BeginMarkedContent(Tagger.Name(StructureRole.P), _tagger.Mark(p, _page));
@@ -174,9 +239,15 @@ internal sealed partial class RenderEngine
             TextStyle lineStyle = style.Merge(new TextStyle { Size = Length.Pt(size), Weight = bold ? FontWeight.Bold : FontWeight.Normal });
             foreach (string part in text.Split('\n'))
             {
-                foreach (LayoutLine line in LayoutText(new Paragraph(part), lineStyle, "/", null, report: true, width: width * Mm).Lines)
+                foreach (LayoutLine line in LayoutText(new Paragraph(part), lineStyle, _slipPath, null, report: true, width: width * Mm).Lines)
                 {
-                    baseline = double.IsNaN(baseline) ? FromTop(top) - line.Ascent : baseline - spacing;
+                    double next = double.IsNaN(baseline) ? FromTop(top) - line.Ascent : baseline - spacing;
+                    if (next < FromTop(bottom))
+                    {
+                        break; // Past the section's bottom: the rest isn't drawn rather than overprinted.
+                    }
+
+                    baseline = next;
                     double x = alignRight ? ((left + width) * Mm) - line.Width : left * Mm;
                     DrawRuns(line, x, baseline);
                 }
@@ -192,7 +263,7 @@ internal sealed partial class RenderEngine
     private void SlipAmount(SwissQrBill bill, string[] t, TextStyle style, double left, double amountLeft, double heading, double value, double spacing, double boxWidth, double boxHeight, Tagger.Element parent)
     {
         const double Top = 68;
-        SlipLines([(t[7], heading, true), (bill.Currency, value, false)], style, left, Top, amountLeft - left - 1, spacing, parent);
+        double currency = SlipLines([(t[7], heading, true), (bill.Currency, value, false)], style, left, Top, amountLeft - left - 1, spacing, parent);
         if (bill.Amount is { } amount)
         {
             var format = new NumberFormatInfo { NumberGroupSeparator = " ", NumberDecimalSeparator = "." };
@@ -201,8 +272,15 @@ internal sealed partial class RenderEngine
         else
         {
             double after = MmFromTop(SlipLines([(t[8], heading, true)], style, amountLeft, Top, 40, spacing, parent));
-            double boxLeft = left > 62 ? amountLeft + (51 - (amountLeft - left) - boxWidth) : left + 52 - boxWidth;
-            CornerMarks(boxLeft, after + 1, boxWidth, boxHeight);
+            if (left > 62)
+            {
+                // Payment part: under the currency, in the code's 46 mm column, clear of the 5 mm gap to the information.
+                CornerMarks(left + 46 - boxWidth, MmFromTop(currency) + 1.5, boxWidth, boxHeight);
+            }
+            else
+            {
+                CornerMarks(left + 52 - boxWidth, after + 1, boxWidth, boxHeight);
+            }
         }
     }
 
@@ -270,17 +348,21 @@ internal sealed partial class RenderEngine
         }
     }
 
-    /// <summary>Name, street and number, postal code and town, with the country first outside Switzerland and Liechtenstein.</summary>
-    private static IEnumerable<(string, double, bool)> AddressLines(SwissQrAddress address, double size)
+    /// <summary>
+    /// Name (up to two lines), street and number, postal code and town (a line each), cut with "..." to fit; the
+    /// country code first outside Switzerland, Liechtenstein included (3.5.4).
+    /// </summary>
+    private List<(string, double, bool)> AddressLines(SwissQrAddress address, double size, double width, TextStyle style)
     {
-        yield return (address.Name, size, false);
-        string street = string.Join(' ', new[] { address.Street, address.HouseNumber }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        var lines = new List<(string, double, bool)> { (Fit(address.Name.Trim(), style, size, false, width, 2), size, false) };
+        string street = string.Join(' ', new[] { address.Street, address.HouseNumber }.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!.Trim()));
         if (street.Length > 0)
         {
-            yield return (street, size, false);
+            lines.Add((Fit(street, style, size, false, width, 1), size, false));
         }
 
-        string country = address.Country is "CH" or "LI" ? "" : address.Country + "-";
-        yield return (string.Create(CultureInfo.InvariantCulture, $"{country}{address.PostalCode} {address.Town}"), size, false);
+        string country = address.Country is "CH" ? "" : address.Country + "-";
+        lines.Add((Fit(string.Create(CultureInfo.InvariantCulture, $"{country}{address.PostalCode.Trim()} {address.Town.Trim()}"), style, size, false, width, 1), size, false));
+        return lines;
     }
 }

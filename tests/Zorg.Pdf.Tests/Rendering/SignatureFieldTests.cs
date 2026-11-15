@@ -54,7 +54,7 @@ public sealed partial class SignatureFieldTests
         string flat = PdfInspect.Text(unsigned);
         Assert.Equal(2, Regex.Count(flat, @"/FT /Sig /T \((buyer|seller)\) /TU \(Signature\) /Rect"));
         Assert.DoesNotContain("/V ", flat, StringComparison.Ordinal);
-        Assert.DoesNotContain("/SigFlags", flat, StringComparison.Ordinal);
+        Assert.Contains("/SigFlags 1", flat, StringComparison.Ordinal); // Fields exist, none signed yet.
         Assert.Contains("/AcroForm <</Fields [", flat, StringComparison.Ordinal);
         Assert.Equal(2, PdfInspect.Elements(unsigned, "Form").Count);
 

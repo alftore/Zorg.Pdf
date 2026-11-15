@@ -439,16 +439,22 @@ internal sealed class TemplateBinder
             static string? Text(JsonElement o, string name, string? current) =>
                 o.TryGetProperty(name, out JsonElement e) ? e.ValueKind switch { JsonValueKind.String => e.GetString(), JsonValueKind.Null => null, _ => e.GetRawText() } : current;
 
-            static SwissQrAddress? Address(JsonElement o, string name, SwissQrAddress? current)
+            SwissQrAddress? Address(JsonElement o, string name, SwissQrAddress? current)
             {
                 if (!o.TryGetProperty(name, out JsonElement a))
                 {
                     return current;
                 }
 
-                if (a.ValueKind != JsonValueKind.Object)
+                if (a.ValueKind == JsonValueKind.Null)
                 {
                     return null;
+                }
+
+                if (a.ValueKind != JsonValueKind.Object)
+                {
+                    _sink.Error(DiagnosticCodes.BadSwissQrBill, $"The bound \"{name}\" must be an object with name, postalCode and town, not {a.ValueKind switch { JsonValueKind.String => "a string", JsonValueKind.Number => "a number", JsonValueKind.Array => "an array", _ => "true or false" }}.", $"{path}/bind");
+                    return current;
                 }
 
                 SwissQrAddress start = current ?? new SwissQrAddress("", "", "");
@@ -463,9 +469,24 @@ internal sealed class TemplateBinder
             decimal? amount = bound.Amount;
             if (value.TryGetProperty("amount", out JsonElement number))
             {
-                amount = number.ValueKind == JsonValueKind.Number && number.TryGetDecimal(out decimal d) ? d
-                    : number.ValueKind == JsonValueKind.String && decimal.TryParse(number.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal parsed) ? parsed
-                    : null;
+                // A decimal point only: "793,00" isn't 79 300, and an amount that can't be read isn't a blank one.
+                const NumberStyles Plain = NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite;
+                if (number.ValueKind == JsonValueKind.Null)
+                {
+                    amount = null;
+                }
+                else if (number.ValueKind == JsonValueKind.Number && number.TryGetDecimal(out decimal d))
+                {
+                    amount = d;
+                }
+                else if (number.ValueKind == JsonValueKind.String && decimal.TryParse(number.GetString(), Plain, CultureInfo.InvariantCulture, out decimal parsed))
+                {
+                    amount = parsed;
+                }
+                else
+                {
+                    _sink.Error(DiagnosticCodes.BadSwissQrBill, $"The bound amount {number.GetRawText()} isn't a number like 793.00 (a decimal point, no thousands separators or currency).", $"{path}/bind");
+                }
             }
 
             bound = bound with

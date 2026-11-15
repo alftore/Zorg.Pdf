@@ -28,7 +28,7 @@ internal sealed partial class RenderEngine
     /// <summary>Every visible field, for the AcroForm's /Fields.</summary>
     private readonly List<PdfReference> _formFields = [];
 
-    private async ValueTask PlaceSignatureFieldAsync(SignatureField field, CancellationToken cancellationToken)
+    private async ValueTask PlaceSignatureFieldAsync(int index, SignatureField field, CancellationToken cancellationToken)
     {
         double width = Math.Min(field.Width?.Points ?? Length.Mm(60).Points, _geometry.ContentWidth);
         double height = Math.Min(field.Height?.Points ?? Length.Mm(20).Points, _geometry.ContentHeight);
@@ -54,7 +54,7 @@ internal sealed partial class RenderEngine
         Tagger.AddObject(form, widget, _page);
         _tagger.End(form, _documentWriter.Pages);
 
-        WriteFieldAppearance(appearance, field, width, height, signed ? SignedLines(_options.Signature!) : [label], dim: !signed);
+        WriteFieldAppearance(appearance, field, width, height, signed ? SignedLines(_options.Signature!) : [label], dim: !signed, string.Create(CultureInfo.InvariantCulture, $"/content/{index}"));
         _pageFields.Add(new PendingField(widget, appearance, field.Name, label, (x, bottom, x + width, top), key, signed));
         _formFields.Add(widget);
         _y = bottom - FieldSpaceAfter;
@@ -88,7 +88,7 @@ internal sealed partial class RenderEngine
     /// Draws a field's appearance into its own form XObject: a grey border, then the lines from the top, as many as
     /// fit. The page's drawing state is put back afterwards, as the field is placed mid-page.
     /// </summary>
-    private void WriteFieldAppearance(PdfReference stream, SignatureField field, double width, double height, string[] text, bool dim)
+    private void WriteFieldAppearance(PdfReference stream, SignatureField field, double width, double height, string[] text, bool dim, string path)
     {
         TextStyle style = _styles.For(field);
         double size = Math.Clamp(Math.Min(style.Size?.Points ?? 8, (height - (2 * FieldPadding)) / (text.Length * 1.25)), 4, 12);
@@ -107,7 +107,7 @@ internal sealed partial class RenderEngine
             double baseline = height - FieldPadding;
             foreach (string paragraph in text)
             {
-                foreach (LayoutLine line in LayoutText(new Paragraph(paragraph), style, "/", null, report: true, width: width - (2 * FieldPadding)).Lines)
+                foreach (LayoutLine line in LayoutText(new Paragraph(paragraph), style, path, null, report: true, width: width - (2 * FieldPadding)).Lines)
                 {
                     if (baseline - line.Height < FieldPadding - 0.01)
                     {

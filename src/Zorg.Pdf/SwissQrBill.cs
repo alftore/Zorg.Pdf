@@ -215,8 +215,9 @@ internal static class SwissQrRules
     public static string ReferenceType(string account, string reference) =>
         IsQrIban(account) ? "QRR" : reference.Length > 0 ? "SCOR" : "NON";
 
+    /// <summary>An address's elements, trimmed: the guidelines forbid padding with blanks (4.1.3).</summary>
     public static IEnumerable<string> AddressLines(SwissQrAddress address) =>
-        ["S", address.Name, address.Street ?? "", address.HouseNumber ?? "", address.PostalCode, address.Town, address.Country];
+        ["S", address.Name?.Trim() ?? "", address.Street?.Trim() ?? "", address.HouseNumber?.Trim() ?? "", address.PostalCode?.Trim() ?? "", address.Town?.Trim() ?? "", address.Country];
 
     /// <summary>What breaks the guidelines, each with the path of the field under the bill (such as "/account").</summary>
     public static IEnumerable<(string Message, string Path)> Check(SwissQrBill bill)
@@ -275,9 +276,9 @@ internal static class SwissQrRules
             yield return ("With an ordinary IBAN the reference must be an ISO 11649 creditor reference (\"RF\" and its check digits) or none. QR references need a QR-IBAN.", "/reference");
         }
 
-        if ((bill.Message?.Length ?? 0) + (bill.BillInformation?.Length ?? 0) > 140)
+        if ((bill.Message?.Trim().Length ?? 0) + (bill.BillInformation?.Trim().Length ?? 0) > 140)
         {
-            yield return ("The message and billing information are at most 140 characters together.", "/message");
+            yield return ("The message and billing information are at most 140 characters together.", string.IsNullOrWhiteSpace(bill.Message) ? "/billInformation" : "/message");
         }
 
         if (bill.BillInformation is { Length: > 0 } information && !information.StartsWith("//", StringComparison.Ordinal))
@@ -298,9 +299,31 @@ internal static class SwissQrRules
             }
         }
 
-        if (bill.Creditor is not null && Build(bill).Length is > 997 and var length)
+        if (bill.Creditor is not null)
         {
-            yield return ($"The QR code's data is {length} characters, more than the 997 the guidelines allow. Shorten the message.", "");
+            string payload = Build(bill);
+            if (payload.Length > 997)
+            {
+                yield return ($"The QR code's data is {payload.Length} characters, more than the 997 the guidelines allow. Shorten the message.", "");
+            }
+            else if (Version(payload) > 25)
+            {
+                // Letters outside ASCII take two bytes each, so 997 characters can still need too big a code.
+                yield return ("The QR code would need more than version 25 (117 × 117 modules), the guidelines' limit for a 46 mm code. Shorten the message or the names.", "");
+            }
+        }
+    }
+
+    /// <summary>The smallest QR version (1 to 40) that holds the payload at level M, or 41 when none does.</summary>
+    private static int Version(string payload)
+    {
+        try
+        {
+            return (Barcodes.QrEncoder.Encode(payload, QrErrorCorrection.M).GetLength(0) - 17) / 4;
+        }
+        catch (ArgumentException)
+        {
+            return 41;
         }
     }
 
@@ -317,11 +340,11 @@ internal static class SwissQrRules
         lines.AddRange(bill.Debtor is { } debtor ? AddressLines(debtor) : Enumerable.Repeat("", 7));
         lines.Add(ReferenceType(account, reference));
         lines.Add(reference);
-        lines.Add(bill.Message ?? "");
+        lines.Add(bill.Message?.Trim() ?? "");
         lines.Add("EPD");
-        if (!string.IsNullOrEmpty(bill.BillInformation))
+        if (bill.BillInformation?.Trim() is { Length: > 0 } billing)
         {
-            lines.Add(bill.BillInformation);
+            lines.Add(billing);
         }
 
         return string.Join('\n', lines);
@@ -331,7 +354,7 @@ internal static class SwissQrRules
     {
         foreach ((string? value, string name, int max, bool required) in (IEnumerable<(string?, string, int, bool)>)[(address.Name, "name", 70, true), (address.Street, "street", 70, false), (address.HouseNumber, "houseNumber", 16, false), (address.PostalCode, "postalCode", 16, true), (address.Town, "town", 35, true)])
         {
-            if (string.IsNullOrWhiteSpace(value) ? required : value.Length > max)
+            if (string.IsNullOrWhiteSpace(value) ? required : value.Trim().Length > max)
             {
                 yield return (required ? $"The {name} is required, up to {max} characters." : $"The {name} is at most {max} characters.", $"{path}/{name}");
             }

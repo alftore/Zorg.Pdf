@@ -278,7 +278,7 @@ internal sealed partial class RenderEngine : IDisposable
                     break;
                 case SignatureField field:
                     Arrived(field);
-                    await PlaceSignatureFieldAsync(field, cancellationToken).ConfigureAwait(false);
+                    await PlaceSignatureFieldAsync(i, field, cancellationToken).ConfigureAwait(false);
                     break;
                 case List list:
                     Arrived(list);

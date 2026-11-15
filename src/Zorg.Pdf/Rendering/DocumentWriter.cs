@@ -421,12 +421,10 @@ internal sealed class DocumentWriter
             }
 
             _writer.EndArray();
-            if (signed)
-            {
-                // SigFlags 3: the document has signatures, and changes must be appended (ISO 32000-1, 12.7.2).
-                _writer.Name("SigFlags"u8);
-                _writer.Integer(3);
-            }
+            // SigFlags: 1, the document has signature fields; 3, and it's signed, so changes must be appended
+            // (ISO 32000-1, 12.7.2).
+            _writer.Name("SigFlags"u8);
+            _writer.Integer(signed ? 3 : 1);
 
             _writer.EndDictionary();
         }
