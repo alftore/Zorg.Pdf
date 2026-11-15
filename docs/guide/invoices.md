@@ -11,7 +11,7 @@ An invoice is an ordinary document. The examples [invoice.json](../examples/invo
 
 ## Factur-X and ZUGFeRD
 
-Factur-X (France) and ZUGFeRD 2 (Germany) are the same e-invoice format: a PDF/A-3 file that people read, with the invoice's Cross Industry Invoice (CII) XML attached for software. `Zorg.Pdf.Invoicing` turns your document into one.
+Factur-X (France) and ZUGFeRD 2 (Germany) are the same e-invoice format: a PDF/A-3 file that people read, with the invoice's Cross Industry Invoice (CII) XML attached for software. `FacturX` (namespace `Zorg.Pdf.Invoicing`, in the core package) turns your document into one.
 
 ```csharp
 FacturXInvoice facturX = FacturX.Read(await File.ReadAllBytesAsync("invoice.xml", cancellationToken));

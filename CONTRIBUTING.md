@@ -64,6 +64,10 @@ Windows needs the Visual Studio C++ workload. Use `linux-x64` on Linux (needs `c
 - **Public API changes** update `src/Zorg.Pdf/PublicAPI.Unshipped.txt`. The build fails otherwise.
 - **Vertical slices.** Tests and docs land in the same commit as the code.
 
+## New packages
+
+Features go in `Zorg.Pdf` unless they bring something a user of the core shouldn't pay for. That means a third-party package, a framework reference (ASP.NET Core) or a lot of data (hyphenation patterns). Only then are they an add-on, named `Zorg.Pdf.<Area>` after Microsoft's names where there's one (`AspNetCore`, `Extensions.AI`). A topic alone isn't a reason: Factur-X has its namespace, `Zorg.Pdf.Invoicing`, inside the core package. Every package shares one version and is released together.
+
 ## Commits
 
 Signed, with no co-author or generator lines. The README covers how the library is built.

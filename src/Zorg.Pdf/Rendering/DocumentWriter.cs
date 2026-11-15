@@ -32,7 +32,7 @@ internal readonly record struct PageGeometry(double Width, double Height, double
 /// </summary>
 internal sealed class DocumentWriter
 {
-    /// <summary>"Zorg.Pdf 0.1.0": the same for every file a build writes, so output stays deterministic.</summary>
+    /// <summary>"Zorg.Pdf 0.5.0": the same for every file a build writes, so output stays deterministic.</summary>
     internal static readonly string Producer = "Zorg.Pdf " + (typeof(DocumentWriter).Assembly.GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "0");
 
     private readonly PdfObjectWriter _writer;

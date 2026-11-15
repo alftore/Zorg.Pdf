@@ -31,7 +31,7 @@ zorg-pdf render docs/examples/annual-report.json --pdfua --pdfa 2a --preview
 - **Reports:** tables of contents, bookmarks, links, sections with their own page numbering, headers and footers, and bar, stacked, line and pie charts drawn as vectors.
 - **Templates:** values, repeats and conditions bound from a JSON model, so one document renders many invoices.
 - **Letters:** address boxes for DIN 5008 and Norwegian window envelopes, letterhead from an existing PDF behind the page, QR codes, Code 128, GS1-128 and EAN-13 barcodes, EPC payment codes, Swiss QR-bills (not yet verified with a Swiss banking app: see [the guide](docs/guide/barcodes.md#swiss-qr-bills)) and KID check digits.
-- **Accessible and archivable:** tagged PDF by default, with PDF/UA-1 and PDF/A-2 and -3 (a, u and b) checked against veraPDF. Attachments, and Factur-X/ZUGFeRD e-invoices through `Zorg.Pdf.Invoicing`.
+- **Accessible and archivable:** tagged PDF by default, with PDF/UA-1 and PDF/A-2 and -3 (a, u and b) checked against veraPDF. Attachments, and Factur-X/ZUGFeRD e-invoices.
 - **Signed:** PAdES baseline signatures (B-B, and B-T with an RFC 3161 timestamp) as the document renders, with a certificate's key or one in an HSM or key vault through `IPdfSigner`. The CMS is built in, so there's still no dependency.
 - **Existing PDFs:** page count, sizes and metadata of any PDF, including damaged ones and ones encrypted without a password; merge, extract and split; sign, keeping earlier signatures valid.
 - **For agents:** one document model with a published JSON Schema, diagnostics with stable codes and JSON pointers ([docs/diagnostics.md](docs/diagnostics.md)), PNG previews to check a layout by eye, and ready-made `AIFunction` tools.
@@ -39,16 +39,17 @@ zorg-pdf render docs/examples/annual-report.json --pdfua --pdfa 2a --preview
 
 ## Packages
 
-| Package | What it adds |
-|---|---|
-| `Zorg.Pdf` | The document model, JSON, rendering, signing, reading and merging. No dependencies |
-| `Zorg.Pdf.Imaging` | WebP, GIF, BMP and TIFF images, EXIF orientation, sRGB conversion, downsampling and PNG page previews, through Zorg.Imaging |
-| `Zorg.Pdf.Markdown` | Markdown to PDF, on Markdig |
-| `Zorg.Pdf.Hyphenation` | Hyphenation for English, German, French, Norwegian and Danish |
-| `Zorg.Pdf.Invoicing` | Factur-X and ZUGFeRD e-invoices |
-| `Zorg.Pdf.AspNetCore` | `PdfResults.Pdf`: streams a PDF response, with a 422 ProblemDetails for a document that can't render |
-| `Zorg.Pdf.Extensions.AI` | Tools that let an AI agent validate and render documents |
-| `Zorg.Pdf.Tool` | The `zorg-pdf` command-line tool: render, watch, preview, info, merge, extract, split |
+Most apps need `Zorg.Pdf` alone. The others each bring a dependency, a framework or a lot of data that not everyone needs, so they're separate.
+
+| Package | You need it when | What it adds |
+|---|---|---|
+| `Zorg.Pdf` | Always | The document model, JSON, rendering, signing, reading and merging, barcodes and payment codes, Factur-X/ZUGFeRD. No dependencies |
+| `Zorg.Pdf.Imaging` | You use images other than JPEG and PNG, want them shrunk or turned upright, or want PNG previews of pages | WebP, GIF, BMP and TIFF, EXIF orientation, sRGB conversion, downsampling and page previews, through Zorg.Imaging |
+| `Zorg.Pdf.Markdown` | Your content is written in Markdown | Markdown to PDF, on Markdig |
+| `Zorg.Pdf.Hyphenation` | You justify text or set narrow columns | Hyphenation for English, German, French, Norwegian and Danish (600 KB of patterns) |
+| `Zorg.Pdf.AspNetCore` | You serve PDFs from ASP.NET Core | `PdfResults.Pdf`: streams a PDF response, with a 422 ProblemDetails for a document that can't render |
+| `Zorg.Pdf.Extensions.AI` | An AI agent writes your documents | Tools that let an agent validate and render documents |
+| `Zorg.Pdf.Tool` | You work from the command line or a build script | The `zorg-pdf` tool: render, watch, preview, info, merge, extract, split |
 
 ## Examples
 

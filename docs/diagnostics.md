@@ -60,7 +60,7 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-M002 | Info | A Markdown construct was simplified or left out: strikethrough, an image inside text, a heading or table in a list item, front matter keys other than `title` and `lang`. | Restructure it, or accept the simpler form. |
 | ZPDF-M003 | Info | A Markdown link's target isn't one a PDF can use (`https://`, `http://`, `mailto:` or `#id`), or the link is in a table cell: its text was kept without the link. | Use an absolute URL or a block id, and keep links out of tables for now. |
 | ZPDF-M004 | Error | The Markdown is nested too deeply to read: lists, quotes, emphasis or links inside each other past the parser's depth limit. Nothing is rendered. | Flatten the nesting. |
-| ZPDF-X001 | Error | Factur-X (Zorg.Pdf.Invoicing): the XML isn't well-formed, has a DTD, or is over 20 MB. | Give the XML your invoicing system wrote, unchanged. |
+| ZPDF-X001 | Error | Factur-X (`FacturX.Read`): the XML isn't well-formed, has a DTD, or is over 20 MB. | Give the XML your invoicing system wrote, unchanged. |
 | ZPDF-X002 | Error | Factur-X: the XML's root isn't `rsm:CrossIndustryInvoice` in the CII namespace (it may be UBL). | Export CII (Factur-X/ZUGFeRD 2) from the invoicing system. |
 | ZPDF-X003 | Error | Factur-X: the XML's `GuidelineSpecifiedDocumentContextParameter/ID` isn't a Factur-X or ZUGFeRD profile. | Use MINIMUM, BASIC WL, BASIC, EN 16931, EXTENDED or XRECHNUNG. |
 | ZPDF-P001 | Warning | Reading an existing PDF: its cross-reference data is damaged or missing, or an object isn't where it says, so objects were found by scanning the file, as viewers do. The path is `file`. | Check the result; save the file again from a viewer to repair it. |

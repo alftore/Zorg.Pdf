@@ -14,7 +14,6 @@
     <ProjectReference Include="..\Zorg.Pdf.Imaging\Zorg.Pdf.Imaging.csproj" />
     <ProjectReference Include="..\Zorg.Pdf.Hyphenation\Zorg.Pdf.Hyphenation.csproj" />
     <ProjectReference Include="..\Zorg.Pdf.Markdown\Zorg.Pdf.Markdown.csproj" />
-    <ProjectReference Include="..\Zorg.Pdf.Invoicing\Zorg.Pdf.Invoicing.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -18,7 +18,6 @@
     <ProjectReference Include="..\..\src\Zorg.Pdf.Hyphenation\Zorg.Pdf.Hyphenation.csproj" />
     <ProjectReference Include="..\..\src\Zorg.Pdf.Markdown\Zorg.Pdf.Markdown.csproj" />
     <ProjectReference Include="..\..\src\Zorg.Pdf.AspNetCore\Zorg.Pdf.AspNetCore.csproj" />
-    <ProjectReference Include="..\..\src\Zorg.Pdf.Invoicing\Zorg.Pdf.Invoicing.csproj" />
     <ProjectReference Include="..\..\src\Zorg.Pdf.Tool\Zorg.Pdf.Tool.csproj" />
   </ItemGroup>
 

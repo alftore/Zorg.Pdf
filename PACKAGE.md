@@ -13,7 +13,7 @@ Async-first PDF generation for .NET 10, written in C# only, with no native binar
 - Pages stream to the output while later pages are laid out. Output is deterministic: the same document, data and font give the same bytes on every OS.
 - Every problem is a diagnostic with a stable code and a JSON pointer, and errors stop a render before the first byte.
 
-Add-on packages: Zorg.Pdf.Imaging (more image formats, page previews), Zorg.Pdf.Hyphenation, Zorg.Pdf.Markdown, Zorg.Pdf.Invoicing (Factur-X and ZUGFeRD), Zorg.Pdf.Extensions.AI (tools for AI agents), and the `zorg-pdf` command-line tool (Zorg.Pdf.Tool).
+Add-on packages: Zorg.Pdf.Imaging (more image formats, page previews), Zorg.Pdf.Hyphenation, Zorg.Pdf.Markdown, Zorg.Pdf.AspNetCore (streaming PDF responses), Zorg.Pdf.Extensions.AI (tools for AI agents), and the `zorg-pdf` command-line tool (Zorg.Pdf.Tool).
 
 ## Quick start
 

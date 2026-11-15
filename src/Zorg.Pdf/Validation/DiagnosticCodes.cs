@@ -72,7 +72,7 @@ internal static class DiagnosticCodes
     public const string MarkdownSimplified = "ZPDF-M002";
     public const string MarkdownLink = "ZPDF-M003";
     public const string MarkdownTooDeep = "ZPDF-M004";
-    public const string FacturXNotXml = "ZPDF-X001";         // Reported by Zorg.Pdf.Invoicing.
+    public const string FacturXNotXml = "ZPDF-X001";         // Reported by FacturX.Read.
     public const string FacturXNotCii = "ZPDF-X002";
     public const string FacturXProfile = "ZPDF-X003";
     public const string ReadRecovered = "ZPDF-P001";       // Reading existing PDFs.
