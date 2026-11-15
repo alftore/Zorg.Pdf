@@ -14,6 +14,7 @@
     <Project Path="src/Zorg.Pdf.Imaging/Zorg.Pdf.Imaging.csproj" />
     <Project Path="src/Zorg.Pdf.Hyphenation/Zorg.Pdf.Hyphenation.csproj" />
     <Project Path="src/Zorg.Pdf.Markdown/Zorg.Pdf.Markdown.csproj" />
+    <Project Path="src/Zorg.Pdf.AspNetCore/Zorg.Pdf.AspNetCore.csproj" />
     <Project Path="src/Zorg.Pdf.Invoicing/Zorg.Pdf.Invoicing.csproj" />
     <Project Path="src/Zorg.Pdf.Tool/Zorg.Pdf.Tool.csproj" />
   </Folder>

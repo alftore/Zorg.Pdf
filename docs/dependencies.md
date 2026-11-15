@@ -19,6 +19,7 @@ Rules:
 | hyph-utf8 hyphenation patterns (in `Zorg.Pdf.Hyphenation`, as files, not packages): hyph-en-us, hyph-en-gb, hyph-de-1996, hyph-fr, hyph-no, hyph-nb, hyph-nn, hyph-da `.tex` | Read in each file's header, 2026-11-14: en-gb, de-1996 and fr MIT; da MIT or LPPL 1.3+; en-us, no, nb and nn "copying and distribution … with or without modification, are permitted … provided the copyright notice and this notice are preserved". Shipped unchanged (`-text` in `.gitattributes`), notices intact. From github.com/hyphenation/tex-hyphen master, 2026-11-14; SHA-256 recorded in `.tmp`-free form in `src/Zorg.Pdf.Hyphenation/Patterns/SHA256SUMS` | Hyphenating words in text with `hyphens: auto` | Low. Data, no code; the licences ask only that the notices stay. Swedish (LPPL 1.2) is left out until decided |
 | Microsoft.Extensions.AI.Abstractions 10.11.0 | MIT (checked in the `.nuspec`, 2026-11-14); no dependencies on `net10.0` | `Zorg.Pdf.Extensions.AI` only: the `AIFunction` type its tools are | Low. Microsoft's abstraction for AI tools, used by every .NET AI client. 11.0.0 was four days old when this was added, so it waits. |
 | Markdig 1.6.0 | BSD-2-Clause (checked in the `.nuspec`, 2026-11-14; published 2026-11-04); no dependencies on `net8.0` and later | `Zorg.Pdf.Markdown` only, and the `zorg-pdf` tool through it: parsing CommonMark and GitHub-flavoured Markdown | Low. The standard .NET Markdown parser, permissive licence, managed only, no dependencies. Only its syntax tree is used, never its HTML output. |
+| ASP.NET Core shared framework (`FrameworkReference Microsoft.AspNetCore.App`, not a package) | MIT, part of .NET | `Zorg.Pdf.AspNetCore` only: `IResult`, `HttpContext`, ProblemDetails, logging | Low. Comes with the runtime an ASP.NET Core app already has; nothing is downloaded. |
 
 ## Build only (not shipped)
 
@@ -31,6 +32,7 @@ Rules:
 | Package | Licence | Why | Risk |
 |---|---|---|---|
 | xunit.v3 4.0.2 | Apache-2.0 | Test framework | Low. |
+| Microsoft.AspNetCore.TestHost 10.0.15 | MIT (checked in the `.nuspec`, 2026-11-15); no package dependencies on `net10.0`, the ASP.NET Core shared framework | TestServer for `Zorg.Pdf.AspNetCore`'s tests: a real pipeline in memory | Low. Tests only. Microsoft's own packages don't wait out the 7-day age rule. |
 | System.Security.Cryptography.Pkcs 10.0.15 | MIT (checked in the `.nuspec`, 2026-11-15; published 2026-11-10, no advisories); no dependencies on `net10.0` | `SignedCms` checks the signatures Zorg.Pdf builds with `System.Formats.Asn1`: an independent CMS implementation as the oracle | Low. Tests only; the library ships without it. Microsoft's own packages don't wait out the 7-day age rule (maintainer, 2026-11-15). |
 | coverlet.MTP 10.1.0 | MIT | Coverage | Low. |
 

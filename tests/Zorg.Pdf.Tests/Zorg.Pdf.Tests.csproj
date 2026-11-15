@@ -8,6 +8,7 @@
     <PackageReference Include="coverlet.MTP" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,6 +17,7 @@
     <ProjectReference Include="..\..\src\Zorg.Pdf.Imaging\Zorg.Pdf.Imaging.csproj" />
     <ProjectReference Include="..\..\src\Zorg.Pdf.Hyphenation\Zorg.Pdf.Hyphenation.csproj" />
     <ProjectReference Include="..\..\src\Zorg.Pdf.Markdown\Zorg.Pdf.Markdown.csproj" />
+    <ProjectReference Include="..\..\src\Zorg.Pdf.AspNetCore\Zorg.Pdf.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\Zorg.Pdf.Invoicing\Zorg.Pdf.Invoicing.csproj" />
     <ProjectReference Include="..\..\src\Zorg.Pdf.Tool\Zorg.Pdf.Tool.csproj" />
   </ItemGroup>

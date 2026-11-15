@@ -80,6 +80,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Digital signatures: `RenderOptions.Signature` signs a document as it renders, with a PAdES baseline B-B signature (ETSI.CAdES.detached) over the whole file in an invisible field. `PdfSigners.FromCertificate` signs with RSA (PKCS #1 v1.5 or PSS) or ECDSA and SHA-256, -384 or -512; `IPdfSigner` takes a key in an HSM or key vault, asynchronously. The CMS is built with `System.Formats.Asn1`, so there's no new dependency. Output still streams; only the end of the file waits for the signature. Signed files pass veraPDF as PDF/UA-1 and PDF/A-2a.
 - Timestamps: `PdfSignatureOptions.Timestamp` makes a signature PAdES B-T. `Rfc3161TimestampClient` posts an RFC 3161 request with a nonce and checks the token answers it (status, digest, nonce), with the response bounded to 256 KB; `ITimestampClient` for other transports. Checked against DigiCert's public TSA.
 - Guide: a digital signatures page.
+- `Zorg.Pdf.AspNetCore`: `PdfResults.Pdf` streams a document into the response as pages finish, with `application/pdf`, `nosniff` and an RFC 6266 file name (inline or attachment). A document that fails the checks before the first byte becomes a 422 ProblemDetails listing its diagnostics; a client that leaves cancels the render; a failure after the first byte aborts the connection and is logged. Tested over TestServer. Guide page added.
 
 ### Removed
 

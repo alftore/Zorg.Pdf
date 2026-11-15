@@ -1,0 +1,10 @@
+#nullable enable
+Zorg.Pdf.AspNetCore.PdfResult
+Zorg.Pdf.AspNetCore.PdfResult.ContentType.get -> string!
+Zorg.Pdf.AspNetCore.PdfResult.Document.get -> Zorg.Pdf.PdfDocument!
+Zorg.Pdf.AspNetCore.PdfResult.ExecuteAsync(Microsoft.AspNetCore.Http.HttpContext! httpContext) -> System.Threading.Tasks.Task!
+Zorg.Pdf.AspNetCore.PdfResult.FileName.get -> string?
+Zorg.Pdf.AspNetCore.PdfResult.Inline.get -> bool
+Zorg.Pdf.AspNetCore.PdfResult.Options.get -> Zorg.Pdf.RenderOptions!
+Zorg.Pdf.AspNetCore.PdfResults
+static Zorg.Pdf.AspNetCore.PdfResults.Pdf(Zorg.Pdf.PdfDocument! document, Zorg.Pdf.RenderOptions! options, string? fileName = null, bool inline = false) -> Zorg.Pdf.AspNetCore.PdfResult!

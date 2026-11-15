@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Serve Zorg.Pdf documents from ASP.NET Core: an IResult that streams the PDF into the response as pages finish, with the right headers and file name, cancellation when the client leaves, and a 422 ProblemDetails with the diagnostics when a document can't be rendered.</Description>
+    <PackageTags>pdf;aspnetcore;minimal-api;streaming;problemdetails;report</PackageTags>
+    <!-- ASP.NET Core supports native AOT, but its shared-framework assemblies aren't marked IsAotCompatible, so the
+         reference check (IL3058) would flag every one. This project's own code is still analysed for AOT. -->
+    <VerifyReferenceAotCompatibility>false</VerifyReferenceAotCompatibility>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zorg.Pdf\Zorg.Pdf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zorg.Pdf.Tests" />
+  </ItemGroup>
+
+</Project>
