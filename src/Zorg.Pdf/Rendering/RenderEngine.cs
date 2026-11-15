@@ -198,7 +198,7 @@ internal sealed partial class RenderEngine : IDisposable
     public void Dispose() => _writer.Dispose();
 
     /// <summary>Checks the signature options before anything is written; a mistake there is the caller's, so it throws.</summary>
-    private static void CheckSignature(PdfSignatureOptions signature)
+    internal static void CheckSignature(PdfSignatureOptions signature)
     {
         IPdfSigner signer = signature.Signer ?? throw new ArgumentException("PdfSignatureOptions.Signer is null.", nameof(signature));
         if (signer.Certificate is null)

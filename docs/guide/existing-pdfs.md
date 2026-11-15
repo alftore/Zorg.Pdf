@@ -40,6 +40,10 @@ zorg-pdf merge cover.pdf contract.pdf:2- -o pack.pdf --title "Signing pack"
 zorg-pdf split contract.pdf -o pages
 ```
 
+## Signing
+
+`PdfSigning.SignAsync` signs an existing PDF by appending to it, so earlier signatures stay valid. See [digital signatures](signatures.md#signing-existing-pdfs).
+
 ## Using a page as a background
 
 A page of an existing PDF can sit behind every page of a new document, as letterhead. See [letters](letters.md).

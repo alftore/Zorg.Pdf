@@ -46,6 +46,20 @@ In JSON a field is `{ "type": "signatureField", "name": "customer", "label": "Si
 
 If no field matches `FieldName`, the signature goes in an invisible field, as before.
 
+## Signing existing PDFs
+
+`PdfSigning.SignAsync` signs a PDF that already exists, from Zorg.Pdf or any other producer. The original bytes are kept exactly. The signature is appended as an incremental update, so signatures already in the file stay valid, and a second or third signer can follow:
+
+```csharp
+await using FileStream input = File.OpenRead("contract-signed-by-supplier.pdf");
+await using FileStream output = File.Create("contract-signed-by-both.pdf");
+await PdfSigning.SignAsync(input, output, new PdfSignatureOptions(signer) { FieldName = "customer" }, cancellationToken: cancellationToken);
+```
+
+If the file has an empty signature field named `FieldName`, that field is signed. It keeps the appearance it had, and viewers show the signature's details when it's clicked. Otherwise an invisible field is added to the first page. A field that's signed already is refused, so pick another name for a new field. Readers show earlier signatures as valid with changes since, which is what an added signature is.
+
+The update uses the same kind of cross-reference section as the file's last one, a table or a stream. Files that are encrypted, or whose cross-reference data is damaged, are refused with a `PdfException` rather than signed into something that would break. Save them again first.
+
 ## Timestamps (PAdES B-T)
 
 A timestamp authority (TSA) signs the time it saw your signature, so the signing time is proven, not only claimed, and the signature stays valid after the certificate expires. Give `Timestamp` an RFC 3161 client with your TSA's URL. Trust service providers run them, and some are free:
@@ -91,8 +105,8 @@ Signed files are checked in the tests with .NET's `SignedCms` and `Rfc3161Timest
 
 ## What isn't there yet
 
-- **An image in a signature's appearance**, such as a scanned handwritten signature.
-- **Signing existing PDFs** and adding a second signature, by incremental update.
+- **An image in a signature's appearance**, such as a scanned handwritten signature, and the signer's details drawn into an empty field when it's signed later.
+- **Signing encrypted files**, and signing from the `zorg-pdf` tool.
 - **Long-term validation (B-LT, B-LTA):** revocation data and archive timestamps embedded in the file.
 
-The key is only ever given in code, so a JSON document can't carry a signature, and the `zorg-pdf` tool doesn't sign.
+The key is only ever given in code, so a JSON document can't carry a signature.

@@ -16,7 +16,7 @@ Each page covers one topic, with C# and JSON side by side where both apply. The 
 | [Letters](letters.md) | Window envelopes, letterhead backgrounds | Written |
 | [Barcodes and payments](barcodes.md) | QR, Code 128, GS1-128, EAN-13, EPC, KID | Written |
 | [Charts](charts.md) | Bar, stacked, line and pie; alt text | Written |
-| [Digital signatures](signatures.md) | PAdES B-B and B-T, visible and empty signature fields, timestamps, keys in an HSM or key vault | Written |
+| [Digital signatures](signatures.md) | PAdES B-B and B-T, visible and empty signature fields, signing existing PDFs, timestamps, keys in an HSM or key vault | Written |
 | [ASP.NET Core](aspnetcore.md) | Streaming a PDF response, file names, 422 ProblemDetails, cancellation | Written |
 | [Existing PDFs](existing-pdfs.md) | Info, merge, extract, split, encrypted input | Written |
 | [Markdown](markdown.md) | Markdown to PDF, images, diagnostics | Written |

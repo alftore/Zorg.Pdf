@@ -33,7 +33,7 @@ zorg-pdf render docs/examples/annual-report.json --pdfua --pdfa 2a --preview
 - **Letters:** address boxes for DIN 5008 and Norwegian window envelopes, letterhead from an existing PDF behind the page, QR codes, Code 128, GS1-128 and EAN-13 barcodes, EPC payment codes and KID check digits.
 - **Accessible and archivable:** tagged PDF by default, with PDF/UA-1 and PDF/A-2 and -3 (a, u and b) checked against veraPDF. Attachments, and Factur-X/ZUGFeRD e-invoices through `Zorg.Pdf.Invoicing`.
 - **Signed:** PAdES baseline signatures (B-B, and B-T with an RFC 3161 timestamp) as the document renders, with a certificate's key or one in an HSM or key vault through `IPdfSigner`. The CMS is built in, so there's still no dependency.
-- **Existing PDFs:** page count, sizes and metadata of any PDF, including damaged ones and ones encrypted without a password; merge, extract and split.
+- **Existing PDFs:** page count, sizes and metadata of any PDF, including damaged ones and ones encrypted without a password; merge, extract and split; sign, keeping earlier signatures valid.
 - **For agents:** one document model with a published JSON Schema, diagnostics with stable codes and JSON pointers ([docs/diagnostics.md](docs/diagnostics.md)), PNG previews to check a layout by eye, and ready-made `AIFunction` tools.
 - **Fast and small:** a tagged 1,000-row invoice renders in 30 ms (MigraDoc 6.2.4: 260 ms). Output is byte for byte the same on Windows and Linux. The library is clean under NativeAOT and trimming.
 
@@ -62,7 +62,7 @@ zorg-pdf render docs/examples/annual-report.json --pdfua --pdfa 2a --preview
 | 0.2 | Templates and data binding, lists, cell spans, watermarks, text boxes, PNG previews, the `zorg-pdf` tool | Done |
 | 0.3 | PDF/A-2, bookmarks and links, tables of contents, sections and page labels, hyphenation, Markdown | Done |
 | 0.4 | Reading PDFs, letterhead backgrounds, merging and splitting, attachments and PDF/A-3, Factur-X, encrypted input | Done |
-| 0.5 | Barcodes and payment codes, charts, digital signatures (PAdES), an ASP.NET Core result | Done but for signing existing files and the Swiss QR-bill |
+| 0.5 | Barcodes and payment codes, charts, digital signatures (PAdES), an ASP.NET Core result | Done but for the Swiss QR-bill |
 
 ## Goals
 

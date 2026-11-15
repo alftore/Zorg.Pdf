@@ -58,6 +58,14 @@ internal static partial class GuideSnippets
         return signature;
     }
 
+    // signatures.md
+    public static async Task SignExistingAsync(IPdfSigner signer, CancellationToken cancellationToken)
+    {
+        await using FileStream input = File.OpenRead("contract-signed-by-supplier.pdf");
+        await using FileStream output = File.Create("contract-signed-by-both.pdf");
+        await PdfSigning.SignAsync(input, output, new PdfSignatureOptions(signer) { FieldName = "customer" }, cancellationToken: cancellationToken);
+    }
+
     /// <summary>Stands for a key service's client, such as Azure Key Vault's.</summary>
     public sealed class CryptographyClient
     {

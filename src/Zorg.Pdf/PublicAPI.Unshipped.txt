@@ -1091,6 +1091,8 @@ static Zorg.Pdf.Signing.PdfSignatureOptions.operator !=(Zorg.Pdf.Signing.PdfSign
 static Zorg.Pdf.Signing.PdfSignatureOptions.operator ==(Zorg.Pdf.Signing.PdfSignatureOptions? left, Zorg.Pdf.Signing.PdfSignatureOptions? right) -> bool
 Zorg.Pdf.Signing.PdfSigners
 static Zorg.Pdf.Signing.PdfSigners.FromCertificate(System.Security.Cryptography.X509Certificates.X509Certificate2! certificate, System.Collections.Generic.IEnumerable<System.Security.Cryptography.X509Certificates.X509Certificate2!>? chain = null, System.Security.Cryptography.HashAlgorithmName digestAlgorithm = default(System.Security.Cryptography.HashAlgorithmName), bool rsaPss = false) -> Zorg.Pdf.Signing.IPdfSigner!
+Zorg.Pdf.Signing.PdfSigning
+static Zorg.Pdf.Signing.PdfSigning.SignAsync(System.IO.Stream! input, System.IO.Stream! output, Zorg.Pdf.Signing.PdfSignatureOptions! options, Zorg.Pdf.PdfReadLimits? limits = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 Zorg.Pdf.Signing.Rfc3161TimestampClient
 Zorg.Pdf.Signing.Rfc3161TimestampClient.GetTokenAsync(System.ReadOnlyMemory<byte> digest, System.Security.Cryptography.HashAlgorithmName digestAlgorithm, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<byte[]!>
 Zorg.Pdf.Signing.Rfc3161TimestampClient.Rfc3161TimestampClient(System.Uri! url, System.Net.Http.HttpClient? httpClient = null) -> void

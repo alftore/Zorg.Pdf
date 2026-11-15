@@ -60,6 +60,7 @@ internal sealed class CosFile
 
         if (trailer is null)
         {
+            StartXref = null;
             _xref.Clear();
             _objects.Clear();
             _objectStreams.Clear();
@@ -88,6 +89,15 @@ internal sealed class CosFile
 
     private readonly int _encryptObject = -1;
     private readonly CosSecurity? _security;
+
+    /// <summary>The last startxref offset, from the header; null when the file was recovered by scanning.</summary>
+    public long? StartXref { get; private set; }
+
+    /// <summary>True when the last cross-reference section is a stream (PDF 1.5), false for a table.</summary>
+    public bool LastSectionIsStream { get; private set; }
+
+    /// <summary>Where the %PDF- header starts: offsets in the file count from here.</summary>
+    public int HeaderOffset => _base;
 
     /// <summary>The trailer, merged over incremental updates (newest entries win).</summary>
     public CosDictionary Trailer { get; }
@@ -236,6 +246,8 @@ internal sealed class CosFile
 
         var lexer = new CosLexer(data, tail + at + "startxref".Length);
         long offset = lexer.TryInteger() ?? throw PdfReadException.Malformed("startxref has no offset.");
+        StartXref = offset;
+        LastSectionIsStream = offset >= 0 && _base + offset < data.Length && !data[(int)(_base + offset)..].TrimStart(" \t\r\n\f\0"u8).StartsWith("xref"u8);
         var merged = new Dictionary<string, CosValue>(StringComparer.Ordinal);
         var visited = new HashSet<long>();
         var free = new HashSet<int>();
