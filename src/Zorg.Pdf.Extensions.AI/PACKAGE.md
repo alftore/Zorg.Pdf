@@ -9,6 +9,9 @@ Tools for AI agents that write PDF documents with [Zorg.Pdf](https://www.nuget.o
 | `get_document_schema` | Returns the JSON Schema of a document, a short guide, and an example |
 | `validate_document` | Checks a document and its data; returns every problem with a code and a JSON pointer |
 | `render_document` | Renders a document with its data as tagged PDF; returns pages, size, warnings and where the file went |
+| `get_capabilities` | Says what the host renders with: font families, conformance, PDF/A level, limits, and which optional tools exist |
+| `render_preview` | Renders and returns one page as a PNG picture, so the model can check its layout by looking (when the host sets `PreviewAsync`, for example to Zorg.Pdf.Imaging's `PdfPreview`) |
+| `render_markdown` | Renders Markdown as tagged PDF, for notes and reports that need no layout of their own (when the host sets `ParseMarkdown`, for example to Zorg.Pdf.Markdown) |
 
 The model writes the document and its data. The host decides everything else: fonts, conformance, limits, and where rendered files go. The tools never read or write files themselves.
 
