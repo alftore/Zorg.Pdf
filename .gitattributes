@@ -3,6 +3,9 @@
 
 *.sh text eol=lf
 
+# Embedded byte for byte (the Factur-X XML goes into the PDF as it is), so the same on every OS.
+*.xml text eol=lf
+
 # PDF, font and image fixtures are byte-exact test data: never convert line endings in them.
 *.pdf binary
 *.ttf binary

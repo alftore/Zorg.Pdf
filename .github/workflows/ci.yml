@@ -125,7 +125,7 @@ jobs:
 
   # The same document, data and font give the same bytes on every OS. Liberation Sans 2.1.5 (OFL 1.1) is fetched and
   # checked against a SHA-256 published independently of its upstream (Homebrew's font-liberation cask); the smoke
-  # documents (text, tables, bands, images) are rendered and hashed on Windows and Ubuntu, and the compare job fails
+  # documents (text, tables, bands, images; not the signed ones) are rendered and hashed on Windows and Ubuntu, and the compare job fails
   # on any difference. The hashes travel as job outputs: artifact uploads fail to start in this private repository.
   determinism-windows:
     name: Byte-identical output (Windows)
@@ -159,6 +159,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/out"
           dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release -- "$RUNNER_TEMP/out"
           cd "$RUNNER_TEMP/out"
+          # The signed files use a key made for the run and the current time; the Linux gate checks them with mutool.
+          rm signed*.pdf
           sha256sum --binary *.pdf *.png
           echo "hashes=$(sha256sum --binary *.pdf *.png | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
@@ -194,6 +196,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/out"
           dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release -- "$RUNNER_TEMP/out"
           cd "$RUNNER_TEMP/out"
+          # The signed files use a key made for the run and the current time; the Linux gate checks them with mutool.
+          rm signed*.pdf
           sha256sum --binary *.pdf *.png
           echo "hashes=$(sha256sum --binary *.pdf *.png | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
