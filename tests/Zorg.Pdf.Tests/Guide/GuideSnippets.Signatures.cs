@@ -41,6 +41,23 @@ internal static partial class GuideSnippets
         return signature;
     }
 
+    // signatures.md
+    public static PdfSignatureOptions VisibleFields(IPdfSigner signer)
+    {
+        var contract = new PdfDocument("Service agreement")
+        {
+            Content =
+            [
+                new Heading("Service agreement"),
+                new Paragraph("Fjordlys AS and Nordlys Consulting agree to the terms below."),
+                new SignatureField("supplier") { Label = "Signed for Fjordlys AS" },
+                new SignatureField("customer") { Label = "Signed for Nordlys Consulting", Align = TextAlign.Right },
+            ],
+        };
+        var signature = new PdfSignatureOptions(signer) { FieldName = "supplier" };
+        return signature;
+    }
+
     /// <summary>Stands for a key service's client, such as Azure Key Vault's.</summary>
     public sealed class CryptographyClient
     {

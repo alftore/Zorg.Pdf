@@ -153,6 +153,10 @@ internal static class Preflight
                     Need(chartStyle with { Weight = FontWeight.Bold }, blockPath);
                 }
             }
+            else if (block is SignatureField field)
+            {
+                Need(styles.For(field), blockPath); // The text in its appearance.
+            }
             else if (block is Barcode { ShowText: true, Kind: not BarcodeKind.Qr } barcode)
             {
                 Need(styles.For(barcode), blockPath); // The digits printed under the bars.

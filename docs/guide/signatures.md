@@ -1,6 +1,6 @@
 # Digital signatures
 
-A signed PDF shows in Acrobat and other readers as signed by a named certificate and unchanged since. If one byte changes afterwards, the signature breaks. Zorg.Pdf signs documents as it renders them. Each one gets a PAdES baseline signature (ETSI EN 319 142-1), the kind eIDAS validators expect, over the whole file in an invisible signature field. Level B-B is the signature alone; add a timestamp and it's B-T.
+A signed PDF shows in Acrobat and other readers as signed by a named certificate and unchanged since. If one byte changes afterwards, the signature breaks. Zorg.Pdf signs documents as it renders them. Each one gets a PAdES baseline signature (ETSI EN 319 142-1), the kind eIDAS validators expect, over the whole file, in an invisible field or one you place on a page. Level B-B is the signature alone; add a timestamp and it's B-T.
 
 ## Sign with a certificate
 
@@ -23,6 +23,28 @@ await document.RenderAsync(output, options, cancellationToken);
 RSA keys sign with PKCS #1 v1.5 padding, or with PSS if you pass `rsaPss: true`. EC keys sign with ECDSA. The digest is SHA-256 unless you choose SHA-384 or SHA-512. Pass the intermediate certificates too, so a validator can build the path to a root it trusts. The signer's own certificate is always embedded.
 
 `PdfSignatureOptions` also takes a `Name`, `ContactInfo`, the `FieldName` ("Signature1" by default) and a `SigningTime`. The time goes in the signature dictionary, as PAdES requires. It's the signer's own claim; a timestamp proves it.
+
+## Visible signature fields
+
+A `signatureField` block puts a box in the flow. The field whose name matches `FieldName` is signed in place. It shows who signed, when, and the reason and place, so a printed copy carries them too. Fields with other names stay empty, for someone to sign later in Acrobat or another signing tool:
+
+```csharp
+var contract = new PdfDocument("Service agreement")
+{
+    Content =
+    [
+        new Heading("Service agreement"),
+        new Paragraph("Fjordlys AS and Nordlys Consulting agree to the terms below."),
+        new SignatureField("supplier") { Label = "Signed for Fjordlys AS" },
+        new SignatureField("customer") { Label = "Signed for Nordlys Consulting", Align = TextAlign.Right },
+    ],
+};
+var signature = new PdfSignatureOptions(signer) { FieldName = "supplier" };
+```
+
+In JSON a field is `{ "type": "signatureField", "name": "customer", "label": "Signed for Nordlys Consulting" }`, so a template can lay out where signatures go while the key stays in code. A field is 60 × 20 mm unless you set `width` and `height`, and it moves to the next page if it doesn't fit. Its `label` is what screen readers announce and what an empty field shows. Each field is tagged as a Form element, and signed and empty fields both pass veraPDF as PDF/UA-1 and PDF/A-2a. Some viewers draw their own "sign here" mark over an empty field instead of its box.
+
+If no field matches `FieldName`, the signature goes in an invisible field, as before.
 
 ## Timestamps (PAdES B-T)
 
@@ -69,7 +91,7 @@ Signed files are checked in the tests with .NET's `SignedCms` and `Rfc3161Timest
 
 ## What isn't there yet
 
-- **Visible signatures:** a signature field with an appearance (name, date, image) on a page, and empty fields for others to sign later.
+- **An image in a signature's appearance**, such as a scanned handwritten signature.
 - **Signing existing PDFs** and adding a second signature, by incremental update.
 - **Long-term validation (B-LT, B-LTA):** revocation data and archive timestamps embedded in the file.
 

@@ -1028,6 +1028,26 @@ Zorg.Pdf.SectionBreak.StartAt.init -> void
 override Zorg.Pdf.SectionBreak.ToString() -> string!
 static Zorg.Pdf.SectionBreak.operator !=(Zorg.Pdf.SectionBreak? left, Zorg.Pdf.SectionBreak? right) -> bool
 static Zorg.Pdf.SectionBreak.operator ==(Zorg.Pdf.SectionBreak? left, Zorg.Pdf.SectionBreak? right) -> bool
+Zorg.Pdf.SignatureField
+override Zorg.Pdf.SignatureField.<Clone>$() -> Zorg.Pdf.SignatureField!
+Zorg.Pdf.SignatureField.Align.get -> Zorg.Pdf.TextAlign
+Zorg.Pdf.SignatureField.Align.init -> void
+override sealed Zorg.Pdf.SignatureField.Equals(Zorg.Pdf.Block? other) -> bool
+Zorg.Pdf.SignatureField.Equals(Zorg.Pdf.SignatureField? other) -> bool
+override Zorg.Pdf.SignatureField.Equals(object? obj) -> bool
+override Zorg.Pdf.SignatureField.GetHashCode() -> int
+Zorg.Pdf.SignatureField.Height.get -> Zorg.Pdf.Length?
+Zorg.Pdf.SignatureField.Height.init -> void
+Zorg.Pdf.SignatureField.Label.get -> string?
+Zorg.Pdf.SignatureField.Label.init -> void
+Zorg.Pdf.SignatureField.Name.get -> string!
+Zorg.Pdf.SignatureField.Name.init -> void
+Zorg.Pdf.SignatureField.SignatureField(string! name) -> void
+override Zorg.Pdf.SignatureField.ToString() -> string!
+Zorg.Pdf.SignatureField.Width.get -> Zorg.Pdf.Length?
+Zorg.Pdf.SignatureField.Width.init -> void
+static Zorg.Pdf.SignatureField.operator !=(Zorg.Pdf.SignatureField? left, Zorg.Pdf.SignatureField? right) -> bool
+static Zorg.Pdf.SignatureField.operator ==(Zorg.Pdf.SignatureField? left, Zorg.Pdf.SignatureField? right) -> bool
 Zorg.Pdf.Signing.IPdfSigner
 Zorg.Pdf.Signing.IPdfSigner.Algorithm.get -> Zorg.Pdf.Signing.PdfSignatureAlgorithm
 Zorg.Pdf.Signing.IPdfSigner.Certificate.get -> System.Security.Cryptography.X509Certificates.X509Certificate2!

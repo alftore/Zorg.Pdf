@@ -62,7 +62,7 @@ zorg-pdf render docs/examples/annual-report.json --pdfua --pdfa 2a --preview
 | 0.2 | Templates and data binding, lists, cell spans, watermarks, text boxes, PNG previews, the `zorg-pdf` tool | Done |
 | 0.3 | PDF/A-2, bookmarks and links, tables of contents, sections and page labels, hyphenation, Markdown | Done |
 | 0.4 | Reading PDFs, letterhead backgrounds, merging and splitting, attachments and PDF/A-3, Factur-X, encrypted input | Done |
-| 0.5 | Barcodes and payment codes, charts, digital signatures (PAdES), an ASP.NET Core result | Done but for visible signatures, signing existing files and the Swiss QR-bill |
+| 0.5 | Barcodes and payment codes, charts, digital signatures (PAdES), an ASP.NET Core result | Done but for signing existing files and the Swiss QR-bill |
 
 ## Goals
 

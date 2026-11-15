@@ -157,7 +157,7 @@
       "description": "Something that flows down the page. The \"type\" property says which.",
       "type": "object",
       "required": ["type"],
-      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents", "sectionBreak", "barcode", "chart"] } },
+      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents", "sectionBreak", "barcode", "chart", "signatureField"] } },
       "oneOf": [
         { "$ref": "#/$defs/heading" },
         { "$ref": "#/$defs/paragraph" },
@@ -172,7 +172,8 @@
         { "$ref": "#/$defs/tableOfContents" },
         { "$ref": "#/$defs/sectionBreak" },
         { "$ref": "#/$defs/barcode" },
-        { "$ref": "#/$defs/chart" }
+        { "$ref": "#/$defs/chart" },
+        { "$ref": "#/$defs/signatureField" }
       ]
     },
     "pageNumberStyle": { "description": "How pages are numbered.", "enum": ["number", "lowerRoman", "upperRoman", "lowerLetter", "upperLetter"] },
@@ -307,6 +308,23 @@
         "maximum": { "type": "number" },
         "alt": { "type": "string" },
         "decorative": { "type": "boolean", "default": false },
+        "style": { "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" }
+      }
+    },
+    "signatureField": {
+      "description": "A visible signature field: a box where a signature shows. The field named in the signature options is signed as the document renders; others stay empty for later signers. Keys are only given in code.",
+      "type": "object",
+      "required": ["type", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "signatureField" },
+        "name": { "description": "Letters, digits, - and _, unique in the document.", "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+        "label": { "description": "What the field is for, for screen readers and shown in an empty field. Default \"Signature\".", "type": "string" },
+        "width": { "description": "Default 60mm.", "$ref": "#/$defs/length" },
+        "height": { "description": "Default 20mm.", "$ref": "#/$defs/length" },
+        "align": { "$ref": "#/$defs/textAlign" },
         "style": { "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
         "id": { "$ref": "#/$defs/id" }

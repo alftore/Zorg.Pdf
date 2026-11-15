@@ -28,6 +28,7 @@ internal enum StructureRole
     Link,
     TOC,
     TOCI,
+    Form,
 }
 
 /// <summary>
@@ -38,7 +39,7 @@ internal enum StructureRole
 internal sealed class Tagger
 {
     private static readonly byte[][] RoleNames =
-        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD", "Figure", "L", "LI", "Lbl", "LBody", "Div", "Link", "TOC", "TOCI" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
+        [.. new[] { "Document", "H1", "H2", "H3", "H4", "H5", "H6", "P", "Table", "TR", "TH", "TD", "Figure", "L", "LI", "Lbl", "LBody", "Div", "Link", "TOC", "TOCI", "Form" }.Select(name => System.Text.Encoding.ASCII.GetBytes(name))];
 
     private readonly PdfObjectWriter _writer;
     private readonly List<List<PdfReference>> _pageOwners = []; // Per page, the element that owns each MCID.

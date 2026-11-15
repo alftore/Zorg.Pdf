@@ -204,8 +204,55 @@ internal sealed class DocumentWriter
         _writer.EndObject();
     }
 
+    /// <summary>
+    /// Writes a visible signature field: field and widget in one dictionary, with its appearance, a description for
+    /// screen readers (/TU) and its parent-tree key. <paramref name="signature"/> is the signature dictionary of the
+    /// field that's signed, or null for an empty one.
+    /// </summary>
+    public void WriteSignatureWidget(PdfReference widget, int page, string name, string label, (double Left, double Bottom, double Right, double Top) rect, PdfReference appearance, int structParent, PdfReference? signature)
+    {
+        _writer.BeginObject(widget);
+        _writer.BeginDictionary();
+        _writer.Name("Type"u8);
+        _writer.Name("Annot"u8);
+        _writer.Name("Subtype"u8);
+        _writer.Name("Widget"u8);
+        _writer.Name("FT"u8);
+        _writer.Name("Sig"u8);
+        _writer.Name("T"u8);
+        _writer.TextString(name);
+        _writer.Name("TU"u8);
+        _writer.TextString(label);
+        if (signature is { } value)
+        {
+            _writer.Name("V"u8);
+            _writer.Reference(value);
+        }
+
+        _writer.Name("Rect"u8);
+        _writer.BeginArray();
+        _writer.Real(rect.Left);
+        _writer.Real(rect.Bottom);
+        _writer.Real(rect.Right);
+        _writer.Real(rect.Top);
+        _writer.EndArray();
+        _writer.Name("F"u8);
+        _writer.Integer(signature is null ? 4 : 132); // Print (PDF/A requires it); a signed field is Locked too.
+        _writer.Name("P"u8);
+        _writer.Reference(_pages[page]);
+        _writer.Name("AP"u8);
+        _writer.BeginDictionary();
+        _writer.Name("N"u8);
+        _writer.Reference(appearance);
+        _writer.EndDictionary();
+        _writer.Name("StructParent"u8);
+        _writer.Integer(structParent);
+        _writer.EndDictionary();
+        _writer.EndObject();
+    }
+
     /// <summary>Writes the page tree, Info, XMP and catalog. Returns the Info dictionary for the trailer.</summary>
-    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot, IReadOnlyList<OutlineEntry> outline, IReadOnlyDictionary<string, (int Page, double Top)> destinations, IReadOnlyList<PageSection> labels, IReadOnlyList<(Attachment Attachment, ReadOnlyMemory<byte> Bytes)> attachments, PdfReference signatureField = default)
+    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot, IReadOnlyList<OutlineEntry> outline, IReadOnlyDictionary<string, (int Page, double Top)> destinations, IReadOnlyList<PageSection> labels, IReadOnlyList<(Attachment Attachment, ReadOnlyMemory<byte> Bytes)> attachments, IReadOnlyList<PdfReference>? formFields = null, bool signed = false)
     {
         List<(byte[] Key, PdfReference Spec)> files = WriteAttachments(attachments, options);
         PdfReference? outlines = outline.Count > 0 ? WriteOutline(outline) : null;
@@ -362,17 +409,25 @@ internal sealed class DocumentWriter
             _writer.EndDictionary();
         }
 
-        if (signatureField.IsValid)
+        if (formFields is { Count: > 0 })
         {
-            // SigFlags 3: the document has signatures, and changes must be appended (ISO 32000-1, 12.7.2).
             _writer.Name("AcroForm"u8);
             _writer.BeginDictionary();
             _writer.Name("Fields"u8);
             _writer.BeginArray();
-            _writer.Reference(signatureField);
+            foreach (PdfReference field in formFields)
+            {
+                _writer.Reference(field);
+            }
+
             _writer.EndArray();
-            _writer.Name("SigFlags"u8);
-            _writer.Integer(3);
+            if (signed)
+            {
+                // SigFlags 3: the document has signatures, and changes must be appended (ISO 32000-1, 12.7.2).
+                _writer.Name("SigFlags"u8);
+                _writer.Integer(3);
+            }
+
             _writer.EndDictionary();
         }
 

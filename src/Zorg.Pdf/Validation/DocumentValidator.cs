@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Zorg.Pdf.Validation;
@@ -270,6 +271,10 @@ internal sealed partial class DocumentValidator
 
             case Chart chart:
                 Chart(chart, path);
+                break;
+
+            case SignatureField field:
+                SignatureField(field, path);
                 break;
 
             case Spacer spacer:
@@ -743,6 +748,30 @@ internal sealed partial class DocumentValidator
         }
     }
 
+    private void SignatureField(SignatureField field, string path)
+    {
+        if (!ValidFieldName(field.Name))
+        {
+            Error(DiagnosticCodes.BadSignatureField, "A signature field needs a \"name\" of letters, digits, '-' and '_' (up to 64), such as \"approver\".", $"{path}/name");
+        }
+        else if (!_signatureFields.Add(field.Name))
+        {
+            Error(DiagnosticCodes.BadSignatureField, $"There's already a signature field named \"{field.Name}\"; each needs its own name.", $"{path}/name");
+        }
+
+        foreach ((Length? length, string name) in new[] { (field.Width, "width"), (field.Height, "height") })
+        {
+            if (length is { } l)
+            {
+                Positive(l, $"{path}/{name}");
+            }
+        }
+    }
+
+    /// <summary>A signature field's name: letters, digits, '-' and '_', so it's a whole field name (no '.' for nesting).</summary>
+    internal static bool ValidFieldName(string? name) =>
+        name is { Length: > 0 and <= 64 } && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
+
     private void Barcode(Barcode barcode, string path)
     {
         if (!barcode.Decorative && string.IsNullOrWhiteSpace(barcode.Alt))
@@ -883,6 +912,8 @@ internal sealed partial class DocumentValidator
         Error(DiagnosticCodes.BadLength, Invariant($"{length.Points} pt isn't a usable length here: it must be 0 or more and less than 1,000,000 pt."), path);
         return false;
     }
+
+    private readonly HashSet<string> _signatureFields = new(StringComparer.Ordinal);
 
     private void Error(string code, string message, string path) => _diagnostics.Add(new PdfDiagnostic(code, DiagnosticSeverity.Error, message, path));
 

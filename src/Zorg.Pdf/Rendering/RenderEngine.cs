@@ -45,7 +45,8 @@ internal sealed partial class RenderEngine : IDisposable
     private readonly PdfObjectWriter _writer;
     private readonly DocumentWriter _documentWriter;
     private readonly Tagger _tagger;
-    private readonly PdfReference _signatureField; // The invisible signature field's widget, on the first page.
+    private readonly PdfReference _signatureField; // The signed field's widget: invisible on the first page, or a visible field.
+    private readonly bool _signatureVisible; // The signature goes in a visible SignatureField of the same name.
     private PageGeometry _geometry; // The content area: the page inside its margins, less the header and footer.
     private readonly PageGeometry _pageGeometry; // The page inside its margins.
     private readonly Dictionary<int, PreparedText> _prepared = [];
@@ -90,6 +91,7 @@ internal sealed partial class RenderEngine : IDisposable
         if (options.Signature is { } signature)
         {
             _signatureField = _writer.Allocate();
+            _signatureVisible = document.Content.Any(b => b is SignatureField f && f.Name == signature.FieldName);
             _writer.Sign(_writer.Allocate(), signature);
         }
 
@@ -116,6 +118,21 @@ internal sealed partial class RenderEngine : IDisposable
         {
             // A template: bound to the model first, so everything after sees a plain document.
             document = TemplateBinder.Bind(document, options.Data.Model, sink);
+        }
+
+        if (options.Signature is { SigningTime: null } unsigned)
+        {
+            // One time for the signature dictionary and a visible field's text.
+            options = options with { Signature = unsigned with { SigningTime = DateTimeOffset.Now } };
+        }
+
+        var fieldNames = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < document.Content.Length && !sink.HasErrors; i++)
+        {
+            if (document.Content[i] is SignatureField { Name: var name } && !fieldNames.Add(name))
+            {
+                sink.Error(DiagnosticCodes.BadSignatureField, $"There's already a signature field named \"{name}\"; each needs its own name (a repeat can't repeat one).", string.Create(CultureInfo.InvariantCulture, $"/content/{i}/name"));
+            }
         }
 
         var styles = new StyleResolver(document.Styles);
@@ -247,6 +264,10 @@ internal sealed partial class RenderEngine : IDisposable
                     Arrived(chart);
                     await PlaceChartAsync(chart, cancellationToken).ConfigureAwait(false);
                     break;
+                case SignatureField field:
+                    Arrived(field);
+                    await PlaceSignatureFieldAsync(field, cancellationToken).ConfigureAwait(false);
+                    break;
                 case List list:
                     Arrived(list);
                     await PlaceListAsync(i, list, cancellationToken).ConfigureAwait(false);
@@ -285,12 +306,13 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         _tagger.Finish(_documentWriter.Pages);
-        if (_signatureField.IsValid)
+        if (_signatureField.IsValid && !_signatureVisible)
         {
             _documentWriter.WriteSignatureField(_signatureField, _writer.SignatureReference, _options.Signature!.FieldName);
+            _formFields.Insert(0, _signatureField);
         }
 
-        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot, _outline, _destinations, PageLabels(), _attachments, _signatureField);
+        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot, _outline, _destinations, PageLabels(), _attachments, _formFields, signed: _signatureField.IsValid);
         await _writer.FinishAsync(_documentWriter.Catalog, info, cancellationToken).ConfigureAwait(false);
     }
 
@@ -790,7 +812,8 @@ internal sealed partial class RenderEngine : IDisposable
         PdfReference? toc = TocStream();
         PdfReference? band = BandStream();
         PdfReference[] annotations = WriteLinkAnnotations();
-        if (_page == 0 && _signatureField.IsValid)
+        annotations = [.. annotations, .. WriteFieldWidgets()];
+        if (_page == 0 && _signatureField.IsValid && !_signatureVisible)
         {
             annotations = [.. annotations, _signatureField];
         }
