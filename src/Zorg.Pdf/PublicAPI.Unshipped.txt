@@ -183,6 +183,8 @@ static Zorg.Pdf.Chart.operator !=(Zorg.Pdf.Chart? left, Zorg.Pdf.Chart? right) -
 static Zorg.Pdf.Chart.operator ==(Zorg.Pdf.Chart? left, Zorg.Pdf.Chart? right) -> bool
 Zorg.Pdf.ChartKind
 Zorg.Pdf.ChartKind.Bar = 0 -> Zorg.Pdf.ChartKind
+Zorg.Pdf.ChartKind.Line = 2 -> Zorg.Pdf.ChartKind
+Zorg.Pdf.ChartKind.Pie = 3 -> Zorg.Pdf.ChartKind
 Zorg.Pdf.ChartKind.StackedBar = 1 -> Zorg.Pdf.ChartKind
 Zorg.Pdf.ChartSeries
 Zorg.Pdf.ChartSeries.<Clone>$() -> Zorg.Pdf.ChartSeries!

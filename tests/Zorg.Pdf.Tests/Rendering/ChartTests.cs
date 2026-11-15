@@ -36,6 +36,8 @@ public sealed class ChartTests
                 Sales,
                 Sales with { Kind = ChartKind.StackedBar, Horizontal = true, Title = null },
                 new Barcode(BarcodeKind.Ean13, "590123412345") { Alt = "Product number" },
+                Sales with { Kind = ChartKind.Line },
+                Sales with { Kind = ChartKind.Pie, Series = [new ChartSeries("2026", [14, 17, 19])] },
             ],
         };
 
@@ -43,8 +45,9 @@ public sealed class ChartTests
 
         Assert.DoesNotContain(result.Diagnostics, d => d.Severity != DiagnosticSeverity.Info); // The test font may lack bold for the title.
         PdfFile.CheckStructure(file);
-        Assert.Equal(3, PdfInspect.Elements(file, "Figure").Count);
+        Assert.Equal(5, PdfInspect.Elements(file, "Figure").Count);
         string page = PdfInspect.PageContents(file)[0];
+        Assert.Matches(@"\sc\s", page); // Pie arcs and round markers are Bézier curves.
         // Text inside a figure mustn't close the figure's marked content: every BDC has its EMC, in order.
         Assert.Equal(Regex.Count(page, @"\b(BDC|BMC)\b"), Regex.Count(page, @"\bEMC\b"));
         int depth = 0;
@@ -67,11 +70,14 @@ public sealed class ChartTests
                 Sales with { Kind = ChartKind.StackedBar, Series = [new ChartSeries("a", [1, -2, 3])] },
                 Sales with { Bind = "sales" },
                 Sales with { Minimum = 10, Maximum = 5 },
+                Sales with { Kind = ChartKind.Pie },
+                Sales with { Kind = ChartKind.Line, Horizontal = true },
+                Sales with { Kind = ChartKind.Pie, Series = [new ChartSeries("a", [0, 0, 0])] },
             ],
         };
 
         Assert.Equal(
-            ["ZPDF-A003 /content/0/alt", "ZPDF-J033 /content/1/series/0/values", "ZPDF-J033 /content/2/series/0/values", "ZPDF-J033 /content/3", "ZPDF-J033 /content/4/maximum"],
+            ["ZPDF-A003 /content/0/alt", "ZPDF-J033 /content/1/series/0/values", "ZPDF-J033 /content/2/series/0/values", "ZPDF-J033 /content/3", "ZPDF-J033 /content/4/maximum", "ZPDF-J033 /content/5/series", "ZPDF-J033 /content/6/horizontal", "ZPDF-J033 /content/7/series/0/values"],
             document.Validate().Diagnostics.Select(d => $"{d.Code} {d.Path}"));
     }
 

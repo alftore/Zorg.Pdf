@@ -713,6 +713,16 @@ internal sealed partial class DocumentValidator
             return;
         }
 
+        if (chart.Kind == ChartKind.Pie && chart.Series.Length != 1)
+        {
+            error(DiagnosticCodes.BadChart, "A pie chart has one series: its slices are the categories.", $"{path}/series");
+        }
+
+        if (chart.Horizontal && chart.Kind is ChartKind.Line or ChartKind.Pie)
+        {
+            error(DiagnosticCodes.BadChart, "Only bar charts lie down: \"horizontal\" is for bar and stackedBar.", $"{path}/horizontal");
+        }
+
         int categories = chart.Categories.IsDefault ? 0 : chart.Categories.Length;
         for (int s = 0; s < chart.Series.Length; s++)
         {
@@ -722,9 +732,13 @@ internal sealed partial class DocumentValidator
             {
                 error(DiagnosticCodes.BadChart, Invariant($"A series has one value per category: {categories}."), $"{at}/values");
             }
-            else if (System.Linq.Enumerable.Any(series.Values, v => !double.IsFinite(v)) || (chart.Kind == ChartKind.StackedBar && System.Linq.Enumerable.Any(series.Values, v => v < 0)))
+            else if (System.Linq.Enumerable.Any(series.Values, v => !double.IsFinite(v)) || (chart.Kind is ChartKind.StackedBar or ChartKind.Pie && System.Linq.Enumerable.Any(series.Values, v => v < 0)))
             {
-                error(DiagnosticCodes.BadChart, chart.Kind == ChartKind.StackedBar ? "A stacked chart's values are numbers of 0 or more." : "A chart's values are finite numbers.", $"{at}/values");
+                error(DiagnosticCodes.BadChart, chart.Kind is ChartKind.StackedBar or ChartKind.Pie ? "A stacked or pie chart's values are numbers of 0 or more." : "A chart's values are finite numbers.", $"{at}/values");
+            }
+            else if (chart.Kind == ChartKind.Pie && System.Linq.Enumerable.Sum(series.Values) <= 0)
+            {
+                error(DiagnosticCodes.BadChart, "A pie chart's values add up to more than 0.", $"{at}/values");
             }
         }
     }

@@ -277,13 +277,13 @@
       "oneOf": [{ "required": ["text"] }, { "required": ["image"] }]
     },
     "chart": {
-      "description": "A bar chart, drawn as vectors: bars side by side (bar) or stacked (stackedBar), standing up or lying down (horizontal). Needs alt text that says what it shows, unless decorative. Set categories and series, or bind.",
+      "description": "A chart, drawn as vectors: bars side by side (bar) or stacked (stackedBar), standing up or lying down (horizontal); lines with markers (line); or one series as a pie (pie). Needs alt text that says what it shows, unless decorative. Set categories and series, or bind.",
       "type": "object",
       "required": ["type"],
       "additionalProperties": false,
       "properties": {
         "type": { "const": "chart" },
-        "kind": { "enum": ["bar", "stackedBar"], "default": "bar" },
+        "kind": { "enum": ["bar", "stackedBar", "line", "pie"], "default": "bar" },
         "categories": { "type": "array", "items": { "type": "string" }, "maxItems": 200 },
         "series": {
           "type": "array",

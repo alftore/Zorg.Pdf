@@ -67,7 +67,14 @@ internal sealed partial class RenderEngine
     private void DrawChart(Chart chart, double left, double bottom, double width, double height)
     {
         TextStyle style = _styles.For(chart);
+        if (chart.Kind == ChartKind.Pie)
+        {
+            DrawPie(chart, style, left, bottom, width, height);
+            return;
+        }
+
         int count = chart.Categories.Length;
+        bool isLine = chart.Kind == ChartKind.Line;
         bool stacked = chart.Kind == ChartKind.StackedBar;
         double gap = style.Size?.Points ?? 8;
 
@@ -118,6 +125,39 @@ internal sealed partial class RenderEngine
             double plotBottom = floor + labelHeight + (gap / 2), plotTop = top - (lineHeight / 2);
             double Y(double v) => plotBottom + ((v - axisLow) / (axisHigh - axisLow) * (plotTop - plotBottom));
             Grid(ticks, t => (plotLeft, Y(t), plotRight, Y(t)), t => (left, Y(t) - (lineHeight / 3), valueLabelWidth, Label(t)), style);
+            for (int c = 0; c < count && isLine; c++)
+            {
+                double labelTop = plotBottom - (gap / 4);
+                foreach (LayoutLine label in labels[c].Lines)
+                {
+                    DrawLine(label, plotLeft + (band * c) + 1, labelTop - label.Ascent);
+                    labelTop -= label.Height;
+                }
+            }
+
+            if (isLine)
+            {
+                Axis(plotLeft, Y(Math.Clamp(0, axisLow, axisHigh)), plotRight, Y(Math.Clamp(0, axisLow, axisHigh)));
+                for (int s = 0; s < chart.Series.Length; s++)
+                {
+                    Color color = SeriesColor(chart, s);
+                    _content.SaveState().SetLineWidth(1.5).SetLineJoin(1).SetLineCap(1).SetStrokeRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0);
+                    for (int c = 0; c < count; c++)
+                    {
+                        double x = plotLeft + (band * (c + 0.5)), y = Y(Math.Clamp(Value(chart.Series[s], c), axisLow, axisHigh));
+                        _ = c == 0 ? _content.MoveTo(x, y) : _content.LineTo(x, y);
+                    }
+
+                    _content.Stroke().RestoreState();
+                    for (int c = 0; c < count; c++)
+                    {
+                        Marker(s, color, plotLeft + (band * (c + 0.5)), Y(Math.Clamp(Value(chart.Series[s], c), axisLow, axisHigh)), gap * 0.55);
+                    }
+                }
+
+                return;
+            }
+
             for (int c = 0; c < count; c++)
             {
                 double x0 = plotLeft + (band * c);
@@ -188,11 +228,132 @@ internal sealed partial class RenderEngine
         }
     }
 
+    /// <summary>A series' marker, its shape by its index so colour isn't the only difference: circle, square, triangle, diamond.</summary>
+    private void Marker(int series, Color color, double x, double y, double size)
+    {
+        double r = size / 2;
+        _content.SaveState().SetFillRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0).SetLineWidth(0.75).SetStrokeGray(1);
+        switch (series % 4)
+        {
+            case 0:
+                Arc(x, y, r, 0, 2 * Math.PI, moveTo: true);
+                break;
+            case 1:
+                _content.Rectangle(x - (r * 0.9), y - (r * 0.9), r * 1.8, r * 1.8);
+                break;
+            case 2:
+                _content.MoveTo(x, y + r).LineTo(x + (r * 0.95), y - (r * 0.75)).LineTo(x - (r * 0.95), y - (r * 0.75)).ClosePath();
+                break;
+            default:
+                _content.MoveTo(x, y + r).LineTo(x + r, y).LineTo(x, y - r).LineTo(x - r, y).ClosePath();
+                break;
+        }
+
+        _content.FillAndStroke().RestoreState();
+    }
+
+    /// <summary>A circular arc of radius <paramref name="r"/> from angle <paramref name="from"/> to <paramref name="to"/> (radians, counterclockwise), as cubic Béziers of 90° or less.</summary>
+    private void Arc(double cx, double cy, double r, double from, double to, bool moveTo)
+    {
+        int parts = Math.Max(1, (int)Math.Ceiling(Math.Abs(to - from) / (Math.PI / 2)));
+        double step = (to - from) / parts;
+        double k = 4.0 / 3 * Math.Tan(step / 4);
+        if (moveTo)
+        {
+            _content.MoveTo(cx + (r * Math.Cos(from)), cy + (r * Math.Sin(from)));
+        }
+
+        for (int i = 0; i < parts; i++)
+        {
+            double a0 = from + (step * i), a1 = a0 + step;
+            (double c0, double s0, double c1, double s1) = (Math.Cos(a0), Math.Sin(a0), Math.Cos(a1), Math.Sin(a1));
+            _content.CurveTo(cx + (r * (c0 - (k * s0))), cy + (r * (s0 + (k * c0))), cx + (r * (c1 + (k * s1))), cy + (r * (s1 - (k * c1))), cx + (r * c1), cy + (r * s1));
+        }
+    }
+
+    /// <summary>A pie: slices clockwise from twelve o'clock, white lines between them, and a legend with each share in percent.</summary>
+    private void DrawPie(Chart chart, TextStyle style, double left, double bottom, double width, double height)
+    {
+        double gap = style.Size?.Points ?? 8;
+        double top = bottom + height;
+        if (chart.Title is { Length: > 0 } title)
+        {
+            LayoutLine titleLine = Line(title, style with { Weight = FontWeight.Bold }, width, TextAlign.Center);
+            DrawLine(titleLine, left, top - titleLine.Ascent);
+            top -= titleLine.Height + (gap / 2);
+        }
+
+        ChartSeries series = chart.Series[0];
+        double total = Enumerable.Range(0, chart.Categories.Length).Sum(c => Math.Max(0, Value(series, c)));
+        CultureInfo culture = Culture(_document.Language);
+        var entries = new List<(Color, string, int)>();
+        for (int c = 0; c < chart.Categories.Length; c++)
+        {
+            double share = total > 0 ? Math.Max(0, Value(series, c)) / total : 0;
+            entries.Add((series.Color is { } own && chart.Categories.Length == 1 ? own : ChartPalette[c % ChartPalette.Length], $"{chart.Categories[c]} {share.ToString("P0", culture)}", -1));
+        }
+
+        double floor = bottom;
+        if (chart.Legend ?? true)
+        {
+            floor += DrawLegend(entries, style, left, bottom, width) + (gap / 2);
+        }
+
+        double r = Math.Max(1, Math.Min(width, top - floor) / 2) - 1;
+        double cx = left + (width / 2), cy = floor + ((top - floor) / 2);
+        double angle = Math.PI / 2; // Twelve o'clock, going clockwise: angles decrease.
+        for (int c = 0; c < chart.Categories.Length && total > 0; c++)
+        {
+            double sweep = Math.Max(0, Value(series, c)) / total * 2 * Math.PI;
+            if (sweep <= 0)
+            {
+                continue;
+            }
+
+            Color color = entries[c].Item1;
+            _content.SaveState().SetFillRgb(color.R / 255.0, color.G / 255.0, color.B / 255.0).SetLineWidth(1).SetStrokeGray(1).SetLineJoin(1);
+            if (sweep >= (2 * Math.PI) - 1e-9)
+            {
+                Arc(cx, cy, r, angle, angle - (2 * Math.PI), moveTo: true);
+                _content.ClosePath();
+            }
+            else
+            {
+                _content.MoveTo(cx, cy).LineTo(cx + (r * Math.Cos(angle)), cy + (r * Math.Sin(angle)));
+                Arc(cx, cy, r, angle, angle - sweep, moveTo: false);
+                _content.ClosePath();
+            }
+
+            _content.FillAndStroke().RestoreState();
+            angle -= sweep;
+        }
+    }
+
     private static double Value(ChartSeries series, int category) =>
         category < series.Values.Length && double.IsFinite(series.Values[category]) ? series.Values[category] : 0;
 
     private static (double Low, double High) ValueRange(Chart chart)
     {
+        if (chart.Kind == ChartKind.Line)
+        {
+            // A line shows change: the axis starts near the data, not at 0, unless the data comes close to it.
+            double min = double.MaxValue, max = double.MinValue;
+            foreach (ChartSeries series in chart.Series)
+            {
+                for (int c = 0; c < chart.Categories.Length; c++)
+                {
+                    (min, max) = (Math.Min(min, Value(series, c)), Math.Max(max, Value(series, c)));
+                }
+            }
+
+            if (min > 0 && min < (max - min))
+            {
+                min = 0;
+            }
+
+            return max > min ? (min, max) : (min - 1, max + 1);
+        }
+
         double low = 0, high = 0;
         for (int c = 0; c < chart.Categories.Length; c++)
         {
@@ -258,11 +419,17 @@ internal sealed partial class RenderEngine
     /// <summary>Swatches and series names in a row, wrapping; returns the height used.</summary>
     private double DrawLegend(Chart chart, TextStyle style, double left, double bottom, double width)
     {
+        return DrawLegend([.. chart.Series.Select((s, i) => (SeriesColor(chart, i), s.Name ?? "", chart.Kind == ChartKind.Line ? i : -1))], style, left, bottom, width);
+    }
+
+    /// <summary>A legend of (colour, text, marker or -1 for a square) items in centred rows; returns the height used.</summary>
+    private double DrawLegend(List<(Color Color, string Text, int Marker)> entries, TextStyle style, double left, double bottom, double width)
+    {
         double size = style.Size?.Points ?? 8;
-        var items = chart.Series.Select((s, i) => (Color: SeriesColor(chart, i), Text: Line(s.Name ?? "", style, 1e6, TextAlign.Left))).ToList();
-        var rows = new List<List<(Color Color, LayoutLine Text)>> { new() };
+        var items = entries.Select(e => (e.Color, Text: Line(e.Text, style, 1e6, TextAlign.Left), e.Marker)).ToList();
+        var rows = new List<List<(Color Color, LayoutLine Text, int Marker)>> { new() };
         double used = 0;
-        foreach ((Color color, LayoutLine text) in items)
+        foreach ((Color color, LayoutLine text, int marker) in items)
         {
             double itemWidth = size + 3 + text.Width + size;
             if (used + itemWidth > width && rows[^1].Count > 0)
@@ -271,19 +438,27 @@ internal sealed partial class RenderEngine
                 used = 0;
             }
 
-            rows[^1].Add((color, text));
+            rows[^1].Add((color, text, marker));
             used += itemWidth;
         }
 
         double lineHeight = items[0].Text.Height;
         double y = bottom + (lineHeight * (rows.Count - 1));
-        foreach (List<(Color Color, LayoutLine Text)> row in rows)
+        foreach (List<(Color Color, LayoutLine Text, int Marker)> row in rows)
         {
             double rowWidth = row.Sum(i => size + 3 + i.Text.Width + size) - size;
             double x = left + ((width - rowWidth) / 2);
-            foreach ((Color color, LayoutLine text) in row)
+            foreach ((Color color, LayoutLine text, int marker) in row)
             {
-                FillBox(color, x, y + (lineHeight * 0.2), size * 0.8, size * 0.8);
+                if (marker < 0)
+                {
+                    FillBox(color, x, y + (lineHeight * 0.2), size * 0.8, size * 0.8);
+                }
+                else
+                {
+                    Marker(marker, color, x + (size * 0.4), y + (lineHeight * 0.2) + (size * 0.4), size * 0.6);
+                }
+
                 DrawLine(text, x + size + 3 - text.Offset, y + (lineHeight * 0.2));
                 x += size + 3 + text.Width + size;
             }

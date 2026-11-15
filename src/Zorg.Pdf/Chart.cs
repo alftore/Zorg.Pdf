@@ -6,8 +6,8 @@ using Zorg.Pdf.Json;
 namespace Zorg.Pdf;
 
 /// <summary>
-/// A bar chart, drawn as vectors: one bar per category for each series side by side, or stacked. Columns stand up by
-/// default; <see cref="Horizontal"/> lays them down, which suits long category names. Values come from the document
+/// A chart, drawn as vectors: bars side by side or stacked, lines, or a pie. Bar columns stand up by default;
+/// <see cref="Horizontal"/> lays them down, which suits long category names. Values come from the document
 /// or, with <see cref="Bind"/>, from the template model. Like an image it needs <see cref="Alt"/> text that says what
 /// the chart shows, unless it's <see cref="Decorative"/>.
 /// In JSON <c>{ "type": "chart", "kind": "bar", "categories": ["Q1", "Q2"], "series": [{ "name": "2026", "values": [12, 15] }], "alt": "…" }</c>.
@@ -97,7 +97,7 @@ public sealed record ChartSeries(string Name, ImmutableArray<double> Values)
     public Color? Color { get; init; }
 }
 
-/// <summary>A chart's kind. In JSON <c>"bar"</c> or <c>"stackedBar"</c>.</summary>
+/// <summary>A chart's kind. In JSON <c>"bar"</c>, <c>"stackedBar"</c>, <c>"line"</c> or <c>"pie"</c>.</summary>
 [JsonConverter(typeof(CamelCaseEnumConverter<ChartKind>))]
 public enum ChartKind
 {
@@ -106,4 +106,10 @@ public enum ChartKind
 
     /// <summary>Each category's bars stacked into one; values must not be negative.</summary>
     StackedBar,
+
+    /// <summary>A line through each series' values, with a marker of its own shape at every category.</summary>
+    Line,
+
+    /// <summary>One series' values as slices of a circle, clockwise from the top; values must not be negative.</summary>
+    Pie,
 }
