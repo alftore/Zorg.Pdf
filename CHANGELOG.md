@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+To be released as 0.5.0: the first release, covering the roadmap from 0.1 to 0.5.
+
 ### Added
 
 - Repository scaffold: build settings, CI and release workflows, AOT smoke test, and `PdfException` as the base exception type.

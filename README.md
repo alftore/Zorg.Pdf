@@ -2,7 +2,7 @@
 
 Async-first PDF for .NET 10, written in C# only. You can build documents, reports, letters and invoices from code, from a JSON document model, or from templates and data. Output is tagged and accessible, and the core has no native binaries and no NuGet dependencies. It can also read, merge and split existing PDFs.
 
-**Status: not released yet.** Versions 0.1 to 0.4 are complete and 0.5 is under way; the maintainer is reviewing them before the first preview on NuGet. Read [the guide](docs/guide/README.md) to get started, and [docs/limits.md](docs/limits.md) for what isn't supported.
+**Status: 0.5.0 is ready for its first release.** Versions 0.1 to 0.5 are complete; a preview (0.1.0-preview.1) is on NuGet. The API may still change before 1.0. Read [the guide](docs/guide/README.md) to get started, and [docs/limits.md](docs/limits.md) for what isn't supported.
 
 ```csharp
 var document = new PdfDocument("Invoice 2026-0042")
