@@ -119,6 +119,21 @@ else:
     sys.exit(1)
 PY
 
+stage "Signatures against MuPDF"
+# signed.pdf has one signature over the whole file; signed-twice.pdf adds a second by incremental update, so the first
+# must still verify, with changes since, and the second must cover everything.
+check_signatures() {
+  local name="$1" unchanged="$2" edited="$3" report
+  report="$(mutool sign -v "/out/$name" 2>&1 || true)"
+  if [ "$(grep -c 'unchanged since signing' <<<"$report")" = "$unchanged" ] && [ "$(grep -c 'edits since signing' <<<"$report")" = "$edited" ]; then
+    echo "ok   $name: MuPDF verifies $unchanged unchanged and $edited earlier signature(s)"
+  else
+    echo "FAIL $name: MuPDF's signature check:"; echo "$report"; failed=1
+  fi
+}
+check_signatures signed.pdf 1 0
+check_signatures signed-twice.pdf 1 1
+
 stage "Reader against qpdf"
 # PdfFileInfo (zorg-pdf info) reads each smoke PDF as other tools rewrite it: object streams packed or unpacked, a
 # classic cross-reference table, QDF, linearized, cleaned and decompressed by MuPDF, and encrypted with an empty user

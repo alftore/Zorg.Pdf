@@ -54,6 +54,8 @@ The same in JSON:
 | `Spacer`, `PageBreak` | `spacer`, `pageBreak` | Vertical space, and a new page |
 | `TextBox` | `textBox` | Fixed in place, outside the flow. See [design](design.md) and [letters](letters.md) |
 | `Chart`, `Barcode` | `chart`, `barcode` | See [charts](charts.md) and [barcodes](barcodes.md) |
+| `SwissQrBill` | `swissQrBill` | A Swiss payment part and receipt at the page's bottom. See [barcodes](barcodes.md#swiss-qr-bills) |
+| `SignatureField` | `signatureField` | A box for a digital signature, signed now or later. See [signatures](signatures.md#visible-signature-fields) |
 | `TableOfContents`, `SectionBreak` | `tableOfContents`, `sectionBreak` | See [links and contents](links-and-contents.md) and [sections](sections.md) |
 | `Repeat`, `Conditional` | `repeat`, `when` | See [templates](templates.md) |
 

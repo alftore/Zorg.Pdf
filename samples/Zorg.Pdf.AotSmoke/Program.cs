@@ -429,6 +429,31 @@ if (saveTo is not null)
     File.WriteAllText(Path.Combine(saveTo, "barcodes.expected"), System.Text.Json.JsonSerializer.Serialize(codes.Select(c => c.Decoded).ToArray(), BarcodeJson.Default.StringArray));
 }
 
+// 0.5 slices 3 and 6: a signature in a visible field as the document renders, then a second one by incremental update.
+// A test key made here, never stored. The gate checks both files with veraPDF, and with MuPDF's signature check.
+if (saveTo is not null)
+{
+    using var key = System.Security.Cryptography.RSA.Create(2048);
+    var request = new System.Security.Cryptography.X509Certificates.CertificateRequest("CN=Zorg.Pdf AOT smoke", key, System.Security.Cryptography.HashAlgorithmName.SHA256, System.Security.Cryptography.RSASignaturePadding.Pkcs1);
+    using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+    var contract = new PdfDocument("Signed agreement")
+    {
+        Content = [new Heading("Service agreement"), new Paragraph("The parties agree to the terms below."), new SignatureField("supplier") { Label = "Signed for the supplier" }, new SignatureField("customer") { Label = "Signed for the customer" }],
+    };
+    using var signed = new MemoryStream();
+    contract.RenderAsync(signed, new RenderOptions
+    {
+        Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }),
+        Conformance = PdfConformance.PdfUA1,
+        Signature = new Zorg.Pdf.Signing.PdfSignatureOptions(Zorg.Pdf.Signing.PdfSigners.FromCertificate(certificate)) { FieldName = "supplier", Reason = "AOT smoke" },
+    }).AsTask().GetAwaiter().GetResult();
+    using var twice = new MemoryStream();
+    Zorg.Pdf.Signing.PdfSigning.SignAsync(new MemoryStream(signed.ToArray()), twice, new Zorg.Pdf.Signing.PdfSignatureOptions(Zorg.Pdf.Signing.PdfSigners.FromCertificate(certificate)) { FieldName = "customer" }).GetAwaiter().GetResult();
+    Check("signatures", twice.Length > signed.Length && twice.ToArray().AsSpan(0, (int)signed.Length).SequenceEqual(signed.ToArray()));
+    File.WriteAllBytes(Path.Combine(saveTo, "signed.pdf"), signed.ToArray());
+    File.WriteAllBytes(Path.Combine(saveTo, "signed-twice.pdf"), twice.ToArray());
+}
+
 // 0.4 slice 3: every example, merged into one file, then its even pages taken out again. Not tagged (tags aren't
 // kept), so the gate checks these with qpdf, MuPDF and pdffonts but not veraPDF.
 if (saveTo is not null)

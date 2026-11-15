@@ -1165,6 +1165,8 @@ Zorg.Pdf.SwissQrBill.Amount.get -> decimal?
 Zorg.Pdf.SwissQrBill.Amount.init -> void
 Zorg.Pdf.SwissQrBill.BillInformation.get -> string?
 Zorg.Pdf.SwissQrBill.BillInformation.init -> void
+Zorg.Pdf.SwissQrBill.Bind.get -> string?
+Zorg.Pdf.SwissQrBill.Bind.init -> void
 Zorg.Pdf.SwissQrBill.Creditor.get -> Zorg.Pdf.SwissQrAddress!
 Zorg.Pdf.SwissQrBill.Creditor.init -> void
 Zorg.Pdf.SwissQrBill.Currency.get -> string!

@@ -31,9 +31,9 @@ public sealed record SwissQrBill : Block
     /// </summary>
     [JsonConstructor]
     [SetsRequiredMembers]
-    internal SwissQrBill(string account, SwissQrAddress creditor, decimal? amount = null, string currency = "CHF", SwissQrAddress? debtor = null, string? reference = null, string? message = null, string? billInformation = null, string? language = null, string? style = null, bool keepWithNext = false, string? id = null) =>
-        (Account, Creditor, Amount, Currency, Debtor, Reference, Message, BillInformation, Language, Style, KeepWithNext, Id) =
-        (account, creditor, amount, currency, debtor, reference, message, billInformation, language, style, keepWithNext, id);
+    internal SwissQrBill(string account, SwissQrAddress creditor, decimal? amount = null, string currency = "CHF", SwissQrAddress? debtor = null, string? reference = null, string? message = null, string? billInformation = null, string? language = null, string? bind = null, string? style = null, bool keepWithNext = false, string? id = null) =>
+        (Account, Creditor, Amount, Currency, Debtor, Reference, Message, BillInformation, Language, Bind, Style, KeepWithNext, Id) =
+        (account, creditor, amount, currency, debtor, reference, message, billInformation, language, bind, style, keepWithNext, id);
 
     /// <summary>A bill to an account.</summary>
     /// <param name="account">The creditor's IBAN or QR-IBAN, CH or LI; spaces are ignored.</param>
@@ -72,6 +72,13 @@ public sealed record SwissQrBill : Block
 
     /// <summary>"de", "fr", "it", "en" or "rm" for the headings. Null: the document's language if it's one of them, else "en".</summary>
     public string? Language { get; init; }
+
+    /// <summary>
+    /// A path in the template model whose value is an object with the fields that change from bill to bill, such as
+    /// <c>{ "amount": 793.00, "reference": "…", "debtor": { … } }</c>. Its fields fill in or replace the bill's own;
+    /// the bill is checked once they're in.
+    /// </summary>
+    public string? Bind { get; init; }
 
     /// <summary>The Swiss QR code's payload, checked against the guidelines.</summary>
     /// <returns>The payload: one element per line, separated by LF, ending with the trailer "EPD" or the billing information.</returns>

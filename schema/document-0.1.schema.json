@@ -344,6 +344,7 @@
         "message": { "type": "string", "maxLength": 140 },
         "billInformation": { "description": "Structured billing information, starting with //.", "type": "string", "maxLength": 140 },
         "language": { "enum": ["de", "fr", "it", "en", "rm"] },
+        "bind": { "description": "A path in the template model to an object with the fields that change per bill (amount, reference, debtor, message, ...); they fill in or replace these.", "type": "string", "minLength": 1 },
         "style": { "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
         "id": { "$ref": "#/$defs/id" }

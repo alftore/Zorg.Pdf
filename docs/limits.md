@@ -13,6 +13,9 @@ Every limit is checked before anything is written, except page and row counts, w
 | Rows in one table | 1,000,000 | `RenderOptions.Limits.MaxTableRows` (`PdfLimitException`) |
 | Image file | 50 MB | `RenderOptions.Limits.MaxImageBytes` (ZPDF-I002) |
 | Image pixels | 50 million | `RenderOptions.Limits.MaxImagePixels` (ZPDF-I002) |
+| Room for a signature | 16 KB (1 KB to 1 MB) | `PdfSignatureOptions.ReservedSize`; too small for the certificates is an `ArgumentException` before anything is written, a signature that outgrows it a `PdfException` naming the size it needs |
+| Timestamp authority's response | 256 KB | `Rfc3161TimestampClient` (`PdfException`) |
+| Swiss QR-bill code data | 997 characters | SIX's guidelines (ZPDF-J035) |
 
 Fonts come from the caller, never from a document; a damaged font is ZPDF-F005.
 
@@ -42,5 +45,8 @@ Fonts come from the caller, never from a document; a damaged font is ZPDF-F005.
 - **Merging and extracting** (`PdfFiles`): the new file isn't tagged, has no bookmarks or page labels, and form fields in it can't be filled in; it's never encrypted, even when a source was. It's written as PDF 1.7 whatever the sources' versions.
 - **Attachments**: at the document level only (no file attachment annotations on a page). Merging and extracting don't carry a source file's attachments over.
 - **Factur-X and ZUGFeRD** (`Zorg.Pdf.Invoicing`): the CII XML is supplied, not made from the document, and isn't checked against EN 16931's business rules or kept in step with the PDF's content; that's the invoicing system's job. UBL isn't embedded. Order-X and other document types aren't handled.
-- **Barcodes**: QR (one segment, no ECI, Kanji or structured append; byte mode is UTF-8), Code 128, GS1-128 and EAN-13. No DataMatrix, PDF417, EAN-8, UPC-A or Swiss QR-bill yet. GS1 element lengths are checked only for the identifiers with predefined fixed lengths.
+- **Barcodes**: QR (one segment, no ECI, Kanji or structured append; byte mode is UTF-8), Code 128, GS1-128 and EAN-13. No DataMatrix, PDF417, EAN-8 or UPC-A yet. GS1 element lengths are checked only for the identifiers with predefined fixed lengths.
+- **Signatures**: PAdES B-B and B-T only, no long-term validation (B-LT, B-LTA: revocation data and archive timestamps). No image in a signature's appearance. A field signed later with `PdfSigning` keeps its earlier appearance; the signer's details aren't drawn into it. Encrypted files can't be signed, and the `zorg-pdf` tool doesn't sign.
+- **Swiss QR-bills**: not verified with a Swiss banking app or SIX's validator (see [the guide](guide/barcodes.md#swiss-qr-bills)). No alternative procedures, no scissors symbol (the "Separate before paying in" note is used), A4 portrait only.
+- **ASP.NET Core**: no report jobs (202 Accepted and polling), and `Zorg.Pdf.AspNetCore` isn't in the AOT smoke test yet.
 - **Charts**: bar, stacked bar, line and pie; no area, scatter or donut charts, no axis titles, value labels on bars, logarithmic axes or data tables generated for screen readers (the alt text carries the point).

@@ -49,6 +49,7 @@ var bill = new SwissQrBill("CH44 3199 9123 0008 8901 2", new SwissQrAddress("Mus
 - **Headings:** in the document's language if it's German, French, Italian or Romansh, otherwise English; or set `Language`.
 - **Page:** the bill goes at the bottom of the page it's on, or of the next page if there isn't room. Content after it starts a new page, and that page's footer is left out. The page must be A4 portrait.
 - **Fonts:** the guidelines allow only Arial, Frutiger, Helvetica or Liberation Sans. Another font gets an Info note (ZPDF-L010).
+- **Templates:** `"bind": "bill"` takes the fields that change per bill (amount, reference, debtor, message and the rest) from an object in the model, and the bill is checked once they're in.
 - **The code itself:** `ToPayload()` returns what's in the code, if you need it elsewhere.
 
 In JSON:
@@ -70,7 +71,9 @@ In JSON:
 }
 ```
 
-[qr-bill.json](../examples/qr-bill.json) is a whole invoice with one. The tests check the payload against the guidelines' own example and the check digits against their worked examples. Rendered bills decode with zxing-cpp to exactly their payload. zbar, which the Linux gate uses for other codes, can't read codes with the Swiss cross over them, as some older scanners can't. The cross follows the Swiss flag's proportions, as SIX's logo file wasn't used. Before you send real bills, try one with your bank's app; SIX's online validator is another check.
+[qr-bill.json](../examples/qr-bill.json) is a whole invoice with one.
+
+> **Not verified in practice.** No Swiss QR-bill from Zorg.Pdf has been scanned with a Swiss banking app, paid, or checked with SIX's online validator; the maintainer isn't in Switzerland and can't do it. Here's what has been checked. The payload matches the guidelines' own example. The check digits match their worked examples. Rendered bills decode with zxing-cpp to exactly their payload, and they pass veraPDF. The layout follows the guidelines' measurements, but nobody has measured a printed bill. The Swiss cross follows the Swiss flag's proportions, because SIX's logo file wasn't used. zbar, which the Linux gate uses for other codes, can't read codes with the cross over them. **Before you send real bills, scan one with your bank's app and run it through SIX's validator.** If you can report how it went, please open an issue.
 
 ## Norwegian KID numbers
 

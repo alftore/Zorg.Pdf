@@ -114,6 +114,26 @@ public sealed class SwissQrBillTests
     }
 
     [Fact]
+    public async Task ABoundBillTakesItsFieldsFromTheModelAndIsCheckedThen()
+    {
+        const string Template = """
+            {"title":"Invoice","content":[{"type":"swissQrBill","account":"CH4431999123000889012",
+             "creditor":{"name":"Max Muster & Söhne","postalCode":"8000","town":"Seldwyla"},"bind":"bill"}]}
+            """;
+        PdfDocument document = PdfDocument.ParseJson(Template);
+        Assert.True(document.Validate().IsValid); // No reference yet: checked once the model fills it in.
+
+        RenderOptions good = PdfInspect.Options() with { Data = PdfData.ParseJson("""{"bill":{"amount":793.00,"reference":"210000000003139471430009017","debtor":{"name":"Café Seeblick AG","postalCode":"8800","town":"Thalwil"}}}""") };
+        (byte[] file, RenderResult result) = await RenderTests.RenderAsync(document, good);
+        Assert.Single(PdfInspect.Elements(file, "Figure"));
+        Assert.Equal(1, result.PageCount);
+
+        RenderOptions bad = PdfInspect.Options() with { Data = PdfData.ParseJson("""{"bill":{"amount":793.00,"reference":"RF18539007547034"}}""") };
+        PdfDocumentException error = await Assert.ThrowsAsync<PdfDocumentException>(async () => await RenderTests.RenderAsync(document, bad));
+        Assert.Contains(error.Diagnostics, d => d is { Code: "ZPDF-J035", Path: "/content/0/reference" });
+    }
+
+    [Fact]
     public async Task TheSlipTakesThePageBottomAndWhatFollowsGoesOn()
     {
         var document = new PdfDocument("Invoice 1042")

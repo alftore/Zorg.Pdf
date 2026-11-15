@@ -26,7 +26,7 @@ internal sealed class TemplateBinder
 
     /// <summary>True when the document uses any template feature, so plain documents skip binding.</summary>
     public static bool IsTemplate(PdfDocument document) =>
-        Blocks(document).Any(b => b is Repeat or Conditional or Table { Rows: RepeatedTableRows } or Barcode { Bind: not null } or Chart { Bind: not null } || Inlines(b).Any(HasBind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
+        Blocks(document).Any(b => b is Repeat or Conditional or Table { Rows: RepeatedTableRows } or Barcode { Bind: not null } or Chart { Bind: not null } or SwissQrBill { Bind: not null } || Inlines(b).Any(HasBind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
 
     public static PdfDocument Bind(PdfDocument template, JsonElement? model, DiagnosticSink sink)
     {
@@ -150,6 +150,10 @@ internal sealed class TemplateBinder
 
             case Chart { Bind: { } chartPath } chart:
                 output.Add(BindChart(chart, chartPath, path));
+                return;
+
+            case SwissQrBill { Bind: { } billPath } bill:
+                output.Add(BindBill(bill, billPath, path));
                 return;
 
             case Barcode { Bind: { } bindPath } barcode:
@@ -420,6 +424,70 @@ internal sealed class TemplateBinder
             _sink.Error(code, message, at);
         });
         return bad ? empty : bound;
+    }
+
+    /// <summary>A QR-bill with the model's fields filled in, then checked against the guidelines.</summary>
+    private SwissQrBill BindBill(SwissQrBill bill, string bindPath, string path)
+    {
+        SwissQrBill bound = bill with { Bind = null };
+        if (Resolve(bindPath, $"{path}/bind", out _) is not { ValueKind: JsonValueKind.Object } value)
+        {
+            Report(DiagnosticCodes.BindingMissing, $"\"{bindPath}\" isn't an object with the bill's fields; the bill keeps the ones it has.", $"{path}/bind");
+        }
+        else
+        {
+            static string? Text(JsonElement o, string name, string? current) =>
+                o.TryGetProperty(name, out JsonElement e) ? e.ValueKind switch { JsonValueKind.String => e.GetString(), JsonValueKind.Null => null, _ => e.GetRawText() } : current;
+
+            static SwissQrAddress? Address(JsonElement o, string name, SwissQrAddress? current)
+            {
+                if (!o.TryGetProperty(name, out JsonElement a))
+                {
+                    return current;
+                }
+
+                if (a.ValueKind != JsonValueKind.Object)
+                {
+                    return null;
+                }
+
+                SwissQrAddress start = current ?? new SwissQrAddress("", "", "");
+                return new SwissQrAddress(Text(a, "name", start.Name) ?? "", Text(a, "postalCode", start.PostalCode) ?? "", Text(a, "town", start.Town) ?? "")
+                {
+                    Street = Text(a, "street", start.Street),
+                    HouseNumber = Text(a, "houseNumber", start.HouseNumber),
+                    Country = Text(a, "country", start.Country) ?? "CH",
+                };
+            }
+
+            decimal? amount = bound.Amount;
+            if (value.TryGetProperty("amount", out JsonElement number))
+            {
+                amount = number.ValueKind == JsonValueKind.Number && number.TryGetDecimal(out decimal d) ? d
+                    : number.ValueKind == JsonValueKind.String && decimal.TryParse(number.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal parsed) ? parsed
+                    : null;
+            }
+
+            bound = bound with
+            {
+                Account = Text(value, "account", bound.Account) ?? "",
+                Creditor = Address(value, "creditor", bound.Creditor)!,
+                Amount = amount,
+                Currency = Text(value, "currency", bound.Currency) ?? "CHF",
+                Debtor = Address(value, "debtor", bound.Debtor),
+                Reference = Text(value, "reference", bound.Reference),
+                Message = Text(value, "message", bound.Message),
+                BillInformation = Text(value, "billInformation", bound.BillInformation),
+                Language = Text(value, "language", bound.Language),
+            };
+        }
+
+        foreach ((string message, string at) in SwissQrRules.Check(bound))
+        {
+            _sink.Error(DiagnosticCodes.BadSwissQrBill, message, $"{path}{at}");
+        }
+
+        return bound;
     }
 
     private void Report(string code, string message, string path)

@@ -281,7 +281,7 @@ internal sealed partial class DocumentValidator
                 break;
 
             case SwissQrBill bill:
-                foreach ((string message, string at) in SwissQrRules.Check(bill))
+                foreach ((string message, string at) in bill.Bind is null ? SwissQrRules.Check(bill) : []) // A bound bill is checked once it's filled in.
                 {
                     Error(DiagnosticCodes.BadSwissQrBill, message, path + at);
                 }

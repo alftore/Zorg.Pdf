@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 namespace Zorg.Pdf;
 
 /// <summary>
-/// Something that flows down the page: a heading, paragraph, list, table, image, spacer or page break. In JSON every
-/// block has a <c>"type"</c>: <c>"heading"</c>, <c>"paragraph"</c>, <c>"list"</c>, <c>"table"</c>, <c>"image"</c>,
-/// <c>"spacer"</c> or <c>"pageBreak"</c>.
+/// Something on the page: a heading, paragraph, list, table, image, spacer, page break, text box, table of contents,
+/// section break, barcode, chart, Swiss QR-bill or signature field, or a template's repeat and when. In JSON every
+/// block has a <c>"type"</c>, such as <c>"heading"</c> or <c>"swissQrBill"</c>; the schema lists them all.
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type", UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
 [JsonDerivedType(typeof(Heading), "heading")]
