@@ -1,1 +1,6 @@
 #nullable enable
+Zorg.Pdf.Hyphenation.PatternHyphenator
+Zorg.Pdf.Hyphenation.PatternHyphenator.Supports(string! language) -> bool
+Zorg.Pdf.Hyphenation.PatternHyphenator.TryHyphenate(string! language, System.ReadOnlySpan<char> word, System.Span<bool> breakAfter) -> bool
+static Zorg.Pdf.Hyphenation.PatternHyphenator.Default.get -> Zorg.Pdf.Hyphenation.PatternHyphenator!
+static Zorg.Pdf.Hyphenation.PatternHyphenator.Languages.get -> System.Collections.Generic.IReadOnlyList<string!>!
