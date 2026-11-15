@@ -23,9 +23,9 @@ namespace Zorg.Pdf.Tests.Rendering;
 public sealed partial class SignatureTests
 {
     private static readonly DateTimeOffset SigningTime = new(2026, 11, 15, 10, 30, 0, TimeSpan.FromHours(1));
-    private static readonly Lazy<(X509Certificate2 Root, X509Certificate2 Intermediate, X509Certificate2 Rsa, X509Certificate2 Ec)> Pki = new(CreatePki);
+    internal static readonly Lazy<(X509Certificate2 Root, X509Certificate2 Intermediate, X509Certificate2 Rsa, X509Certificate2 Ec)> Pki = new(CreatePki);
 
-    private static PdfDocument Document() => new("Signed invoice") { Language = "en", Content = [new Heading("Invoice 1042"), new Paragraph("Total due: 1 250,00 NOK.")] };
+    internal static PdfDocument Document() => new("Signed invoice") { Language = "en", Content = [new Heading("Invoice 1042"), new Paragraph("Total due: 1 250,00 NOK.")] };
 
     private static RenderOptions Options(IPdfSigner signer, PdfConformance conformance = PdfConformance.None) => PdfInspect.Options(conformance) with
     {
@@ -189,7 +189,7 @@ public sealed partial class SignatureTests
         return (range, hole[..length]);
     }
 
-    private static SignedCms Verify(byte[] file) => Verify(file, Signature(file).Range);
+    internal static SignedCms Verify(byte[] file) => Verify(file, Signature(file).Range);
 
     private static SignedCms Verify(byte[] file, long[] range)
     {

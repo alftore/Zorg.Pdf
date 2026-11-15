@@ -3,8 +3,9 @@ using System;
 namespace Zorg.Pdf.Signing;
 
 /// <summary>
-/// Signs a document as it's rendered: a PAdES baseline B-B signature (ETSI EN 319 142-1) over the whole file, in an
-/// invisible signature field. Readers show it as signed, and as changed if a byte is altered afterwards.
+/// Signs a document as it's rendered: a PAdES baseline signature (ETSI EN 319 142-1) over the whole file, in an
+/// invisible signature field: B-B, or B-T with a <see cref="Timestamp"/>. Readers show it as signed, and as changed
+/// if a byte is altered afterwards.
 /// </summary>
 /// <param name="Signer">Signs the digest: <see cref="PdfSigners.FromCertificate"/>, or a key in an HSM or a key vault.</param>
 /// <example>
@@ -42,6 +43,12 @@ public sealed record PdfSignatureOptions(IPdfSigner Signer)
     /// It's the signer's claim; a timestamp from a timestamp authority is what proves it.
     /// </summary>
     public DateTimeOffset? SigningTime { get; init; }
+
+    /// <summary>
+    /// Gets a timestamp from a timestamp authority for the signature, making it PAdES B-T: the signing time is then
+    /// proven, not only claimed. Null (the default): B-B. See <see cref="Rfc3161TimestampClient"/>.
+    /// </summary>
+    public ITimestampClient? Timestamp { get; init; }
 
     /// <summary>
     /// Bytes reserved in the file for the signature, which is written after the rest of the file is hashed. A

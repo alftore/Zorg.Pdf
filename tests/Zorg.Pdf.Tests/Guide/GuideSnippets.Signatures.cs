@@ -31,6 +31,16 @@ internal static partial class GuideSnippets
         await document.RenderAsync(output, options, cancellationToken);
     }
 
+    // signatures.md
+    public static PdfSignatureOptions Timestamped(IPdfSigner signer)
+    {
+        var signature = new PdfSignatureOptions(signer)
+        {
+            Timestamp = new Rfc3161TimestampClient(new Uri("http://timestamp.digicert.com")),
+        };
+        return signature;
+    }
+
     /// <summary>Stands for a key service's client, such as Azure Key Vault's.</summary>
     public sealed class CryptographyClient
     {

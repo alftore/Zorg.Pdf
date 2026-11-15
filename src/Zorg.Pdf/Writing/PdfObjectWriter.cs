@@ -507,10 +507,10 @@ internal sealed class PdfObjectWriter : IDisposable
         documentHash.AppendData(written[holeEnd..]);
         byte[] digest = documentHash.GetHashAndReset();
 
-        ValueTask<byte[]> signing = CmsSignature.CreateAsync(options.Signer, digest, cancellationToken);
+        ValueTask<byte[]> signing = CmsSignature.CreateAsync(options.Signer, digest, options.Timestamp, cancellationToken);
         if (_synchronous && !signing.IsCompleted)
         {
-            throw new PdfException("The signer didn't sign synchronously. Render with RenderAsync when the key is in a remote service.");
+            throw new PdfException("The signer or timestamp client didn't finish synchronously. Render with RenderAsync when the key or the timestamp authority is remote.");
         }
 
         byte[] cms = await signing.ConfigureAwait(false);

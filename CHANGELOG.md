@@ -78,6 +78,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Smaller files: objects other than streams go into compressed object streams, and the file ends with a compressed cross-reference stream (PDF 1.5). A tagged 1,000-row invoice went from 820 KB to 218 KB.
 - `PdfData.WithImage` supplies an image slot's bytes, or loads them asynchronously before the first page. `PdfLimits.MaxImageBytes` (50 MB) and `MaxImagePixels` (50 million) bound what a render accepts. A damaged or unsupported image (ZPDF-I001) or one over the limits (I002) stops the render before anything is written.
 - Digital signatures: `RenderOptions.Signature` signs a document as it renders, with a PAdES baseline B-B signature (ETSI.CAdES.detached) over the whole file in an invisible field. `PdfSigners.FromCertificate` signs with RSA (PKCS #1 v1.5 or PSS) or ECDSA and SHA-256, -384 or -512; `IPdfSigner` takes a key in an HSM or key vault, asynchronously. The CMS is built with `System.Formats.Asn1`, so there's no new dependency. Output still streams; only the end of the file waits for the signature. Signed files pass veraPDF as PDF/UA-1 and PDF/A-2a.
+- Timestamps: `PdfSignatureOptions.Timestamp` makes a signature PAdES B-T. `Rfc3161TimestampClient` posts an RFC 3161 request with a nonce and checks the token answers it (status, digest, nonce), with the response bounded to 256 KB; `ITimestampClient` for other transports. Checked against DigiCert's public TSA.
 - Guide: a digital signatures page.
 
 ### Removed

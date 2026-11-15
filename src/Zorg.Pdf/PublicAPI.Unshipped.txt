@@ -1034,6 +1034,8 @@ Zorg.Pdf.Signing.IPdfSigner.Certificate.get -> System.Security.Cryptography.X509
 Zorg.Pdf.Signing.IPdfSigner.Chain.get -> System.Collections.Generic.IReadOnlyList<System.Security.Cryptography.X509Certificates.X509Certificate2!>!
 Zorg.Pdf.Signing.IPdfSigner.DigestAlgorithm.get -> System.Security.Cryptography.HashAlgorithmName
 Zorg.Pdf.Signing.IPdfSigner.SignDigestAsync(System.ReadOnlyMemory<byte> digest, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<byte[]!>
+Zorg.Pdf.Signing.ITimestampClient
+Zorg.Pdf.Signing.ITimestampClient.GetTokenAsync(System.ReadOnlyMemory<byte> digest, System.Security.Cryptography.HashAlgorithmName digestAlgorithm, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<byte[]!>
 Zorg.Pdf.Signing.PdfSignatureAlgorithm
 Zorg.Pdf.Signing.PdfSignatureAlgorithm.Ecdsa = 2 -> Zorg.Pdf.Signing.PdfSignatureAlgorithm
 Zorg.Pdf.Signing.PdfSignatureAlgorithm.RsaPkcs1 = 0 -> Zorg.Pdf.Signing.PdfSignatureAlgorithm
@@ -1062,11 +1064,16 @@ Zorg.Pdf.Signing.PdfSignatureOptions.Signer.get -> Zorg.Pdf.Signing.IPdfSigner!
 Zorg.Pdf.Signing.PdfSignatureOptions.Signer.init -> void
 Zorg.Pdf.Signing.PdfSignatureOptions.SigningTime.get -> System.DateTimeOffset?
 Zorg.Pdf.Signing.PdfSignatureOptions.SigningTime.init -> void
+Zorg.Pdf.Signing.PdfSignatureOptions.Timestamp.get -> Zorg.Pdf.Signing.ITimestampClient?
+Zorg.Pdf.Signing.PdfSignatureOptions.Timestamp.init -> void
 override Zorg.Pdf.Signing.PdfSignatureOptions.ToString() -> string!
 static Zorg.Pdf.Signing.PdfSignatureOptions.operator !=(Zorg.Pdf.Signing.PdfSignatureOptions? left, Zorg.Pdf.Signing.PdfSignatureOptions? right) -> bool
 static Zorg.Pdf.Signing.PdfSignatureOptions.operator ==(Zorg.Pdf.Signing.PdfSignatureOptions? left, Zorg.Pdf.Signing.PdfSignatureOptions? right) -> bool
 Zorg.Pdf.Signing.PdfSigners
 static Zorg.Pdf.Signing.PdfSigners.FromCertificate(System.Security.Cryptography.X509Certificates.X509Certificate2! certificate, System.Collections.Generic.IEnumerable<System.Security.Cryptography.X509Certificates.X509Certificate2!>? chain = null, System.Security.Cryptography.HashAlgorithmName digestAlgorithm = default(System.Security.Cryptography.HashAlgorithmName), bool rsaPss = false) -> Zorg.Pdf.Signing.IPdfSigner!
+Zorg.Pdf.Signing.Rfc3161TimestampClient
+Zorg.Pdf.Signing.Rfc3161TimestampClient.GetTokenAsync(System.ReadOnlyMemory<byte> digest, System.Security.Cryptography.HashAlgorithmName digestAlgorithm, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<byte[]!>
+Zorg.Pdf.Signing.Rfc3161TimestampClient.Rfc3161TimestampClient(System.Uri! url, System.Net.Http.HttpClient? httpClient = null) -> void
 Zorg.Pdf.SlotImageSource
 override Zorg.Pdf.SlotImageSource.<Clone>$() -> Zorg.Pdf.SlotImageSource!
 Zorg.Pdf.SlotImageSource.Deconstruct(out string! Slot) -> void

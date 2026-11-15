@@ -25,6 +25,7 @@ internal static class CmsSignature
     private const string SigningCertificateV2 = "1.2.840.113549.1.9.16.2.47";
     private const string RsaPss = "1.2.840.113549.1.1.10";
     private const string Mgf1 = "1.2.840.113549.1.1.8";
+    private const string SignatureTimeStampToken = "1.2.840.113549.1.9.16.2.14";
 
     public static bool IsSupportedDigest(HashAlgorithmName digest) =>
         digest == HashAlgorithmName.SHA256 || digest == HashAlgorithmName.SHA384 || digest == HashAlgorithmName.SHA512;
@@ -32,8 +33,9 @@ internal static class CmsSignature
     /// <summary>Builds the signed attributes, has the signer sign them, and returns the DER <c>ContentInfo</c>.</summary>
     /// <param name="signer">The key.</param>
     /// <param name="documentDigest">The digest of the signed byte ranges, made with the signer's digest algorithm.</param>
-    /// <param name="cancellationToken">Passed to the signer.</param>
-    public static async ValueTask<byte[]> CreateAsync(IPdfSigner signer, byte[] documentDigest, CancellationToken cancellationToken)
+    /// <param name="timestamp">Gets a timestamp token for the signature value (PAdES B-T), or null for B-B.</param>
+    /// <param name="cancellationToken">Passed to the signer and the timestamp client.</param>
+    public static async ValueTask<byte[]> CreateAsync(IPdfSigner signer, byte[] documentDigest, ITimestampClient? timestamp, CancellationToken cancellationToken)
     {
         HashAlgorithmName digest = signer.DigestAlgorithm;
         byte[] attributes = SignedAttributes(signer.Certificate, documentDigest);
@@ -44,7 +46,14 @@ internal static class CmsSignature
             signature = EcdsaToDer(signature);
         }
 
-        return Build(signer, attributes, signature);
+        byte[]? token = null;
+        if (timestamp is not null)
+        {
+            // The token covers the signature value (RFC 3161, appendix A), hashed with the signer's digest.
+            token = await timestamp.GetTokenAsync(CryptographicOperations.HashData(digest, signature), digest, cancellationToken).ConfigureAwait(false);
+        }
+
+        return Build(signer, attributes, signature, token);
     }
 
     /// <summary>The signed attributes as a DER <c>SET OF Attribute</c>: what the signature covers.</summary>
@@ -95,7 +104,7 @@ internal static class CmsSignature
         return writer.Encode();
     }
 
-    private static byte[] Build(IPdfSigner signer, byte[] attributes, byte[] signature)
+    private static byte[] Build(IPdfSigner signer, byte[] attributes, byte[] signature, byte[]? timestampToken)
     {
         X509Certificate2 certificate = signer.Certificate;
         var writer = new AsnWriter(AsnEncodingRules.DER);
@@ -140,6 +149,20 @@ internal static class CmsSignature
         writer.WriteEncodedValue(tagged);
         SignatureAlgorithm(writer, signer.Algorithm, signer.DigestAlgorithm);
         writer.WriteOctetString(signature);
+        if (timestampToken is not null)
+        {
+            // unsignedAttrs [1] IMPLICIT: id-aa-signatureTimeStampToken (RFC 3161, appendix A).
+            Asn1Tag implicit1 = new(TagClass.ContextSpecific, 1, isConstructed: true);
+            writer.PushSetOf(implicit1);
+            writer.PushSequence();
+            writer.WriteObjectIdentifier(SignatureTimeStampToken);
+            writer.PushSetOf();
+            writer.WriteEncodedValue(timestampToken);
+            writer.PopSetOf();
+            writer.PopSequence();
+            writer.PopSetOf(implicit1);
+        }
+
         writer.PopSequence();
         writer.PopSetOf();
 
@@ -149,7 +172,7 @@ internal static class CmsSignature
         return writer.Encode();
     }
 
-    private static string DigestOid(HashAlgorithmName digest) =>
+    internal static string DigestOid(HashAlgorithmName digest) =>
         digest == HashAlgorithmName.SHA384 ? "2.16.840.1.101.3.4.2.2"
         : digest == HashAlgorithmName.SHA512 ? "2.16.840.1.101.3.4.2.3"
         : "2.16.840.1.101.3.4.2.1";
