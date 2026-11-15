@@ -1,0 +1,35 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Rechnung 2026-1042",
+  "language": "de-CH",
+  "content": [
+    { "type": "heading", "inlines": ["Rechnung 2026-1042"] },
+    { "type": "paragraph", "inlines": ["Muster Kaffeerösterei GmbH · Bahnhofstrasse 12 · 8001 Zürich"] },
+    { "type": "paragraph", "inlines": ["Datum: 15. November 2026 · Zahlbar innert 30 Tagen"] },
+    {
+      "type": "table",
+      "columns": [
+        { "header": "Artikel", "width": "3*" },
+        { "header": "Menge", "width": "1*", "align": "right" },
+        { "header": "Betrag CHF", "width": "1.2*", "align": "right" }
+      ],
+      "rows": [
+        ["Espresso-Bohnen, 1 kg", "12", "384.00"],
+        ["Filterkaffee, 500 g", "20", "290.00"],
+        ["Entkalker", "4", "59.60"],
+        ["MWST 8,1 %", "", "59.40"],
+        ["Total", "", "793.00"]
+      ]
+    },
+    { "type": "paragraph", "inlines": ["Bitte zahlen Sie mit dem Einzahlungsschein unten oder scannen Sie den QR-Code mit Ihrer Banking-App."] },
+    {
+      "type": "swissQrBill",
+      "account": "CH44 3199 9123 0008 8901 2",
+      "creditor": { "name": "Muster Kaffeerösterei GmbH", "street": "Bahnhofstrasse", "houseNumber": "12", "postalCode": "8001", "town": "Zürich" },
+      "amount": 793.00,
+      "debtor": { "name": "Café Seeblick AG", "street": "Seestrasse", "houseNumber": "45", "postalCode": "8800", "town": "Thalwil" },
+      "reference": "210000000003139471430009017",
+      "message": "Rechnung 2026-1042"
+    }
+  ]
+}

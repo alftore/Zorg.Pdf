@@ -30,7 +30,7 @@ zorg-pdf render docs/examples/annual-report.json --pdfua --pdfa 2a --preview
 - **Documents:** headings, paragraphs with styled runs and fallback fonts, lists, tables with repeating headers, spans, stripes, and rows streamed from `IAsyncEnumerable`. It also handles images, text boxes at fixed places, watermarks, and headers and footers with "Page X of Y".
 - **Reports:** tables of contents, bookmarks, links, sections with their own page numbering, headers and footers, and bar, stacked, line and pie charts drawn as vectors.
 - **Templates:** values, repeats and conditions bound from a JSON model, so one document renders many invoices.
-- **Letters:** address boxes for DIN 5008 and Norwegian window envelopes, letterhead from an existing PDF behind the page, QR codes, Code 128, GS1-128 and EAN-13 barcodes, EPC payment codes and KID check digits.
+- **Letters:** address boxes for DIN 5008 and Norwegian window envelopes, letterhead from an existing PDF behind the page, QR codes, Code 128, GS1-128 and EAN-13 barcodes, EPC payment codes, Swiss QR-bills and KID check digits.
 - **Accessible and archivable:** tagged PDF by default, with PDF/UA-1 and PDF/A-2 and -3 (a, u and b) checked against veraPDF. Attachments, and Factur-X/ZUGFeRD e-invoices through `Zorg.Pdf.Invoicing`.
 - **Signed:** PAdES baseline signatures (B-B, and B-T with an RFC 3161 timestamp) as the document renders, with a certificate's key or one in an HSM or key vault through `IPdfSigner`. The CMS is built in, so there's still no dependency.
 - **Existing PDFs:** page count, sizes and metadata of any PDF, including damaged ones and ones encrypted without a password; merge, extract and split; sign, keeping earlier signatures valid.
@@ -52,7 +52,7 @@ zorg-pdf render docs/examples/annual-report.json --pdfua --pdfa 2a --preview
 
 ## Examples
 
-[docs/examples/](docs/examples) has fifteen documents, from a receipt to a staff handbook. Each one is rendered by the tests and checked with veraPDF. [annual-report.json](docs/examples/annual-report.json) shows the most at once: a cover with a colour band and key-figure cards, a table of contents, line, bar and pie charts, striped tables and a QR code.
+[docs/examples/](docs/examples) has sixteen documents, from a receipt to a staff handbook. Each one is rendered by the tests and checked with veraPDF. [annual-report.json](docs/examples/annual-report.json) shows the most at once: a cover with a colour band and key-figure cards, a table of contents, line, bar and pie charts, striped tables and a QR code.
 
 ## Roadmap
 
@@ -62,7 +62,7 @@ zorg-pdf render docs/examples/annual-report.json --pdfua --pdfa 2a --preview
 | 0.2 | Templates and data binding, lists, cell spans, watermarks, text boxes, PNG previews, the `zorg-pdf` tool | Done |
 | 0.3 | PDF/A-2, bookmarks and links, tables of contents, sections and page labels, hyphenation, Markdown | Done |
 | 0.4 | Reading PDFs, letterhead backgrounds, merging and splitting, attachments and PDF/A-3, Factur-X, encrypted input | Done |
-| 0.5 | Barcodes and payment codes, charts, digital signatures (PAdES), an ASP.NET Core result | Done but for the Swiss QR-bill |
+| 0.5 | Barcodes and payment codes, charts, digital signatures (PAdES), an ASP.NET Core result | Done |
 
 ## Goals
 

@@ -14,7 +14,7 @@ Each page covers one topic, with C# and JSON side by side where both apply. The 
 | [Accessibility and archiving](accessibility.md) | PDF/UA-1, alt text, PDF/A-2 and -3, attachments | Written |
 | [Images and previews](images.md) | Formats, `Zorg.Pdf.Imaging`, PNG previews | Written |
 | [Letters](letters.md) | Window envelopes, letterhead backgrounds | Written |
-| [Barcodes and payments](barcodes.md) | QR, Code 128, GS1-128, EAN-13, EPC, KID | Written |
+| [Barcodes and payments](barcodes.md) | QR, Code 128, GS1-128, EAN-13, EPC, Swiss QR-bill, KID | Written |
 | [Charts](charts.md) | Bar, stacked, line and pie; alt text | Written |
 | [Digital signatures](signatures.md) | PAdES B-B and B-T, visible and empty signature fields, signing existing PDFs, timestamps, keys in an HSM or key vault | Written |
 | [ASP.NET Core](aspnetcore.md) | Streaming a PDF response, file names, 422 ProblemDetails, cancellation | Written |

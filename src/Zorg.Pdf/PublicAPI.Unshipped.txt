@@ -1135,6 +1135,62 @@ Zorg.Pdf.StyleSheet.Styles.init -> void
 override Zorg.Pdf.StyleSheet.ToString() -> string!
 static Zorg.Pdf.StyleSheet.operator !=(Zorg.Pdf.StyleSheet? left, Zorg.Pdf.StyleSheet? right) -> bool
 static Zorg.Pdf.StyleSheet.operator ==(Zorg.Pdf.StyleSheet? left, Zorg.Pdf.StyleSheet? right) -> bool
+Zorg.Pdf.SwissQrAddress
+Zorg.Pdf.SwissQrAddress.<Clone>$() -> Zorg.Pdf.SwissQrAddress!
+Zorg.Pdf.SwissQrAddress.Country.get -> string!
+Zorg.Pdf.SwissQrAddress.Country.init -> void
+Zorg.Pdf.SwissQrAddress.Deconstruct(out string! Name, out string! PostalCode, out string! Town) -> void
+Zorg.Pdf.SwissQrAddress.Equals(Zorg.Pdf.SwissQrAddress? other) -> bool
+override Zorg.Pdf.SwissQrAddress.Equals(object? obj) -> bool
+override Zorg.Pdf.SwissQrAddress.GetHashCode() -> int
+Zorg.Pdf.SwissQrAddress.HouseNumber.get -> string?
+Zorg.Pdf.SwissQrAddress.HouseNumber.init -> void
+Zorg.Pdf.SwissQrAddress.Name.get -> string!
+Zorg.Pdf.SwissQrAddress.Name.init -> void
+Zorg.Pdf.SwissQrAddress.PostalCode.get -> string!
+Zorg.Pdf.SwissQrAddress.PostalCode.init -> void
+Zorg.Pdf.SwissQrAddress.Street.get -> string?
+Zorg.Pdf.SwissQrAddress.Street.init -> void
+Zorg.Pdf.SwissQrAddress.SwissQrAddress(string! Name, string! PostalCode, string! Town) -> void
+override Zorg.Pdf.SwissQrAddress.ToString() -> string!
+Zorg.Pdf.SwissQrAddress.Town.get -> string!
+Zorg.Pdf.SwissQrAddress.Town.init -> void
+static Zorg.Pdf.SwissQrAddress.operator !=(Zorg.Pdf.SwissQrAddress? left, Zorg.Pdf.SwissQrAddress? right) -> bool
+static Zorg.Pdf.SwissQrAddress.operator ==(Zorg.Pdf.SwissQrAddress? left, Zorg.Pdf.SwissQrAddress? right) -> bool
+Zorg.Pdf.SwissQrBill
+override Zorg.Pdf.SwissQrBill.<Clone>$() -> Zorg.Pdf.SwissQrBill!
+Zorg.Pdf.SwissQrBill.Account.get -> string!
+Zorg.Pdf.SwissQrBill.Account.init -> void
+Zorg.Pdf.SwissQrBill.Amount.get -> decimal?
+Zorg.Pdf.SwissQrBill.Amount.init -> void
+Zorg.Pdf.SwissQrBill.BillInformation.get -> string?
+Zorg.Pdf.SwissQrBill.BillInformation.init -> void
+Zorg.Pdf.SwissQrBill.Creditor.get -> Zorg.Pdf.SwissQrAddress!
+Zorg.Pdf.SwissQrBill.Creditor.init -> void
+Zorg.Pdf.SwissQrBill.Currency.get -> string!
+Zorg.Pdf.SwissQrBill.Currency.init -> void
+Zorg.Pdf.SwissQrBill.Debtor.get -> Zorg.Pdf.SwissQrAddress?
+Zorg.Pdf.SwissQrBill.Debtor.init -> void
+override sealed Zorg.Pdf.SwissQrBill.Equals(Zorg.Pdf.Block? other) -> bool
+Zorg.Pdf.SwissQrBill.Equals(Zorg.Pdf.SwissQrBill? other) -> bool
+override Zorg.Pdf.SwissQrBill.Equals(object? obj) -> bool
+override Zorg.Pdf.SwissQrBill.GetHashCode() -> int
+Zorg.Pdf.SwissQrBill.Language.get -> string?
+Zorg.Pdf.SwissQrBill.Language.init -> void
+Zorg.Pdf.SwissQrBill.Message.get -> string?
+Zorg.Pdf.SwissQrBill.Message.init -> void
+Zorg.Pdf.SwissQrBill.Reference.get -> string?
+Zorg.Pdf.SwissQrBill.Reference.init -> void
+Zorg.Pdf.SwissQrBill.SwissQrBill(string! account, Zorg.Pdf.SwissQrAddress! creditor) -> void
+Zorg.Pdf.SwissQrBill.ToPayload() -> string!
+override Zorg.Pdf.SwissQrBill.ToString() -> string!
+static Zorg.Pdf.SwissQrBill.operator !=(Zorg.Pdf.SwissQrBill? left, Zorg.Pdf.SwissQrBill? right) -> bool
+static Zorg.Pdf.SwissQrBill.operator ==(Zorg.Pdf.SwissQrBill? left, Zorg.Pdf.SwissQrBill? right) -> bool
+Zorg.Pdf.SwissQrReferences
+static Zorg.Pdf.SwissQrReferences.CreditorReference(string! reference) -> string!
+static Zorg.Pdf.SwissQrReferences.IsValidCreditorReference(string? reference) -> bool
+static Zorg.Pdf.SwissQrReferences.IsValidQrReference(string? reference) -> bool
+static Zorg.Pdf.SwissQrReferences.QrReference(string! digits) -> string!
 Zorg.Pdf.Table
 override Zorg.Pdf.Table.<Clone>$() -> Zorg.Pdf.Table!
 Zorg.Pdf.Table.Columns.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.Column!>

@@ -157,7 +157,7 @@
       "description": "Something that flows down the page. The \"type\" property says which.",
       "type": "object",
       "required": ["type"],
-      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents", "sectionBreak", "barcode", "chart", "signatureField"] } },
+      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents", "sectionBreak", "barcode", "chart", "signatureField", "swissQrBill"] } },
       "oneOf": [
         { "$ref": "#/$defs/heading" },
         { "$ref": "#/$defs/paragraph" },
@@ -173,7 +173,8 @@
         { "$ref": "#/$defs/sectionBreak" },
         { "$ref": "#/$defs/barcode" },
         { "$ref": "#/$defs/chart" },
-        { "$ref": "#/$defs/signatureField" }
+        { "$ref": "#/$defs/signatureField" },
+        { "$ref": "#/$defs/swissQrBill" }
       ]
     },
     "pageNumberStyle": { "description": "How pages are numbered.", "enum": ["number", "lowerRoman", "upperRoman", "lowerLetter", "upperLetter"] },
@@ -308,6 +309,41 @@
         "maximum": { "type": "number" },
         "alt": { "type": "string" },
         "decorative": { "type": "boolean", "default": false },
+        "style": { "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" }
+      }
+    },
+    "swissQrAddress": {
+      "description": "A structured address on a Swiss QR-bill.",
+      "type": "object",
+      "required": ["name", "postalCode", "town"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 70 },
+        "street": { "type": "string", "maxLength": 70 },
+        "houseNumber": { "type": "string", "maxLength": 16 },
+        "postalCode": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "town": { "type": "string", "minLength": 1, "maxLength": 35 },
+        "country": { "description": "ISO 3166-1 code. Default CH.", "type": "string", "pattern": "^[A-Z]{2}$" }
+      }
+    },
+    "swissQrBill": {
+      "description": "A Swiss QR-bill (SIX guidelines v2.4): the payment part and receipt across the bottom 105 mm of an A4 page, with the Swiss QR code.",
+      "type": "object",
+      "required": ["type", "account", "creditor"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "swissQrBill" },
+        "account": { "description": "IBAN or QR-IBAN, CH or LI. Spaces are ignored.", "type": "string" },
+        "creditor": { "$ref": "#/$defs/swissQrAddress" },
+        "amount": { "description": "0.01 to 999999999.99. Leave out for a blank amount.", "type": "number" },
+        "currency": { "enum": ["CHF", "EUR"], "default": "CHF" },
+        "debtor": { "$ref": "#/$defs/swissQrAddress" },
+        "reference": { "description": "A 27-digit QR reference with a QR-IBAN, or an RF creditor reference.", "type": "string" },
+        "message": { "type": "string", "maxLength": 140 },
+        "billInformation": { "description": "Structured billing information, starting with //.", "type": "string", "maxLength": 140 },
+        "language": { "enum": ["de", "fr", "it", "en", "rm"] },
         "style": { "type": "string" },
         "keepWithNext": { "type": "boolean", "default": false },
         "id": { "$ref": "#/$defs/id" }

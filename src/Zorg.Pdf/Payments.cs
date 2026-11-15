@@ -106,7 +106,7 @@ public sealed record EpcPayment
     internal static bool IbanValid(string iban) =>
         iban.Length is >= 15 and <= 34 && char.IsAsciiLetterUpper(iban[0]) && char.IsAsciiLetterUpper(iban[1]) && IbanStyleValid(iban);
 
-    private static bool IbanStyleValid(string value)
+    internal static bool IbanStyleValid(string value)
     {
         var digits = new StringBuilder();
         foreach (char c in value[4..] + value[..4])

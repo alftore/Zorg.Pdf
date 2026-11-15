@@ -153,6 +153,12 @@ internal static class Preflight
                     Need(chartStyle with { Weight = FontWeight.Bold }, blockPath);
                 }
             }
+            else if (block is SwissQrBill bill)
+            {
+                TextStyle billStyle = styles.For(bill);
+                Need(billStyle, blockPath);
+                Need(billStyle with { Weight = FontWeight.Bold }, blockPath); // Titles and headings are bold.
+            }
             else if (block is SignatureField field)
             {
                 Need(styles.For(field), blockPath); // The text in its appearance.

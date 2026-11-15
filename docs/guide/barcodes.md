@@ -30,6 +30,48 @@ EpcPayment epc = EpcPayment.Create("ACME GmbH", "DE02120300000000202051", 1190.0
 var qr = new Barcode(BarcodeKind.Qr, epc.ToString()) { Size = Length.Cm(3), Alt = "Payment QR code" };
 ```
 
+## Swiss QR-bills
+
+A `SwissQrBill` block draws the payment part and receipt that Swiss invoices carry: a 210 × 105 mm strip across the bottom of an A4 page, with the Swiss QR code, as SIX's guidelines (v2.4) and style guide lay it out. Every field is checked before anything is written (ZPDF-J035, the path names the field):
+
+```csharp
+var bill = new SwissQrBill("CH44 3199 9123 0008 8901 2", new SwissQrAddress("Muster Kaffeerösterei GmbH", "8001", "Zürich") { Street = "Bahnhofstrasse", HouseNumber = "12" })
+{
+    Amount = 793.00m,
+    Reference = SwissQrReferences.QrReference("21000000000313947143000901"),
+    Debtor = new SwissQrAddress("Café Seeblick AG", "8800", "Thalwil") { Street = "Seestrasse", HouseNumber = "45" },
+    Message = "Rechnung 2026-1042",
+};
+```
+
+- **Account and reference:** a QR-IBAN (its bank number is 30000 to 31999) needs a 27-digit QR reference and CHF. An ordinary IBAN takes an `RF` creditor reference or none, in CHF or EUR. `SwissQrReferences` makes both kinds with their check digits.
+- **Blank fields:** leave out `Amount` or `Debtor` and the bill shows marked boxes for the payer to fill in.
+- **Headings:** in the document's language if it's German, French, Italian or Romansh, otherwise English; or set `Language`.
+- **Page:** the bill goes at the bottom of the page it's on, or of the next page if there isn't room. Content after it starts a new page, and that page's footer is left out. The page must be A4 portrait.
+- **Fonts:** the guidelines allow only Arial, Frutiger, Helvetica or Liberation Sans. Another font gets an Info note (ZPDF-L010).
+- **The code itself:** `ToPayload()` returns what's in the code, if you need it elsewhere.
+
+In JSON:
+
+```json
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Rechnung 2026-1042",
+  "language": "de-CH",
+  "content": [
+    {
+      "type": "swissQrBill",
+      "account": "CH44 3199 9123 0008 8901 2",
+      "creditor": { "name": "Muster Kaffeerösterei GmbH", "street": "Bahnhofstrasse", "houseNumber": "12", "postalCode": "8001", "town": "Zürich" },
+      "amount": 793.00,
+      "reference": "210000000003139471430009017"
+    }
+  ]
+}
+```
+
+[qr-bill.json](../examples/qr-bill.json) is a whole invoice with one. The tests check the payload against the guidelines' own example and the check digits against their worked examples. Rendered bills decode with zxing-cpp to exactly their payload. zbar, which the Linux gate uses for other codes, can't read codes with the Swiss cross over them, as some older scanners can't. The cross follows the Swiss flag's proportions, as SIX's logo file wasn't used. Before you send real bills, try one with your bank's app; SIX's online validator is another check.
+
 ## Norwegian KID numbers
 
 A KID is the customer reference on a Norwegian giro, a number with a MOD10 or MOD11 check digit. It's printed as text, not as a barcode:

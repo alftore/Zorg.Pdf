@@ -131,6 +131,19 @@ internal sealed partial class RenderEngine
             return null;
         }
 
+        if (_slipPages.Contains(_page) && set.Footer is not null)
+        {
+            // A QR-bill takes the bottom of this page: a stream of its own, without the footer.
+            if (set.Header is null)
+            {
+                return null;
+            }
+
+            PdfReference own = _writer.Allocate();
+            _bandStreams.Add((own, _page, _bandSet));
+            return own;
+        }
+
         if (!(set.Header?.HasFields ?? false) && !(set.Footer?.HasFields ?? false))
         {
             set.Shared ??= _writer.Allocate(); // The same on every page of the section: one stream.
@@ -149,7 +162,7 @@ internal sealed partial class RenderEngine
         {
             if (set.Shared is { } shared)
             {
-                WriteBandStream(shared, set, 0, _documentWriter.Pages.Count);
+                WriteBandStream(shared, set, -1, _documentWriter.Pages.Count); // No fields, so no page of its own.
             }
         }
 
@@ -173,7 +186,7 @@ internal sealed partial class RenderEngine
             DrawBand(header, LayoutBand(header, Field, report: false), _pageGeometry.Top);
         }
 
-        if (set.Footer is { } footer)
+        if (set.Footer is { } footer && !_slipPages.Contains(page))
         {
             DrawBand(footer, LayoutBand(footer, Field, report: false), _pageGeometry.Bottom + footer.Height);
         }

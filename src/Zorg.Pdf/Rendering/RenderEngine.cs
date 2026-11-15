@@ -264,6 +264,10 @@ internal sealed partial class RenderEngine : IDisposable
                     Arrived(chart);
                     await PlaceChartAsync(chart, cancellationToken).ConfigureAwait(false);
                     break;
+                case SwissQrBill bill:
+                    Arrived(bill);
+                    await PlaceSwissQrBillAsync(i, bill, cancellationToken).ConfigureAwait(false);
+                    break;
                 case SignatureField field:
                     Arrived(field);
                     await PlaceSignatureFieldAsync(field, cancellationToken).ConfigureAwait(false);

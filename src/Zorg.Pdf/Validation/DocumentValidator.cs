@@ -22,8 +22,11 @@ internal sealed partial class DocumentValidator
     private string? _tocPath; // The table of contents seen so far: one per document.
     private readonly ImmutableDictionary<string, TextStyle> _styles;
 
+    private readonly PageSettings _pageSettings;
+
     private DocumentValidator(PdfDocument document)
     {
+        _pageSettings = document.Page;
         _styles = StyleSheet.Default.Styles.SetItems(document.Styles?.Styles ?? ImmutableDictionary<string, TextStyle>.Empty);
     }
 
@@ -275,6 +278,19 @@ internal sealed partial class DocumentValidator
 
             case SignatureField field:
                 SignatureField(field, path);
+                break;
+
+            case SwissQrBill bill:
+                foreach ((string message, string at) in SwissQrRules.Check(bill))
+                {
+                    Error(DiagnosticCodes.BadSwissQrBill, message, path + at);
+                }
+
+                if (Math.Abs(_pageSettings.Size.Width.Points - Length.Mm(210).Points) > 1 || _pageSettings.Orientation == PageOrientation.Landscape)
+                {
+                    Error(DiagnosticCodes.BadSwissQrBill, "A Swiss QR-bill goes at the bottom of an A4 page in portrait: the strip is 210 mm wide.", path);
+                }
+
                 break;
 
             case Spacer spacer:

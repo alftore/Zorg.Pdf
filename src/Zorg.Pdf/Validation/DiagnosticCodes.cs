@@ -85,6 +85,7 @@ internal static class DiagnosticCodes
     public const string BadBarcode = "ZPDF-J032";
     public const string BadChart = "ZPDF-J033";
     public const string BadSignatureField = "ZPDF-J034";
+    public const string BadSwissQrBill = "ZPDF-J035";
     public const string AttachmentNeedsPdfA3 = "ZPDF-A005";
     public const string AttachmentTooLarge = "ZPDF-R004";
     public const string BadMetadataSchema = "ZPDF-R005";
@@ -102,6 +103,7 @@ internal static class DiagnosticCodes
     public const string TextBoxOffPage = "ZPDF-L007";
     public const string AddressLayout = "ZPDF-L008";
     public const string AddressTypography = "ZPDF-L009";
+    public const string QrBillFont = "ZPDF-L010";
 
     // I: images.
     public const string ImageUnreadable = "ZPDF-I001";
