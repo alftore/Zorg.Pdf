@@ -157,7 +157,7 @@
       "description": "Something that flows down the page. The \"type\" property says which.",
       "type": "object",
       "required": ["type"],
-      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents", "sectionBreak", "barcode"] } },
+      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents", "sectionBreak", "barcode", "chart"] } },
       "oneOf": [
         { "$ref": "#/$defs/heading" },
         { "$ref": "#/$defs/paragraph" },
@@ -171,7 +171,8 @@
         { "$ref": "#/$defs/textBox" },
         { "$ref": "#/$defs/tableOfContents" },
         { "$ref": "#/$defs/sectionBreak" },
-        { "$ref": "#/$defs/barcode" }
+        { "$ref": "#/$defs/barcode" },
+        { "$ref": "#/$defs/chart" }
       ]
     },
     "pageNumberStyle": { "description": "How pages are numbered.", "enum": ["number", "lowerRoman", "upperRoman", "lowerLetter", "upperLetter"] },
@@ -274,6 +275,41 @@
         "layer": { "enum": ["over", "behind"], "default": "over" }
       },
       "oneOf": [{ "required": ["text"] }, { "required": ["image"] }]
+    },
+    "chart": {
+      "description": "A bar chart, drawn as vectors: bars side by side (bar) or stacked (stackedBar), standing up or lying down (horizontal). Needs alt text that says what it shows, unless decorative. Set categories and series, or bind.",
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "chart" },
+        "kind": { "enum": ["bar", "stackedBar"], "default": "bar" },
+        "categories": { "type": "array", "items": { "type": "string" }, "maxItems": 200 },
+        "series": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "required": ["name", "values"],
+            "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "values": { "type": "array", "items": { "type": "number" } }, "color": { "$ref": "#/$defs/color" } }
+          }
+        },
+        "bind": { "description": "A path in the model to { \"categories\": [...], \"series\": [{ \"name\": ..., \"values\": [...] }] }.", "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "horizontal": { "type": "boolean", "default": false },
+        "width": { "$ref": "#/$defs/length" },
+        "height": { "description": "Default 7cm.", "$ref": "#/$defs/length" },
+        "legend": { "description": "Default: when there's more than one series.", "type": "boolean" },
+        "valueFormat": { "description": "A .NET number format such as N0, P0 or 0.0.", "type": "string" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "alt": { "type": "string" },
+        "decorative": { "type": "boolean", "default": false },
+        "style": { "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" }
+      }
     },
     "barcode": {
       "description": "A QR code, Code 128, GS1-128 or EAN-13, drawn as vectors. Needs alt text unless decorative. Set data or bind.",

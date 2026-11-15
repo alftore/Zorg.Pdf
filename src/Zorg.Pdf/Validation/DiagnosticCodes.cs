@@ -83,6 +83,7 @@ internal static class DiagnosticCodes
     public const string BadBackground = "ZPDF-J030";
     public const string BadAttachment = "ZPDF-J031";
     public const string BadBarcode = "ZPDF-J032";
+    public const string BadChart = "ZPDF-J033";
     public const string AttachmentNeedsPdfA3 = "ZPDF-A005";
     public const string AttachmentTooLarge = "ZPDF-R004";
     public const string BadMetadataSchema = "ZPDF-R005";

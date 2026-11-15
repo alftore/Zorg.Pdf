@@ -112,7 +112,7 @@ internal sealed partial class RenderEngine
                 baseline -= line.Height - line.Ascent;
             }
 
-            EndText();
+            EndTextObject(); // The figure's marked content stays open.
         }
 
         _content.EndMarkedContent();

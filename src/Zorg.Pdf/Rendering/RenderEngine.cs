@@ -203,6 +203,10 @@ internal sealed partial class RenderEngine : IDisposable
                     Arrived(barcode);
                     await PlaceBarcodeAsync(barcode, cancellationToken).ConfigureAwait(false);
                     break;
+                case Chart chart:
+                    Arrived(chart);
+                    await PlaceChartAsync(chart, cancellationToken).ConfigureAwait(false);
+                    break;
                 case List list:
                     Arrived(list);
                     await PlaceListAsync(i, list, cancellationToken).ConfigureAwait(false);
@@ -480,6 +484,18 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         _content.EndText().EndMarkedContent();
+    }
+
+    /// <summary>Ends a text object without closing a marked-content sequence: for text inside a figure's own one.</summary>
+    private void EndTextObject()
+    {
+        if (_renderingMode != 0)
+        {
+            _content.SetTextRenderingMode(0);
+            _renderingMode = 0;
+        }
+
+        _content.EndText();
     }
 
     /// <summary>

@@ -39,7 +39,7 @@ for path in sys.argv[2:]:
 for bad in [
     {"title": "t", "colour": "red"},
     {"title": "t", "content": [{"type": "paragraph"}]},
-    {"title": "t", "content": [{"type": "chart"}]},
+    {"title": "t", "content": [{"type": "gauge"}]},
     {"title": "t", "styles": {"styles": {"x": {"color": "red"}}}},
     {"title": "t", "content": [{"type": "table", "columns": [{"header": "A"}], "rows": [[{"text": "x"}]]}]},
     {"content": []},

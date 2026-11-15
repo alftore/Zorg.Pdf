@@ -14,7 +14,7 @@ public sealed class ParseErrorTests
     [InlineData("""{"language":"en"}""", "ZPDF-J004", "", "title")]
     [InlineData("""{"title":"t","content":[{"type":"paragraph"}]}""", "ZPDF-J004", "/content/0", "inlines")]
     [InlineData("""{"title":"t","content":[{"type":"table","columns":[{"width":"*"}]}]}""", "ZPDF-J004", "/content/0/columns/0", "header")]
-    [InlineData("""{"title":"t","content":[{"type":"chart"}]}""", "ZPDF-J005", "/content/0", "chart")]
+    [InlineData("""{"title":"t","content":[{"type":"gauge"}]}""", "ZPDF-J005", "/content/0", "gauge")]
     [InlineData("""{"title":"t","content":[{"inlines":["x"]}]}""", "ZPDF-J005", "/content/0", "type")]
     [InlineData("""{"title":"t",""", "ZPDF-J003", "", "valid JSON")]
     [InlineData("""{"title":"t","content":[{"type":"heading","level":"one","inlines":["x"]}]}""", "ZPDF-J003", "/content/0/level", "")]

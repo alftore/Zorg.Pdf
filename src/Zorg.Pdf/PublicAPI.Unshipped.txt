@@ -143,6 +143,63 @@ override Zorg.Pdf.Cell.ToString() -> string!
 static Zorg.Pdf.Cell.implicit operator Zorg.Pdf.Cell!(string! text) -> Zorg.Pdf.Cell!
 static Zorg.Pdf.Cell.operator !=(Zorg.Pdf.Cell? left, Zorg.Pdf.Cell? right) -> bool
 static Zorg.Pdf.Cell.operator ==(Zorg.Pdf.Cell? left, Zorg.Pdf.Cell? right) -> bool
+Zorg.Pdf.Chart
+override Zorg.Pdf.Chart.<Clone>$() -> Zorg.Pdf.Chart!
+Zorg.Pdf.Chart.Alt.get -> string?
+Zorg.Pdf.Chart.Alt.init -> void
+Zorg.Pdf.Chart.Bind.get -> string?
+Zorg.Pdf.Chart.Bind.init -> void
+Zorg.Pdf.Chart.Categories.get -> System.Collections.Immutable.ImmutableArray<string!>
+Zorg.Pdf.Chart.Categories.init -> void
+Zorg.Pdf.Chart.Chart(Zorg.Pdf.ChartKind kind, System.Collections.Immutable.ImmutableArray<string!> categories, System.Collections.Immutable.ImmutableArray<Zorg.Pdf.ChartSeries!> series) -> void
+Zorg.Pdf.Chart.Decorative.get -> bool
+Zorg.Pdf.Chart.Decorative.init -> void
+override sealed Zorg.Pdf.Chart.Equals(Zorg.Pdf.Block? other) -> bool
+Zorg.Pdf.Chart.Equals(Zorg.Pdf.Chart? other) -> bool
+override Zorg.Pdf.Chart.Equals(object? obj) -> bool
+override Zorg.Pdf.Chart.GetHashCode() -> int
+Zorg.Pdf.Chart.Height.get -> Zorg.Pdf.Length?
+Zorg.Pdf.Chart.Height.init -> void
+Zorg.Pdf.Chart.Horizontal.get -> bool
+Zorg.Pdf.Chart.Horizontal.init -> void
+Zorg.Pdf.Chart.Kind.get -> Zorg.Pdf.ChartKind
+Zorg.Pdf.Chart.Kind.init -> void
+Zorg.Pdf.Chart.Legend.get -> bool?
+Zorg.Pdf.Chart.Legend.init -> void
+Zorg.Pdf.Chart.Maximum.get -> double?
+Zorg.Pdf.Chart.Maximum.init -> void
+Zorg.Pdf.Chart.Minimum.get -> double?
+Zorg.Pdf.Chart.Minimum.init -> void
+Zorg.Pdf.Chart.Series.get -> System.Collections.Immutable.ImmutableArray<Zorg.Pdf.ChartSeries!>
+Zorg.Pdf.Chart.Series.init -> void
+Zorg.Pdf.Chart.Title.get -> string?
+Zorg.Pdf.Chart.Title.init -> void
+override Zorg.Pdf.Chart.ToString() -> string!
+Zorg.Pdf.Chart.ValueFormat.get -> string?
+Zorg.Pdf.Chart.ValueFormat.init -> void
+Zorg.Pdf.Chart.Width.get -> Zorg.Pdf.Length?
+Zorg.Pdf.Chart.Width.init -> void
+static Zorg.Pdf.Chart.operator !=(Zorg.Pdf.Chart? left, Zorg.Pdf.Chart? right) -> bool
+static Zorg.Pdf.Chart.operator ==(Zorg.Pdf.Chart? left, Zorg.Pdf.Chart? right) -> bool
+Zorg.Pdf.ChartKind
+Zorg.Pdf.ChartKind.Bar = 0 -> Zorg.Pdf.ChartKind
+Zorg.Pdf.ChartKind.StackedBar = 1 -> Zorg.Pdf.ChartKind
+Zorg.Pdf.ChartSeries
+Zorg.Pdf.ChartSeries.<Clone>$() -> Zorg.Pdf.ChartSeries!
+Zorg.Pdf.ChartSeries.ChartSeries(string! Name, System.Collections.Immutable.ImmutableArray<double> Values) -> void
+Zorg.Pdf.ChartSeries.Color.get -> Zorg.Pdf.Color?
+Zorg.Pdf.ChartSeries.Color.init -> void
+Zorg.Pdf.ChartSeries.Deconstruct(out string! Name, out System.Collections.Immutable.ImmutableArray<double> Values) -> void
+Zorg.Pdf.ChartSeries.Equals(Zorg.Pdf.ChartSeries? other) -> bool
+override Zorg.Pdf.ChartSeries.Equals(object? obj) -> bool
+override Zorg.Pdf.ChartSeries.GetHashCode() -> int
+Zorg.Pdf.ChartSeries.Name.get -> string!
+Zorg.Pdf.ChartSeries.Name.init -> void
+override Zorg.Pdf.ChartSeries.ToString() -> string!
+Zorg.Pdf.ChartSeries.Values.get -> System.Collections.Immutable.ImmutableArray<double>
+Zorg.Pdf.ChartSeries.Values.init -> void
+static Zorg.Pdf.ChartSeries.operator !=(Zorg.Pdf.ChartSeries? left, Zorg.Pdf.ChartSeries? right) -> bool
+static Zorg.Pdf.ChartSeries.operator ==(Zorg.Pdf.ChartSeries? left, Zorg.Pdf.ChartSeries? right) -> bool
 Zorg.Pdf.Color
 Zorg.Pdf.Color.B.get -> byte
 Zorg.Pdf.Color.B.init -> void

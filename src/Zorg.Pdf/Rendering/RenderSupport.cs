@@ -57,7 +57,7 @@ internal sealed class StyleResolver
 
     public TextStyle For(Block block)
     {
-        string defaultName = block switch { Heading heading => $"heading{Math.Clamp(heading.Level, 1, 6)}", Barcode => "barcode", _ => "body" };
+        string defaultName = block switch { Heading heading => $"heading{Math.Clamp(heading.Level, 1, 6)}", Barcode => "barcode", Chart => "chart", _ => "body" };
         TextStyle style = _styles["body"];
         if (defaultName != "body")
         {

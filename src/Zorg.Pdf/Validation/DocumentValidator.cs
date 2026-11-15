@@ -268,6 +268,10 @@ internal sealed partial class DocumentValidator
                 Barcode(barcode, path);
                 break;
 
+            case Chart chart:
+                Chart(chart, path);
+                break;
+
             case Spacer spacer:
                 NotNegative(spacer.Height, $"{path}/height");
                 break;
@@ -662,6 +666,67 @@ internal sealed partial class DocumentValidator
         }
 
         _noLinksIn = null;
+    }
+
+    private void Chart(Chart chart, string path)
+    {
+        if (!chart.Decorative && string.IsNullOrWhiteSpace(chart.Alt))
+        {
+            Error(DiagnosticCodes.NoAltText, "A chart needs \"alt\" text that says what it shows (its point, not every number), or \"decorative\": true.", $"{path}/alt");
+        }
+
+        bool inline = !chart.Categories.IsDefaultOrEmpty || !chart.Series.IsDefaultOrEmpty;
+        if (inline == (chart.Bind is not null))
+        {
+            Error(DiagnosticCodes.BadChart, "A chart needs \"categories\" and \"series\", or \"bind\": one of them.", path);
+        }
+        else if (inline)
+        {
+            ChartData(chart, path, (code, message, at) => Error(code, message, at));
+        }
+
+        if (chart.Minimum is { } min && chart.Maximum is { } max && !(max > min))
+        {
+            Error(DiagnosticCodes.BadChart, "A chart's maximum is above its minimum.", $"{path}/maximum");
+        }
+
+        foreach ((Length? length, string name) in new[] { (chart.Width, "width"), (chart.Height, "height") })
+        {
+            if (length is { } l)
+            {
+                Positive(l, $"{path}/{name}");
+            }
+        }
+    }
+
+    /// <summary>Checks a chart's categories and series: also used for data bound from a template's model.</summary>
+    internal static void ChartData(Chart chart, string path, Action<string, string, string> error)
+    {
+        if (chart.Categories.IsDefaultOrEmpty || chart.Categories.Length > 200)
+        {
+            error(DiagnosticCodes.BadChart, "A chart has 1 to 200 categories.", $"{path}/categories");
+        }
+
+        if (chart.Series.IsDefaultOrEmpty || chart.Series.Length > 12)
+        {
+            error(DiagnosticCodes.BadChart, "A chart has 1 to 12 series.", $"{path}/series");
+            return;
+        }
+
+        int categories = chart.Categories.IsDefault ? 0 : chart.Categories.Length;
+        for (int s = 0; s < chart.Series.Length; s++)
+        {
+            ChartSeries? series = chart.Series[s];
+            string at = Invariant($"{path}/series/{s}");
+            if (series is null || series.Values.IsDefault || series.Values.Length != categories)
+            {
+                error(DiagnosticCodes.BadChart, Invariant($"A series has one value per category: {categories}."), $"{at}/values");
+            }
+            else if (System.Linq.Enumerable.Any(series.Values, v => !double.IsFinite(v)) || (chart.Kind == ChartKind.StackedBar && System.Linq.Enumerable.Any(series.Values, v => v < 0)))
+            {
+                error(DiagnosticCodes.BadChart, chart.Kind == ChartKind.StackedBar ? "A stacked chart's values are numbers of 0 or more." : "A chart's values are finite numbers.", $"{at}/values");
+            }
+        }
     }
 
     private void Barcode(Barcode barcode, string path)

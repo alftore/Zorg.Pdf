@@ -26,7 +26,7 @@ internal sealed class TemplateBinder
 
     /// <summary>True when the document uses any template feature, so plain documents skip binding.</summary>
     public static bool IsTemplate(PdfDocument document) =>
-        Blocks(document).Any(b => b is Repeat or Conditional or Table { Rows: RepeatedTableRows } or Barcode { Bind: not null } || Inlines(b).Any(HasBind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
+        Blocks(document).Any(b => b is Repeat or Conditional or Table { Rows: RepeatedTableRows } or Barcode { Bind: not null } or Chart { Bind: not null } || Inlines(b).Any(HasBind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
 
     public static PdfDocument Bind(PdfDocument template, JsonElement? model, DiagnosticSink sink)
     {
@@ -146,6 +146,10 @@ internal sealed class TemplateBinder
                     output.Add(list with { Items = [.. listItems] }); // A list whose repeat found nothing is left out.
                 }
 
+                return;
+
+            case Chart { Bind: { } chartPath } chart:
+                output.Add(BindChart(chart, chartPath, path));
                 return;
 
             case Barcode { Bind: { } bindPath } barcode:
@@ -370,6 +374,54 @@ internal sealed class TemplateBinder
     };
 
     /// <summary>Reports a problem once per template path, however many repetitions hit it.</summary>
+    /// <summary>A chart's categories and series from <c>{ "categories": [...], "series": [{ "name": ..., "values": [...] }] }</c> in the model.</summary>
+    private Chart BindChart(Chart chart, string bindPath, string path)
+    {
+        var empty = chart with { Bind = null, Categories = [], Series = [] };
+        if (Resolve(bindPath, $"{path}/bind", out _) is not { ValueKind: JsonValueKind.Object } value)
+        {
+            Report(DiagnosticCodes.BindingMissing, $"\"{bindPath}\" isn't an object with \"categories\" and \"series\"; the chart is left out.", $"{path}/bind");
+            return empty;
+        }
+
+        var categories = ImmutableArray.CreateBuilder<string>();
+        var series = ImmutableArray.CreateBuilder<ChartSeries>();
+        if (value.TryGetProperty("categories", out JsonElement c) && c.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement item in c.EnumerateArray())
+            {
+                categories.Add(item.ValueKind == JsonValueKind.String ? item.GetString()! : item.GetRawText());
+            }
+        }
+
+        if (value.TryGetProperty("series", out JsonElement s) && s.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement item in s.EnumerateArray())
+            {
+                string name = item.ValueKind == JsonValueKind.Object && item.TryGetProperty("name", out JsonElement n) && n.ValueKind == JsonValueKind.String ? n.GetString()! : "";
+                var values = ImmutableArray.CreateBuilder<double>();
+                if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty("values", out JsonElement v) && v.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (JsonElement number in v.EnumerateArray())
+                    {
+                        values.Add(number.ValueKind == JsonValueKind.Number ? number.GetDouble() : double.NaN);
+                    }
+                }
+
+                series.Add(new ChartSeries(name, values.ToImmutable()));
+            }
+        }
+
+        Chart bound = chart with { Bind = null, Categories = categories.ToImmutable(), Series = series.ToImmutable() };
+        bool bad = false;
+        Validation.DocumentValidator.ChartData(bound, $"{path}/bind", (code, message, at) =>
+        {
+            bad = true;
+            _sink.Error(code, message, at);
+        });
+        return bad ? empty : bound;
+    }
+
     private void Report(string code, string message, string path)
     {
         if (_reported.Add(code + path))

@@ -8,7 +8,7 @@ Async-first PDF generation for .NET 10, written in C# only, with no native binar
 - Headings, paragraphs with bold, italic and fallback fonts, lists, tables with rows from `IAsyncEnumerable<T>`, JPEG and PNG images, headers and footers with "Page X of Y", watermarks, and text boxes for window-envelope addresses (DIN 5008, Norwegian).
 - Documents that navigate: bookmarks from headings, links, tables of contents, sections with roman or lettered page numbers.
 - Templates: values, repeated blocks and table rows bound from a JSON model.
-- Barcodes drawn as vectors (QR, Code 128, GS1-128, EAN-13), EPC payment QR payloads and Norwegian KID check digits.
+- Bar charts (side by side or stacked) and barcodes (QR, Code 128, GS1-128, EAN-13) drawn as vectors; EPC payment QR payloads and Norwegian KID check digits.
 - Existing PDFs: read any PDF's pages and metadata, put a page of letterhead behind every page, merge, extract and split, attach files (PDF/A-3), and read files that are encrypted but open without a password.
 - Pages stream to the output while later pages are laid out. Output is deterministic: the same document, data and font give the same bytes on every OS.
 - Every problem is a diagnostic with a stable code and a JSON pointer, and errors stop a render before the first byte.

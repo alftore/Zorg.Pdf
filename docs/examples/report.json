@@ -33,6 +33,16 @@
         [{ "inlines": [{ "text": "Total", "style": { "weight": "bold" } }] }, "741", "15 237", "+2.2 %"]
       ]
     },
+    {
+      "type": "chart",
+      "kind": "bar",
+      "title": "Revenue by region, thousands of NOK",
+      "categories": ["Oslo", "Bergen", "Trondheim"],
+      "series": [{ "name": "September", "values": [8561, 3917, 2436] }, { "name": "October", "values": [8912, 3870, 2455] }],
+      "valueFormat": "N0",
+      "height": "6cm",
+      "alt": "Oslo brings in more than twice the revenue of Bergen and Trondheim together; October is close to September in every region."
+    },
     { "type": "pageBreak" },
     { "type": "heading", "level": 2, "inlines": ["All orders"] },
     {

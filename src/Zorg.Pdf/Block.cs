@@ -23,6 +23,7 @@ namespace Zorg.Pdf;
 [JsonDerivedType(typeof(TableOfContents), "tableOfContents")]
 [JsonDerivedType(typeof(SectionBreak), "sectionBreak")]
 [JsonDerivedType(typeof(Barcode), "barcode")]
+[JsonDerivedType(typeof(Chart), "chart")]
 public abstract record Block
 {
     /// <summary>The name of a style in the document's <see cref="StyleSheet"/>, replacing the block's default style.</summary>

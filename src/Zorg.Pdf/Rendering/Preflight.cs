@@ -144,6 +144,15 @@ internal static class Preflight
                     Need(styles.Named($"toc{level}"), $"/content/{i}");
                 }
             }
+            else if (block is Chart chart)
+            {
+                TextStyle chartStyle = styles.For(chart);
+                Need(chartStyle, blockPath);
+                if (chart.Title is not null)
+                {
+                    Need(chartStyle with { Weight = FontWeight.Bold }, blockPath);
+                }
+            }
             else if (block is Barcode { ShowText: true, Kind: not BarcodeKind.Qr } barcode)
             {
                 Need(styles.For(barcode), blockPath); // The digits printed under the bars.
