@@ -31,7 +31,7 @@
           { "context": "Build and test (windows-latest)", "integration_id": 15368 },
           { "context": "Build and test (ubuntu-latest)", "integration_id": 15368 },
           { "context": "AOT smoke publish", "integration_id": 15368 },
-          { "context": "Oracle tests (Alpine gate, Docker)", "integration_id": 15368 }
+          { "context": "Oracle tests (Alpine gate, veraPDF)", "integration_id": 15368 }
         ]
       }
     }

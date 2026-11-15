@@ -49,9 +49,9 @@ dotnet test --solution Zorg.Pdf.slnx --no-build
 
 - `CONTRIBUTING.md` has the conventions and the clean-room rules. The build fails on any warning.
 - Commits are signed through `commit.gpgsign`. Never bypass it. If signing fails, stop and tell the maintainer.
-- Early development: the repository is private and signed commits go straight to `main`, no pull requests needed. That changes before the first release, when `.github/rulesets/` is applied.
+- Changes reach `main` through pull requests with signed commits and passing checks (`.github/rulesets/main.json`). Nobody pushes to `main` directly.
 - Commit messages and pull requests have no `Co-Authored-By` or "Generated with" lines. The README states that agents help build the library.
-- `.tmp/research/` and `.tmp/design/` hold the research and the agreed design, where they exist on your machine. Read `.tmp/HANDOFF.md` first. Plans, spikes and scratch files go under `.tmp/` too (gitignored), never in `docs/` or the repository root.
+- `.tmp/research/` and `.tmp/design/` are the maintainer's local notes (research and design), gitignored and only on their machine; read `.tmp/HANDOFF.md` first if it's there. `docs/` is the public reference. Plans, spikes and scratch files go under `.tmp/` too (gitignored), never in `docs/` or the repository root.
 - `docs/dotnet-versions.md` records what each new .NET version offers the library. Update it when one ships.
 - The core library takes no runtime packages. Test and benchmark packages need a row in `docs/dependencies.md`, with the licence checked in the `.nuspec`.
 - Never read the source of QuestPDF (source-available licence), PDFsharp/MigraDoc 6.5 or later, or iText (both AGPL). Work from the specifications.

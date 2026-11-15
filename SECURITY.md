@@ -18,7 +18,7 @@ Expect a first answer within 7 days. Confirmed problems are fixed in a new relea
 
 Releases go through `.github/workflows/release.yml`:
 
-- From the first release, nobody pushes to `main` directly, administrators included: every change arrives through a pull request with signed commits and passing checks (`.github/rulesets/main.json`). **Until then**, while the repository is private and the design is moving fast, the maintainer pushes signed commits straight to `main`, and the rulesets aren't applied yet.
+- Nobody pushes to `main` directly, administrators included: every change arrives through a pull request with signed commits and passing checks (`.github/rulesets/main.json`).
 - A release runs only from a `v*` tag on a commit that's on `main`, and it waits for approval in the `nuget` environment.
 - Packages are published with NuGet trusted publishing. There's no long-lived API key: each release gets a key that lasts one hour.
 - The job that publishes doesn't run repository code. The job that builds has no access to publishing credentials.
