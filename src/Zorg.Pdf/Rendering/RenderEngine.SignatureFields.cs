@@ -62,7 +62,7 @@ internal sealed partial class RenderEngine
     }
 
     /// <summary>What a signed field shows: who, when, and the reason and place if given.</summary>
-    private static string[] SignedLines(PdfSignatureOptions signature)
+    internal static string[] SignedLines(PdfSignatureOptions signature)
     {
         string name = signature.Name ?? signature.Signer.Certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
         DateTimeOffset time = signature.SigningTime!.Value;

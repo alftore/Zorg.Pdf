@@ -20,14 +20,14 @@ internal sealed class SystemFontResolver : IFontResolver
 {
     public static readonly SystemFontResolver Instance = new();
 
-    private readonly Lazy<Dictionary<string, List<(string Path, bool Bold, bool Italic, int Face)>>> _index = new(Build);
+    private readonly Lazy<Dictionary<string, List<(string Path, bool Bold, bool Italic, int Face, int Width)>>> _index = new(Build);
 
     public ValueTask<FontSource?> ResolveAsync(FontRequest request, CancellationToken cancellationToken = default) =>
         ValueTask.FromResult(Find(request));
 
     internal FontSource? Find(FontRequest request)
     {
-        if (!_index.Value.TryGetValue(request.Family, out List<(string Path, bool Bold, bool Italic, int Face)>? faces))
+        if (!_index.Value.TryGetValue(request.Family, out List<(string Path, bool Bold, bool Italic, int Face, int Width)>? faces))
         {
             return null;
         }
@@ -35,9 +35,11 @@ internal sealed class SystemFontResolver : IFontResolver
         bool bold = request.Weight == FontWeight.Bold;
         bool italic = request.Style == FontStyle.Italic;
 
-        // Exact face first, then same weight, then the regular face, then anything; ties go to the path in ordinal order.
-        (string Path, bool Bold, bool Italic, int Face) best = faces
+        // Exact face first, then same weight, then the regular face, then anything. Ties go to normal width (a family's
+        // condensed faces, such as Arial Narrow under "Arial", come after), then to the path in ordinal order.
+        (string Path, bool Bold, bool Italic, int Face, int Width) best = faces
             .OrderBy(f => (f.Bold == bold ? 0 : 2) + (f.Italic == italic ? 0 : 1))
+            .ThenBy(f => Math.Abs(f.Width - 5))
             .ThenBy(f => f.Path, StringComparer.Ordinal)
             .ThenBy(f => f.Face)
             .First();
@@ -67,9 +69,9 @@ internal sealed class SystemFontResolver : IFontResolver
         }
     }
 
-    private static Dictionary<string, List<(string Path, bool Bold, bool Italic, int Face)>> Build()
+    private static Dictionary<string, List<(string Path, bool Bold, bool Italic, int Face, int Width)>> Build()
     {
-        var index = new Dictionary<string, List<(string, bool, bool, int)>>(StringComparer.OrdinalIgnoreCase);
+        var index = new Dictionary<string, List<(string, bool, bool, int, int)>>(StringComparer.OrdinalIgnoreCase);
         foreach (string folder in Folders().Where(Directory.Exists))
         {
             IEnumerable<string> files;
@@ -86,14 +88,14 @@ internal sealed class SystemFontResolver : IFontResolver
 
             foreach (string file in files)
             {
-                foreach ((string family, bool bold, bool italic, _, int face) in DescribeFaces(file))
+                foreach ((string family, bool bold, bool italic, _, int face, int width) in DescribeFaces(file))
                 {
-                    if (!index.TryGetValue(family, out List<(string, bool, bool, int)>? faces))
+                    if (!index.TryGetValue(family, out List<(string, bool, bool, int, int)>? faces))
                     {
                         index[family] = faces = [];
                     }
 
-                    faces.Add((file, bold, italic, face));
+                    faces.Add((file, bold, italic, face, width));
                 }
             }
         }
@@ -104,7 +106,7 @@ internal sealed class SystemFontResolver : IFontResolver
     /// <summary>The family, face and weight class of a font file's first face; a null family when it isn't a TrueType font this library can embed.</summary>
     internal static (string? Family, bool Bold, bool Italic, int Weight) Describe(string path)
     {
-        foreach ((string family, bool bold, bool italic, int weight, int face) in DescribeFaces(path))
+        foreach ((string family, bool bold, bool italic, int weight, int face, _) in DescribeFaces(path))
         {
             if (face == 0)
             {
@@ -119,9 +121,9 @@ internal sealed class SystemFontResolver : IFontResolver
     /// Every TrueType face in a file: one for a <c>.ttf</c>, each face of a <c>.ttc</c> collection with its index.
     /// Faces with CFF outlines, and files that aren't fonts, give nothing.
     /// </summary>
-    internal static List<(string Family, bool Bold, bool Italic, int Weight, int Face)> DescribeFaces(string path)
+    internal static List<(string Family, bool Bold, bool Italic, int Weight, int Face, int Width)> DescribeFaces(string path)
     {
-        var found = new List<(string, bool, bool, int, int)>();
+        var found = new List<(string, bool, bool, int, int, int)>();
         try
         {
             using SafeFileHandle file = File.OpenHandle(path);
@@ -143,15 +145,15 @@ internal sealed class SystemFontResolver : IFontResolver
 
                 for (int face = 0; face < faces; face++)
                 {
-                    if (DescribeAt(file, length, BinaryPrimitives.ReadUInt32BigEndian(offsets.AsSpan(face * 4))) is ({ } family, bool bold, bool italic, int weight))
+                    if (DescribeAt(file, length, BinaryPrimitives.ReadUInt32BigEndian(offsets.AsSpan(face * 4))) is ({ } family, bool bold, bool italic, int weight, int width))
                     {
-                        found.Add((family, bold, italic, weight, face));
+                        found.Add((family, bold, italic, weight, face, width));
                     }
                 }
             }
-            else if (DescribeAt(file, length, 0) is ({ } family, bool bold, bool italic, int weight))
+            else if (DescribeAt(file, length, 0) is ({ } family, bool bold, bool italic, int weight, int width))
             {
-                found.Add((family, bold, italic, weight, 0));
+                found.Add((family, bold, italic, weight, 0, width));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
@@ -163,7 +165,7 @@ internal sealed class SystemFontResolver : IFontResolver
     }
 
     /// <summary>One face's family, style and weight, from the table directory at <paramref name="start"/>.</summary>
-    private static (string? Family, bool Bold, bool Italic, int Weight) DescribeAt(SafeFileHandle file, long length, long start)
+    private static (string? Family, bool Bold, bool Italic, int Weight, int Width) DescribeAt(SafeFileHandle file, long length, long start)
     {
         Span<byte> header = stackalloc byte[12];
         if (start + 12 > length || RandomAccess.Read(file, header, start) != 12 || BinaryPrimitives.ReadUInt32BigEndian(header) is not (0x00010000 or 0x74727565))
@@ -216,7 +218,8 @@ internal sealed class SystemFontResolver : IFontResolver
         ushort macStyle = head is { Length: >= 46 } ? BinaryPrimitives.ReadUInt16BigEndian(head.AsSpan(44)) : (ushort)0;
         int weight = os2 is { Length: >= 6 } ? BinaryPrimitives.ReadUInt16BigEndian(os2.AsSpan(4)) : 400;
         ushort selection = os2 is { Length: >= 64 } ? BinaryPrimitives.ReadUInt16BigEndian(os2.AsSpan(62)) : (ushort)0;
-        return (family, weight >= 600 || (macStyle & 1) != 0, (selection & 1) != 0 || (macStyle & 2) != 0, weight);
+        int width = os2 is { Length: >= 8 } ? BinaryPrimitives.ReadUInt16BigEndian(os2.AsSpan(6)) : 5; // usWidthClass: 5 is normal.
+        return (family, weight >= 600 || (macStyle & 1) != 0, (selection & 1) != 0 || (macStyle & 2) != 0, weight, width);
     }
 
     /// <summary>The typographic family (name ID 16), else the family (ID 1), preferring Windows English.</summary>

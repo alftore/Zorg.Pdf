@@ -94,6 +94,52 @@ internal sealed class PdfObjectWriter : IDisposable
         PdfFormat.WriteAscii(_buffer, [(byte)'%', 0xE2, 0xE3, 0xCF, 0xD3, (byte)'\n']);
     }
 
+    /// <summary>The offset of an object number that belongs to the file being updated, not to this fragment.</summary>
+    private const long External = -3;
+
+    private readonly int _firstFragmentNumber; // 0, or the first number of a fragment's objects.
+
+    /// <summary>
+    /// A fragment: objects numbered from <paramref name="firstNumber"/> on, with no header or trailer, written
+    /// synchronously, for an incremental update to append (<see cref="FinishFragment"/> says where each one is).
+    /// </summary>
+    internal PdfObjectWriter(Stream output, int firstNumber)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+        ArgumentOutOfRangeException.ThrowIfLessThan(firstNumber, 1);
+        _output = output;
+        _buffer = _main;
+        _synchronous = true;
+        _firstFragmentNumber = firstNumber;
+        _hash?.Dispose();
+        _hash = null;
+        while (_offsets.Count < firstNumber)
+        {
+            _offsets.Add(External);
+        }
+    }
+
+    /// <summary>Flushes a fragment and returns each of its objects with its offset from the fragment's start.</summary>
+    internal IReadOnlyList<(int Number, long Offset)> FinishFragment()
+    {
+        if (_firstFragmentNumber == 0 || _open.IsValid)
+        {
+            throw new InvalidOperationException("FinishFragment needs a fragment writer with no object open.");
+        }
+
+        CheckAllWritten(except: 0);
+        FlushSync();
+        _output.Flush();
+        _finished = true;
+        var objects = new List<(int, long)>();
+        for (int i = _firstFragmentNumber; i < _offsets.Count; i++)
+        {
+            objects.Add((i, _offsets[i]));
+        }
+
+        return objects;
+    }
+
     /// <summary>The offset in the file of the next byte to be written.</summary>
     public long Position => _flushed + _main.WrittenCount;
 
@@ -398,7 +444,7 @@ internal sealed class PdfObjectWriter : IDisposable
     {
         for (int i = 1; i < _offsets.Count; i++)
         {
-            if (_offsets[i] == -1 && i != except)
+            if (_offsets[i] == -1 && i != except) // External numbers belong to the file a fragment is appended to.
             {
                 throw new InvalidOperationException($"Object {i} was allocated but never written.");
             }

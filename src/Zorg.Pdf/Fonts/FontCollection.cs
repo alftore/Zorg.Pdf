@@ -64,24 +64,25 @@ public sealed class FontCollection
     public static FontCollection FromFiles(IEnumerable<string> paths)
     {
         ArgumentNullException.ThrowIfNull(paths);
-        var faces = new List<(string Family, bool Bold, bool Italic, int Weight, string Path, int Face)>();
+        var faces = new List<(string Family, bool Bold, bool Italic, int Weight, string Path, int Face, int Width)>();
         foreach (string path in paths)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(paths));
-            foreach ((string family, bool bold, bool italic, int weight, int face) in SystemFontResolver.DescribeFaces(path))
+            foreach ((string family, bool bold, bool italic, int weight, int face, int width) in SystemFontResolver.DescribeFaces(path))
             {
-                faces.Add((family, bold, italic, weight, Path.GetFullPath(path), face));
+                faces.Add((family, bold, italic, weight, Path.GetFullPath(path), face, width));
             }
         }
 
         FontCollection collection = Empty;
-        foreach (IGrouping<string, (string Family, bool Bold, bool Italic, int Weight, string Path, int Face)> family in faces
+        foreach (IGrouping<string, (string Family, bool Bold, bool Italic, int Weight, string Path, int Face, int Width)> family in faces
             .GroupBy(f => f.Family, StringComparer.OrdinalIgnoreCase)
             .OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             FontSource? Pick(bool bold, bool italic) => family
                 .Where(f => f.Bold == bold && f.Italic == italic)
-                .OrderBy(f => Math.Abs(f.Weight - (bold ? 700 : 400)))
+                .OrderBy(f => Math.Abs(f.Width - 5)) // Normal width before a family's condensed faces (Arial Narrow under "Arial").
+                .ThenBy(f => Math.Abs(f.Weight - (bold ? 700 : 400)))
                 .ThenBy(f => f.Path, StringComparer.Ordinal)
                 .ThenBy(f => f.Face)
                 .Select(f => FontSource.FromFile(f.Path, f.Face))

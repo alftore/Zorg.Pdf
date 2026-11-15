@@ -65,6 +65,26 @@ public sealed partial class IncrementalSigningTests
     }
 
     [Fact]
+    public async Task AFieldSignedLaterShowsWhoSignedWithItsOwnEmbeddedFont()
+    {
+        PdfDocument contract = new("Contract") { Language = "en", Content = [new Paragraph("The parties agree."), new SignatureField("customer") { Label = "Signed for the customer" }] };
+        (byte[] unsigned, _) = await RenderTests.RenderAsync(contract, PdfInspect.Options(PdfConformance.PdfUA1));
+
+        PdfSignatureOptions options = Options("customer") with { AppearanceFont = Zorg.Pdf.Fonts.FontSource.FromBytes(Zorg.Pdf.Tests.Fonts.TestFonts.Require()) };
+        byte[] signed = await SignAsync(unsigned, options);
+
+        Assert.Single(VerifyAll(signed));
+        string update = System.Text.Encoding.Latin1.GetString(signed[unsigned.Length..]);
+        Assert.Matches(@"/T \(customer\) [^\n]*/AP <</N \d+ 0 R ?>>", update); // A new appearance on the field,
+        Assert.Matches(@"/T \(customer\) [^\n]*/V \d+ 0 R", update); // and the signature as its value.
+        Assert.Contains("/Subtype /Form /BBox [0 0 170.0", update, StringComparison.Ordinal);
+        Assert.Contains("/FontFile2", update, StringComparison.Ordinal); // Its own subset, embedded in the update.
+        Assert.DoesNotContain("/MCID", update, StringComparison.Ordinal); // No marked content in an appearance.
+        PdfFileInfo info = await PdfFileInfo.ReadAsync(new MemoryStream(signed), cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Empty(info.Diagnostics);
+    }
+
+    [Fact]
     public async Task AFileWithAClassicTableGetsATableUpdate()
     {
         byte[] original = HandMadePdf();

@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Zorg.Pdf.Fonts;
 using Zorg.Pdf.Reading;
 using Zorg.Pdf.Writing;
 
@@ -101,7 +102,24 @@ public static class PdfSigning
                 throw new PdfException($"The field \"{options.FieldName}\" is signed already. Choose another FieldName: a new field is added for it.");
             }
 
-            update.WriteObject(found.Reference, With(found.Field, ("V", signature)));
+            CosDictionary field = With(found.Field, ("V", signature));
+            if (WidgetOf(cos, found.Reference, field) is { } widget && Size(cos, widget.Widget) is { } size
+                && await AppearanceAsync(options, size.Width, size.Height, next, update, cancellationToken).ConfigureAwait(false) is { } drawn)
+            {
+                // Who signed and when, drawn into the field, as a field signed while rendering shows them.
+                next = drawn.Next;
+                var appearance = new CosDictionary(new Dictionary<string, CosValue>(StringComparer.Ordinal) { ["N"] = drawn.Form });
+                if (widget.Reference.Number == found.Reference.Number)
+                {
+                    field = With(field, ("AP", appearance));
+                }
+                else
+                {
+                    update.WriteObject(widget.Reference, With(widget.Widget, ("AP", appearance)));
+                }
+            }
+
+            update.WriteObject(found.Reference, field);
         }
         else
         {
@@ -165,6 +183,123 @@ public static class PdfSigning
         await output.WriteAsync(file, cancellationToken).ConfigureAwait(false);
         await output.WriteAsync(update.WrittenMemory, cancellationToken).ConfigureAwait(false);
         await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>The field's widget: the field itself when they're one dictionary, else its first kid widget.</summary>
+    private static (CosReference Reference, CosDictionary Widget)? WidgetOf(CosFile cos, CosReference reference, CosDictionary field)
+    {
+        if (field["Rect"] is not null)
+        {
+            return (reference, field);
+        }
+
+        if (cos.Resolve(field["Kids"]) is CosArray kids)
+        {
+            foreach (CosValue kid in kids.Items)
+            {
+                if (kid is CosReference kidReference && cos.Resolve(kidReference) is CosDictionary widget && widget["Rect"] is not null)
+                {
+                    return (kidReference, widget);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>A widget's width and height from its /Rect, if it's big enough to draw in.</summary>
+    private static (double Width, double Height)? Size(CosFile cos, CosDictionary widget)
+    {
+        if (cos.Resolve(widget["Rect"]) is not CosArray { Items.Count: 4 } rect || rect.Items.Select(i => cos.Resolve(i).AsNumber).ToArray() is not [{ } x0, { } y0, { } x1, { } y1])
+        {
+            return null;
+        }
+
+        double width = Math.Abs(x1 - x0), height = Math.Abs(y1 - y0);
+        return width >= 20 && height >= 10 && width <= 2000 && height <= 2000 ? (width, height) : null;
+    }
+
+    /// <summary>Families tried, in order, when no appearance font is given: the zorg-pdf tool's defaults.</summary>
+    private static readonly string[] SystemFamilies = ["Arial", "Liberation Sans", "DejaVu Sans", "Noto Sans", "Segoe UI"];
+
+    /// <summary>
+    /// Draws the signer's details at the field's size with the normal renderer, then appends that page as a form
+    /// XObject (marked content removed, its font subset embedded) to the update. Null when no font can be found.
+    /// </summary>
+    private static async Task<(CosReference Form, int Next)?> AppearanceAsync(PdfSignatureOptions options, double width, double height, int next, IncrementalUpdate update, CancellationToken cancellationToken)
+    {
+        FontCollection? fonts = null;
+        string family = "Signature";
+        if (options.AppearanceFont is { } font)
+        {
+            fonts = FontCollection.Empty.Add(new FontFamily(family) { Regular = font });
+        }
+        else
+        {
+            IFontResolver system = FontResolvers.System();
+            foreach (string name in SystemFamilies)
+            {
+                if (await system.ResolveAsync(new FontRequest(name, FontWeight.Normal, FontStyle.Normal), cancellationToken).ConfigureAwait(false) is { } installed)
+                {
+                    fonts = FontCollection.Empty.Add(new FontFamily(family) { Regular = installed });
+                    break;
+                }
+            }
+        }
+
+        if (fonts is null)
+        {
+            return null;
+        }
+
+        var text = new TextStyle { Size = Length.Pt(10), Color = Color.Black }; // Shrunk to fit when the box is small.
+        var drawing = new PdfDocument("Signature")
+        {
+            Page = new PageSettings { Size = new PageSize(Length.Pt(width), Length.Pt(height)), Margin = Thickness.All(Length.Zero) },
+            Content =
+            [
+                new TextBox([.. Rendering.RenderEngine.SignedLines(options).Select(line => (Block)new Paragraph([new TextRun(line) { Style = text }]))])
+                {
+                    X = Length.Zero,
+                    Y = Length.Zero,
+                    Width = Length.Pt(width),
+                    Height = Length.Pt(height),
+                    Padding = Thickness.All(Length.Pt(4)),
+                    BorderColor = Color.Gray(0x99),
+                    BorderWidth = Length.Pt(0.75),
+                    Overflow = TextOverflow.ShrinkToFit,
+                },
+            ],
+        };
+        using var rendered = new MemoryStream();
+        await drawing.RenderAsync(rendered, new RenderOptions { Fonts = fonts.WithDefault(family) }, cancellationToken).ConfigureAwait(false);
+
+        var source = new CosFile(rendered.ToArray(), PdfReadLimits.Default, []);
+        CosPage page = CosPages.Read(source, PdfReadLimits.Default, [])[0];
+        byte[] content = CosContent.Read(source, page, out _);
+        using var fragment = new MemoryStream();
+        using var writer = new PdfObjectWriter(fragment, next);
+        var importer = new CosImporter(source, writer, PdfReadLimits.Default.MaxObjects);
+        PdfReference form = writer.Allocate();
+        writer.BeginStreamObject(form);
+        writer.Name("Type"u8);
+        writer.Name("XObject"u8);
+        writer.Name("Subtype"u8);
+        writer.Name("Form"u8);
+        writer.Name("BBox"u8);
+        writer.BeginArray();
+        writer.Integer(0);
+        writer.Integer(0);
+        writer.Real(width);
+        writer.Real(height);
+        writer.EndArray();
+        writer.Name("Resources"u8);
+        importer.Write(page.Resources ?? new CosDictionary([]));
+        writer.EndStreamObject(content, compress: true);
+        importer.Flush();
+        IReadOnlyList<(int Number, long Offset)> objects = writer.FinishFragment();
+        update.AppendFragment(fragment.ToArray(), objects);
+        return (new CosReference(form.Number, 0), objects.Max(o => o.Number) + 1);
     }
 
     /// <summary>A field by its full name ("parent.child"), walking /Kids; fields without a /T are widgets, not fields.</summary>
@@ -434,6 +569,17 @@ internal sealed class IncrementalUpdate
             Ascii($" /{key} ");
             byte[] bytes = PdfSigning.TextBytes(value, out bool hex);
             Value(new CosString(bytes, hex));
+        }
+    }
+
+    /// <summary>Appends objects written elsewhere (a <see cref="PdfObjectWriter"/> fragment), given their offsets from its start.</summary>
+    public void AppendFragment(ReadOnlySpan<byte> bytes, IReadOnlyList<(int Number, long Offset)> objects)
+    {
+        long start = Offset;
+        _buffer.Write(bytes);
+        foreach ((int number, long offset) in objects)
+        {
+            _objects[number] = (start + offset, 0);
         }
     }
 

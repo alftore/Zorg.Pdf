@@ -1084,6 +1084,8 @@ Zorg.Pdf.Signing.PdfSignatureAlgorithm.RsaPkcs1 = 0 -> Zorg.Pdf.Signing.PdfSigna
 Zorg.Pdf.Signing.PdfSignatureAlgorithm.RsaPss = 1 -> Zorg.Pdf.Signing.PdfSignatureAlgorithm
 Zorg.Pdf.Signing.PdfSignatureOptions
 Zorg.Pdf.Signing.PdfSignatureOptions.<Clone>$() -> Zorg.Pdf.Signing.PdfSignatureOptions!
+Zorg.Pdf.Signing.PdfSignatureOptions.AppearanceFont.get -> Zorg.Pdf.Fonts.FontSource?
+Zorg.Pdf.Signing.PdfSignatureOptions.AppearanceFont.init -> void
 Zorg.Pdf.Signing.PdfSignatureOptions.ContactInfo.get -> string?
 Zorg.Pdf.Signing.PdfSignatureOptions.ContactInfo.init -> void
 Zorg.Pdf.Signing.PdfSignatureOptions.Deconstruct(out Zorg.Pdf.Signing.IPdfSigner! Signer) -> void

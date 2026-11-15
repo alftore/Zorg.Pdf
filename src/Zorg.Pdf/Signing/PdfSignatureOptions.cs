@@ -51,6 +51,14 @@ public sealed record PdfSignatureOptions(IPdfSigner Signer)
     public ITimestampClient? Timestamp { get; init; }
 
     /// <summary>
+    /// The font for drawing who signed and when into an empty field that <see cref="PdfSigning"/> signs later; a
+    /// subset is embedded with the signature. Null: the first of Arial, Liberation Sans, DejaVu Sans, Noto Sans or
+    /// Segoe UI installed on the machine, and if none is, the field keeps the look it had. Not used when rendering,
+    /// where the document's own fonts draw the field.
+    /// </summary>
+    public Fonts.FontSource? AppearanceFont { get; init; }
+
+    /// <summary>
     /// Bytes reserved in the file for the signature, which is written after the rest of the file is hashed. A
     /// signature that doesn't fit stops the render with a message naming the size it needs.
     /// </summary>
