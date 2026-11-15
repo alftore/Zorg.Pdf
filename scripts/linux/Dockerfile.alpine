@@ -7,12 +7,13 @@
 #   poppler-utils   pdffonts and pdftotext: fonts embedded and subset, and text extracts back
 #   mupdf-tools     renders pages, so a broken content stream fails the gate
 #   py3-jsonschema  an independent JSON Schema (2020-12) validator for the document schema and the examples
+#   zbar, imagemagick  zbarimg decodes the barcodes the smoke sample draws (imagemagick gives it image coders)
 #
 # veraPDF runs from its own image (docker.io/verapdf/cli, pinned by digest in test-linux.sh): it bundles a glibc Java
 # that doesn't run on Alpine.
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine@sha256:60a079c9d3ffc98b2968c3153b995ede679f7d6504e3ae7d2b68225a7fd84f5a
 
-RUN apk add --no-cache bash coreutils font-dejavu font-noto-devanagari harfbuzz-utils qpdf poppler-utils mupdf-tools py3-jsonschema py3-pillow
+RUN apk add --no-cache bash coreutils font-dejavu font-noto-devanagari harfbuzz-utils qpdf poppler-utils mupdf-tools py3-jsonschema py3-pillow zbar imagemagick
 
 ENV DOTNET_NOLOGO=1 \
     DOTNET_CLI_TELEMETRY_OPTOUT=1 \

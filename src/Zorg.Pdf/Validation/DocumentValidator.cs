@@ -264,6 +264,10 @@ internal sealed partial class DocumentValidator
                 Image(image, path);
                 break;
 
+            case Barcode barcode:
+                Barcode(barcode, path);
+                break;
+
             case Spacer spacer:
                 NotNegative(spacer.Height, $"{path}/height");
                 break;
@@ -658,6 +662,40 @@ internal sealed partial class DocumentValidator
         }
 
         _noLinksIn = null;
+    }
+
+    private void Barcode(Barcode barcode, string path)
+    {
+        if (!barcode.Decorative && string.IsNullOrWhiteSpace(barcode.Alt))
+        {
+            Error(DiagnosticCodes.NoAltText, "A barcode needs \"alt\" text that says what it's for (\"Payment QR code for invoice 42\"), or \"decorative\": true.", $"{path}/alt");
+        }
+
+        if ((barcode.Data is null) == (barcode.Bind is null))
+        {
+            Error(DiagnosticCodes.BadBarcode, "A barcode needs \"data\" or \"bind\": one of them.", path);
+        }
+        else if (barcode.Data is { } data)
+        {
+            try
+            {
+                _ = Rendering.RenderEngine.EncodeBarcode(barcode);
+            }
+            catch (ArgumentException ex)
+            {
+                Error(DiagnosticCodes.BadBarcode, ex.Message.Split(" (Parameter", 2)[0], $"{path}/data");
+            }
+
+            _ = data;
+        }
+
+        foreach ((Length? length, string name) in new[] { (barcode.Size, "size"), (barcode.Width, "width"), (barcode.Height, "height") })
+        {
+            if (length is { } l)
+            {
+                Positive(l, $"{path}/{name}");
+            }
+        }
     }
 
     private void Image(Image image, string path)

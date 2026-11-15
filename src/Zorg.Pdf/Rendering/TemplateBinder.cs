@@ -26,7 +26,7 @@ internal sealed class TemplateBinder
 
     /// <summary>True when the document uses any template feature, so plain documents skip binding.</summary>
     public static bool IsTemplate(PdfDocument document) =>
-        Blocks(document).Any(b => b is Repeat or Conditional or Table { Rows: RepeatedTableRows } || Inlines(b).Any(HasBind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
+        Blocks(document).Any(b => b is Repeat or Conditional or Table { Rows: RepeatedTableRows } or Barcode { Bind: not null } || Inlines(b).Any(HasBind) || (b is Table { Rows: InlineTableRows { Rows.IsDefault: false } rows } && rows.Rows.Any(r => !r.IsDefault && r.Any(c => c is not null && !c.Inlines.IsDefault && c.Inlines.Any(i => i is Bind)))));
 
     public static PdfDocument Bind(PdfDocument template, JsonElement? model, DiagnosticSink sink)
     {
@@ -146,6 +146,10 @@ internal sealed class TemplateBinder
                     output.Add(list with { Items = [.. listItems] }); // A list whose repeat found nothing is left out.
                 }
 
+                return;
+
+            case Barcode { Bind: { } bindPath } barcode:
+                output.Add(barcode with { Data = Text(new Bind(bindPath), path), Bind = null });
                 return;
 
             case SectionBreak section:

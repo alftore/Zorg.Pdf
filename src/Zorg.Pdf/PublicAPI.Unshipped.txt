@@ -24,6 +24,43 @@ Zorg.Pdf.AttachmentRelationship.Data = 2 -> Zorg.Pdf.AttachmentRelationship
 Zorg.Pdf.AttachmentRelationship.Source = 1 -> Zorg.Pdf.AttachmentRelationship
 Zorg.Pdf.AttachmentRelationship.Supplement = 4 -> Zorg.Pdf.AttachmentRelationship
 Zorg.Pdf.AttachmentRelationship.Unspecified = 0 -> Zorg.Pdf.AttachmentRelationship
+Zorg.Pdf.Barcode
+override Zorg.Pdf.Barcode.<Clone>$() -> Zorg.Pdf.Barcode!
+Zorg.Pdf.Barcode.Align.get -> Zorg.Pdf.TextAlign
+Zorg.Pdf.Barcode.Align.init -> void
+Zorg.Pdf.Barcode.Alt.get -> string?
+Zorg.Pdf.Barcode.Alt.init -> void
+Zorg.Pdf.Barcode.Barcode(Zorg.Pdf.BarcodeKind kind, string! data) -> void
+Zorg.Pdf.Barcode.Bind.get -> string?
+Zorg.Pdf.Barcode.Bind.init -> void
+Zorg.Pdf.Barcode.Data.get -> string?
+Zorg.Pdf.Barcode.Data.init -> void
+Zorg.Pdf.Barcode.Decorative.get -> bool
+Zorg.Pdf.Barcode.Decorative.init -> void
+Zorg.Pdf.Barcode.Equals(Zorg.Pdf.Barcode? other) -> bool
+override sealed Zorg.Pdf.Barcode.Equals(Zorg.Pdf.Block? other) -> bool
+override Zorg.Pdf.Barcode.Equals(object? obj) -> bool
+Zorg.Pdf.Barcode.ErrorCorrection.get -> Zorg.Pdf.QrErrorCorrection
+Zorg.Pdf.Barcode.ErrorCorrection.init -> void
+override Zorg.Pdf.Barcode.GetHashCode() -> int
+Zorg.Pdf.Barcode.Height.get -> Zorg.Pdf.Length?
+Zorg.Pdf.Barcode.Height.init -> void
+Zorg.Pdf.Barcode.Kind.get -> Zorg.Pdf.BarcodeKind
+Zorg.Pdf.Barcode.Kind.init -> void
+Zorg.Pdf.Barcode.ShowText.get -> bool
+Zorg.Pdf.Barcode.ShowText.init -> void
+Zorg.Pdf.Barcode.Size.get -> Zorg.Pdf.Length?
+Zorg.Pdf.Barcode.Size.init -> void
+override Zorg.Pdf.Barcode.ToString() -> string!
+Zorg.Pdf.Barcode.Width.get -> Zorg.Pdf.Length?
+Zorg.Pdf.Barcode.Width.init -> void
+static Zorg.Pdf.Barcode.operator !=(Zorg.Pdf.Barcode? left, Zorg.Pdf.Barcode? right) -> bool
+static Zorg.Pdf.Barcode.operator ==(Zorg.Pdf.Barcode? left, Zorg.Pdf.Barcode? right) -> bool
+Zorg.Pdf.BarcodeKind
+Zorg.Pdf.BarcodeKind.Code128 = 1 -> Zorg.Pdf.BarcodeKind
+Zorg.Pdf.BarcodeKind.Ean13 = 3 -> Zorg.Pdf.BarcodeKind
+Zorg.Pdf.BarcodeKind.Gs1_128 = 2 -> Zorg.Pdf.BarcodeKind
+Zorg.Pdf.BarcodeKind.Qr = 0 -> Zorg.Pdf.BarcodeKind
 Zorg.Pdf.Bind
 override Zorg.Pdf.Bind.<Clone>$() -> Zorg.Pdf.Bind!
 Zorg.Pdf.Bind.Bind(string! Path) -> void
@@ -176,6 +213,27 @@ Zorg.Pdf.DocumentParseResult.Diagnostics.get -> System.Collections.Immutable.Imm
 Zorg.Pdf.DocumentParseResult.Document.get -> Zorg.Pdf.PdfDocument?
 Zorg.Pdf.DocumentParseResult.DocumentParseResult(Zorg.Pdf.PdfDocument? document, System.Collections.Immutable.ImmutableArray<Zorg.Pdf.PdfDiagnostic!> diagnostics) -> void
 Zorg.Pdf.DocumentParseResult.IsSuccess.get -> bool
+Zorg.Pdf.EpcPayment
+Zorg.Pdf.EpcPayment.<Clone>$() -> Zorg.Pdf.EpcPayment!
+Zorg.Pdf.EpcPayment.Amount.get -> decimal?
+Zorg.Pdf.EpcPayment.Amount.init -> void
+Zorg.Pdf.EpcPayment.Bic.get -> string?
+Zorg.Pdf.EpcPayment.Bic.init -> void
+static Zorg.Pdf.EpcPayment.Create(string! name, string! iban, decimal? amount, string? text = null, string? bic = null) -> Zorg.Pdf.EpcPayment!
+Zorg.Pdf.EpcPayment.Equals(Zorg.Pdf.EpcPayment? other) -> bool
+override Zorg.Pdf.EpcPayment.Equals(object? obj) -> bool
+override Zorg.Pdf.EpcPayment.GetHashCode() -> int
+Zorg.Pdf.EpcPayment.Iban.get -> string!
+Zorg.Pdf.EpcPayment.Iban.init -> void
+Zorg.Pdf.EpcPayment.Name.get -> string!
+Zorg.Pdf.EpcPayment.Name.init -> void
+Zorg.Pdf.EpcPayment.Reference.get -> string?
+Zorg.Pdf.EpcPayment.Reference.init -> void
+Zorg.Pdf.EpcPayment.Text.get -> string?
+Zorg.Pdf.EpcPayment.Text.init -> void
+override Zorg.Pdf.EpcPayment.ToString() -> string!
+static Zorg.Pdf.EpcPayment.operator !=(Zorg.Pdf.EpcPayment? left, Zorg.Pdf.EpcPayment? right) -> bool
+static Zorg.Pdf.EpcPayment.operator ==(Zorg.Pdf.EpcPayment? left, Zorg.Pdf.EpcPayment? right) -> bool
 Zorg.Pdf.Field
 override Zorg.Pdf.Field.<Clone>$() -> Zorg.Pdf.Field!
 Zorg.Pdf.Field.Deconstruct(out Zorg.Pdf.FieldKind Kind) -> void
@@ -360,6 +418,12 @@ Zorg.Pdf.InlineTableRows.Rows.init -> void
 override Zorg.Pdf.InlineTableRows.ToString() -> string!
 static Zorg.Pdf.InlineTableRows.operator !=(Zorg.Pdf.InlineTableRows? left, Zorg.Pdf.InlineTableRows? right) -> bool
 static Zorg.Pdf.InlineTableRows.operator ==(Zorg.Pdf.InlineTableRows? left, Zorg.Pdf.InlineTableRows? right) -> bool
+Zorg.Pdf.Kid
+static Zorg.Pdf.Kid.Create(string! digits, Zorg.Pdf.KidMethod method) -> string!
+static Zorg.Pdf.Kid.IsValid(string! kid, Zorg.Pdf.KidMethod method) -> bool
+Zorg.Pdf.KidMethod
+Zorg.Pdf.KidMethod.Mod10 = 0 -> Zorg.Pdf.KidMethod
+Zorg.Pdf.KidMethod.Mod11 = 1 -> Zorg.Pdf.KidMethod
 Zorg.Pdf.Length
 static Zorg.Pdf.Length.Cm(double value) -> Zorg.Pdf.Length
 Zorg.Pdf.Length.Deconstruct(out double Points) -> void
@@ -800,6 +864,11 @@ Zorg.Pdf.PdfReadLimits.PdfReadLimits() -> void
 override Zorg.Pdf.PdfReadLimits.ToString() -> string!
 static Zorg.Pdf.PdfReadLimits.operator !=(Zorg.Pdf.PdfReadLimits? left, Zorg.Pdf.PdfReadLimits? right) -> bool
 static Zorg.Pdf.PdfReadLimits.operator ==(Zorg.Pdf.PdfReadLimits? left, Zorg.Pdf.PdfReadLimits? right) -> bool
+Zorg.Pdf.QrErrorCorrection
+Zorg.Pdf.QrErrorCorrection.H = 3 -> Zorg.Pdf.QrErrorCorrection
+Zorg.Pdf.QrErrorCorrection.L = 0 -> Zorg.Pdf.QrErrorCorrection
+Zorg.Pdf.QrErrorCorrection.M = 1 -> Zorg.Pdf.QrErrorCorrection
+Zorg.Pdf.QrErrorCorrection.Q = 2 -> Zorg.Pdf.QrErrorCorrection
 Zorg.Pdf.RenderOptions
 Zorg.Pdf.RenderOptions.<Clone>$() -> Zorg.Pdf.RenderOptions!
 Zorg.Pdf.RenderOptions.Archive.get -> Zorg.Pdf.PdfArchive

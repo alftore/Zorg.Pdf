@@ -157,7 +157,7 @@
       "description": "Something that flows down the page. The \"type\" property says which.",
       "type": "object",
       "required": ["type"],
-      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents", "sectionBreak"] } },
+      "properties": { "type": { "enum": ["heading", "paragraph", "list", "table", "image", "spacer", "pageBreak", "repeat", "when", "textBox", "tableOfContents", "sectionBreak", "barcode"] } },
       "oneOf": [
         { "$ref": "#/$defs/heading" },
         { "$ref": "#/$defs/paragraph" },
@@ -170,7 +170,8 @@
         { "$ref": "#/$defs/when" },
         { "$ref": "#/$defs/textBox" },
         { "$ref": "#/$defs/tableOfContents" },
-        { "$ref": "#/$defs/sectionBreak" }
+        { "$ref": "#/$defs/sectionBreak" },
+        { "$ref": "#/$defs/barcode" }
       ]
     },
     "pageNumberStyle": { "description": "How pages are numbered.", "enum": ["number", "lowerRoman", "upperRoman", "lowerLetter", "upperLetter"] },
@@ -273,6 +274,29 @@
         "layer": { "enum": ["over", "behind"], "default": "over" }
       },
       "oneOf": [{ "required": ["text"] }, { "required": ["image"] }]
+    },
+    "barcode": {
+      "description": "A QR code, Code 128, GS1-128 or EAN-13, drawn as vectors. Needs alt text unless decorative. Set data or bind.",
+      "type": "object",
+      "required": ["type", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "barcode" },
+        "kind": { "enum": ["qr", "code128", "gs1_128", "ean13"] },
+        "data": { "description": "Text for qr and code128, element strings like (01)09501101530003 for gs1_128, 12 or 13 digits for ean13.", "type": "string" },
+        "bind": { "description": "A path in the template model whose value is the data.", "type": "string", "minLength": 1 },
+        "size": { "description": "A QR code's side, quiet zone included. Default 3cm.", "$ref": "#/$defs/length" },
+        "width": { "description": "A linear code's width, quiet zones included. Default 0.33 mm per module.", "$ref": "#/$defs/length" },
+        "height": { "description": "A linear code's bar height. Default 15mm.", "$ref": "#/$defs/length" },
+        "errorCorrection": { "enum": ["l", "m", "q", "h"], "default": "m" },
+        "showText": { "description": "Print the data under a linear code.", "type": "boolean", "default": true },
+        "alt": { "type": "string" },
+        "decorative": { "type": "boolean", "default": false },
+        "align": { "$ref": "#/$defs/textAlign" },
+        "style": { "type": "string" },
+        "keepWithNext": { "type": "boolean", "default": false },
+        "id": { "$ref": "#/$defs/id" }
+      }
     },
     "attachment": {
       "description": "A file carried in the PDF. Under PDF/A it needs PDF/A-3.",

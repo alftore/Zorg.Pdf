@@ -199,6 +199,10 @@ internal sealed partial class RenderEngine : IDisposable
                     Arrived(image);
                     await PlaceImageAsync(i, image, cancellationToken).ConfigureAwait(false);
                     break;
+                case Barcode barcode:
+                    Arrived(barcode);
+                    await PlaceBarcodeAsync(barcode, cancellationToken).ConfigureAwait(false);
+                    break;
                 case List list:
                     Arrived(list);
                     await PlaceListAsync(i, list, cancellationToken).ConfigureAwait(false);

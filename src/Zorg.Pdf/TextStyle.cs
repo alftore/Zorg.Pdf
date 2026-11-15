@@ -148,6 +148,7 @@ public sealed record StyleSheet
                 new("quote", new TextStyle { FontStyle = FontStyle.Italic, Color = Color.Parse("#444444") }),
                 new("code", new TextStyle { Size = Length.Pt(9), Color = Color.Parse("#333333"), Hyphens = Pdf.Hyphens.None }),
                 new("watermark", new TextStyle { Weight = FontWeight.Bold }),
+                new("barcode", new TextStyle { Size = Length.Pt(9), Hyphens = Pdf.Hyphens.None }),
             ]),
     };
 

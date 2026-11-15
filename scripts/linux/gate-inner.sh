@@ -17,7 +17,7 @@ timeout 900 dotnet test --solution Zorg.Pdf.slnx -c Release --no-build
 
 stage "Smoke sample"
 mkdir -p /out
-rm -f /out/*.pdf # The volume outlives the container: start clean.
+rm -rf /out/* # The volume outlives the container: start clean.
 timeout 300 dotnet run --project samples/Zorg.Pdf.AotSmoke -c Release --no-build -- /out
 
 stage "Validate documents against the JSON Schema (python-jsonschema)"
@@ -100,6 +100,24 @@ qpdf --show-attachment=invoice.xml /out/pdfa3-attachment.pdf > /tmp/invoice.xml
 if ! grep -q '<invoice id="42"/>' /tmp/invoice.xml; then
   echo "FAIL qpdf pdfa3-attachment.pdf: invoice.xml doesn't come out as written"; failed=1
 fi
+
+stage "Barcodes against zbar"
+# One barcode per page: each must decode, at 300 dpi, to the value it was given. zbar's plain output is used; its XML
+# output garbles bytes above 127.
+mutool draw -q -r 300 -F png -o /tmp/barcodes-%d.png /out/barcodes.pdf
+python3 - /out/barcodes.expected <<'PY' || failed=1
+import json, subprocess, sys
+expected = json.load(open(sys.argv[1], encoding="utf-8"))
+found = [subprocess.run(["zbarimg", "-q", "--raw", f"/tmp/barcodes-{page}.png"], capture_output=True).stdout.decode("utf-8").removesuffix("\n")
+         for page in range(1, len(expected) + 1)]
+if found == expected:
+    print(f"ok   barcodes.pdf: zbar decodes all {len(expected)} codes to what they were given")
+else:
+    for page, (got, want) in enumerate(zip(found, expected), 1):
+        if got != want:
+            print(f"FAIL barcodes.pdf page {page}: zbar decoded {got!r}, expected {want!r}")
+    sys.exit(1)
+PY
 
 stage "Reader against qpdf"
 # PdfFileInfo (zorg-pdf info) reads each smoke PDF as other tools rewrite it: object streams packed or unpacked, a

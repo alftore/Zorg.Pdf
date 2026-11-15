@@ -227,6 +227,7 @@ internal sealed class SchemaTool() : PdfTool(
         Long words in justified or narrow text: give the body style "hyphens": "auto" (used when the host has a hyphenator; English, German, French, Norwegian, Danish).
         Letterhead: "background": { "source": { "$data": "letterhead" }, "otherPages": 2 } draws page 1 of a PDF the host supplies behind the first page and page 2 behind the rest (0 for none); leave room for it with the page margins.
         Attachments: "attachments": [{ "name": "invoice.xml", "source": { "$data": "xml" }, "mimeType": "application/xml", "relationship": "data", "description": "..." }] carries files in the PDF.
+        Barcodes: { "type": "barcode", "kind": "qr", "data": "https://...", "size": "3cm", "alt": "What it's for" }; kinds qr, code128, gs1_128 ("(01)09501101530003(10)ABC"), ean13 (12 or 13 digits); "bind": "path" takes the data from the model.
         Lengths are numbers in points or strings with a unit: "2cm", "12pt", "5mm".
         Data is a separate JSON object whose properties are slots: { "lines": [["1", "Consulting", "9 375,00"]], "logo": { "base64": "..." } }.
         Unknown properties are errors. validate_document returns every problem with a code and a JSON pointer: fix those and validate again.

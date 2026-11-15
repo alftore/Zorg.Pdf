@@ -144,6 +144,10 @@ internal static class Preflight
                     Need(styles.Named($"toc{level}"), $"/content/{i}");
                 }
             }
+            else if (block is Barcode { ShowText: true, Kind: not BarcodeKind.Qr } barcode)
+            {
+                Need(styles.For(barcode), blockPath); // The digits printed under the bars.
+            }
             else if (block is TextBox box && !box.Content.IsDefault)
             {
                 for (int p = 0; p < box.Content.Length; p++)

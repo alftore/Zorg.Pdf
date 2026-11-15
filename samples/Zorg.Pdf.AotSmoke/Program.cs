@@ -400,6 +400,35 @@ if (examples is not null && saveTo is not null)
     File.WriteAllBytes(Path.Combine(saveTo, "pdfa3-facturx.pdf"), fx.ToArray());
 }
 
+// 0.5 slice 1: barcodes, drawn as vectors; the gate rasterises the page and zbar must decode every one of them.
+if (saveTo is not null)
+{
+    string epc = EpcPayment.Create("ACME GmbH", "DE02120300000000202051", 1190m, "Invoice 2026-0042").ToString();
+    (BarcodeKind Kind, string Data, string Decoded)[] codes =
+    [
+        (BarcodeKind.Qr, "https://example.com/", "https://example.com/"),
+        (BarcodeKind.Qr, "Blåbærsyltetøy – æøå", "Blåbærsyltetøy – æøå"),
+        (BarcodeKind.Qr, epc, epc),
+        (BarcodeKind.Code128, "Zorg-Pdf 0042", "Zorg-Pdf 0042"),
+        (BarcodeKind.Gs1_128, "(01)09501101530003(17)261231(10)ABC123", "01095011015300031726123110ABC123"),
+        (BarcodeKind.Ean13, "590123412345", "5901234123457"),
+    ];
+    var codesDocument = new PdfDocument("Barcodes")
+    {
+        // One code per page, so the gate can tell which value each decodes to.
+        Content = [.. codes.SelectMany((c, i) => i == 0 ? [(Block)new Barcode(c.Kind, c.Data) { Alt = c.Kind + " code", Size = Length.Cm(4), Width = Length.Cm(10) }] : new Block[] { new PageBreak(), new Barcode(c.Kind, c.Data) { Alt = c.Kind + " code", Size = Length.Cm(4), Width = Length.Cm(10) } })],
+    };
+    using var drawn = new MemoryStream();
+    RenderResult codesResult = codesDocument.RenderAsync(drawn, new RenderOptions
+    {
+        Fonts = FontCollection.Empty.Add(new FontFamily("Body") { Regular = FontSource.FromBytes(font) }),
+        Conformance = PdfConformance.PdfUA1,
+    }).AsTask().GetAwaiter().GetResult();
+    Check("barcodes", !codesResult.HasWarnings && Kid.Create("1234567890", KidMethod.Mod10) == "12345678903");
+    File.WriteAllBytes(Path.Combine(saveTo, "barcodes.pdf"), drawn.ToArray());
+    File.WriteAllText(Path.Combine(saveTo, "barcodes.expected"), System.Text.Json.JsonSerializer.Serialize(codes.Select(c => c.Decoded).ToArray(), BarcodeJson.Default.StringArray));
+}
+
 // 0.4 slice 3: every example, merged into one file, then its even pages taken out again. Not tagged (tags aren't
 // kept), so the gate checks these with qpdf, MuPDF and pdffonts but not veraPDF.
 if (saveTo is not null)
@@ -508,3 +537,7 @@ static async System.Collections.Generic.IAsyncEnumerable<int> InvoiceLines(int c
         yield return i;
     }
 }
+
+/// <summary>Source-generated JSON for the smoke run's expected barcode values (AOT has no reflection).</summary>
+[System.Text.Json.Serialization.JsonSerializable(typeof(string[]))]
+internal sealed partial class BarcodeJson : System.Text.Json.Serialization.JsonSerializerContext;
