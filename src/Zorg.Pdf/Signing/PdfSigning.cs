@@ -62,17 +62,18 @@ public static class PdfSigning
             throw new ArgumentException("The output stream must be writable.", nameof(output));
         }
 
-        Rendering.RenderEngine.CheckSignature(options);
+        Rendering.RenderEngine.CheckSignature(options, existingFile: true);
         options = options with { SigningTime = options.SigningTime ?? DateTimeOffset.Now };
         limits ??= PdfReadLimits.Default;
 
-        var cos = new CosFile(file, limits, []);
+        var read = new List<PdfDiagnostic>();
+        var cos = new CosFile(file, limits, read);
         if (cos.IsEncrypted)
         {
             throw new PdfException("The file is encrypted. Signing encrypted files isn't supported yet: sign it before encrypting, or decrypt it first.");
         }
 
-        if (cos.StartXref is not { } startXref)
+        if (cos.StartXref is not { } startXref || read.Exists(d => d.Code == Validation.DiagnosticCodes.ReadRecovered))
         {
             throw new PdfException("The file's cross-reference data is damaged, so it can't take an incremental update without breaking. Save it again with the program that made it, then sign that.");
         }
@@ -83,9 +84,21 @@ public static class PdfSigning
         }
 
         var update = new IncrementalUpdate(file, cos.HeaderOffset);
-        int next = Math.Max(cos.Size, (int)Math.Clamp(cos.Trailer["Size"]?.AsInteger ?? 0, 0, int.MaxValue));
+        long claimed = Math.Max(cos.Size, cos.Trailer["Size"]?.AsInteger ?? 0);
+        if (claimed > limits.MaxObjects)
+        {
+            // The update numbers its objects after the file's; a claimed size past the limit would also overflow them.
+            throw new PdfException($"The file numbers its objects up to {claimed:N0}, more than PdfReadLimits.MaxObjects ({limits.MaxObjects:N0}), so an update can't number its own after them.");
+        }
+
+        int next = (int)Math.Max(claimed, 1);
         var signature = new CosReference(next++, 0);
         CosDictionary catalog = cos.Catalog;
+        (bool locked, bool noChanges) = Restrictions(cos, catalog);
+        if (noChanges)
+        {
+            throw new PdfException("The file is certified with no changes allowed (DocMDP, P 1): signing it would break its certification.");
+        }
         var acroForm = cos.Resolve(catalog["AcroForm"]) as CosDictionary;
         List<CosValue> fields = acroForm is not null && cos.Resolve(acroForm["Fields"]) is CosArray existingFields ? [.. existingFields.Items] : [];
 
@@ -97,7 +110,7 @@ public static class PdfSigning
                 throw new PdfException($"The field \"{options.FieldName}\" isn't a signature field. Choose another FieldName.");
             }
 
-            if (found.Field["V"] is { } value && value is not CosNull)
+            if (cos.Resolve(found.Field["V"]) is not CosNull) // A /V to a missing object is empty.
             {
                 throw new PdfException($"The field \"{options.FieldName}\" is signed already. Choose another FieldName: a new field is added for it.");
             }
@@ -123,6 +136,16 @@ public static class PdfSigning
         }
         else
         {
+            if (locked)
+            {
+                throw new PdfException($"The file is certified or locked so that only its existing signature fields may be signed, and it has no empty field named \"{options.FieldName}\".");
+            }
+
+            if (options.FieldName.Contains('.', StringComparison.Ordinal))
+            {
+                throw new PdfException($"The file has no field named \"{options.FieldName}\", and a new field's name can't contain a period.");
+            }
+
             if (FirstPage(cos) is not { } page)
             {
                 throw new PdfException("The file has no pages to put a signature field on.");
@@ -183,6 +206,62 @@ public static class PdfSigning
         await output.WriteAsync(file, cancellationToken).ConfigureAwait(false);
         await output.WriteAsync(update.WrittenMemory, cancellationToken).ConfigureAwait(false);
         await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// What an earlier certification or lock allows (ISO 32000-1, 12.8.2.2 and 12.8.2.4): no changes at all (DocMDP
+    /// P 1), or only filling in existing fields and signing them (DocMDP P 2 or 3, or a FieldMDP lock on all fields).
+    /// </summary>
+    private static (bool Locked, bool NoChanges) Restrictions(CosFile cos, CosDictionary catalog)
+    {
+        bool locked = false, noChanges = false;
+        var signatures = new List<CosDictionary>();
+        if (cos.Resolve(catalog["Perms"]) is CosDictionary perms && cos.Resolve(perms["DocMDP"]) is CosDictionary certification)
+        {
+            signatures.Add(certification);
+        }
+
+        if (cos.Resolve(catalog["AcroForm"]) is CosDictionary form && cos.Resolve(form["Fields"]) is CosArray fields)
+        {
+            foreach (CosValue field in fields.Items.Take(10_000))
+            {
+                if (cos.Resolve(field) is CosDictionary dictionary && cos.Resolve(dictionary["V"]) is CosDictionary signed)
+                {
+                    signatures.Add(signed);
+                }
+            }
+        }
+
+        foreach (CosDictionary signature in signatures)
+        {
+            if (cos.Resolve(signature["Reference"]) is not CosArray references)
+            {
+                continue;
+            }
+
+            foreach (CosValue item in references.Items.Take(100))
+            {
+                if (cos.Resolve(item) is not CosDictionary reference || cos.Resolve(reference["TransformParams"]) is not CosDictionary parameters)
+                {
+                    continue;
+                }
+
+                string? method = (cos.Resolve(reference["TransformMethod"]) as CosName)?.Value;
+                long permission = cos.Resolve(parameters["P"]).AsInteger ?? 2;
+                if (method == "DocMDP")
+                {
+                    noChanges |= permission == 1;
+                    locked = true;
+                }
+                else if (method == "FieldMDP" && ((cos.Resolve(parameters["Action"]) as CosName)?.Value == "All" || permission == 1))
+                {
+                    noChanges |= permission == 1;
+                    locked = true;
+                }
+            }
+        }
+
+        return (locked, noChanges);
     }
 
     /// <summary>The field's widget: the field itself when they're one dictionary, else its first kid widget.</summary>
@@ -312,8 +391,19 @@ public static class PdfSigning
 
         foreach (CosValue value in fields)
         {
-            if (value is not CosReference reference || cos.Resolve(reference) is not CosDictionary field || field["T"] is not CosString title)
+            if (value is not CosReference reference || cos.Resolve(reference) is not CosDictionary field)
             {
+                continue;
+            }
+
+            if (field["T"] is not CosString title)
+            {
+                // No partial name: its kids' names continue the parent's (ISO 32000-1, 12.7.3.2).
+                if (cos.Resolve(field["Kids"]) is CosArray unnamed && FindField(cos, unnamed.Items, name, prefix, depth + 1) is { } inside)
+                {
+                    return inside;
+                }
+
                 continue;
             }
 
@@ -418,6 +508,11 @@ internal sealed class IncrementalUpdate
 
     public void WriteObject(CosReference reference, CosValue value)
     {
+        if (reference.Generation is < 0 or > 65535)
+        {
+            throw new PdfException($"Object {reference.Number} has generation {reference.Generation}, outside 0 to 65535, so it can't be updated.");
+        }
+
         _objects[reference.Number] = (Offset, reference.Generation);
         Ascii(string.Create(CultureInfo.InvariantCulture, $"{reference.Number} {reference.Generation} obj\n"));
         Value(value);
@@ -483,6 +578,11 @@ internal sealed class IncrementalUpdate
                 for (int n = start; n < start + count; n++)
                 {
                     (long at, int generation) = _objects[n];
+                    if (at > uint.MaxValue)
+                    {
+                        throw new PdfException("The file is over 4 GB, beyond what this update's cross-reference stream records.");
+                    }
+
                     rows.AddRange([1, (byte)(at >> 24), (byte)(at >> 16), (byte)(at >> 8), (byte)at, (byte)(generation >> 8), (byte)generation]);
                 }
             }
@@ -603,7 +703,11 @@ internal sealed class IncrementalUpdate
                 PdfFormat.WriteInteger(_buffer, integer.Value);
                 break;
             case CosReal real:
-                PdfFormat.WriteReal(_buffer, real.Value);
+                // As read: no rounding, and no exponent, which PDF numbers don't have.
+                Ascii(real.Value.ToString("0.##########", CultureInfo.InvariantCulture));
+                break;
+            case CosName { Value.Length: 0 }:
+                Ascii("/"); // The empty name is valid PDF (ISO 32000-1, 7.3.5).
                 break;
             case CosName name:
                 PdfFormat.WriteName(_buffer, Encoding.Latin1.GetBytes(name.Value));
@@ -635,7 +739,15 @@ internal sealed class IncrementalUpdate
                 Ascii("<<");
                 foreach ((string key, CosValue item) in dictionary.Entries)
                 {
-                    PdfFormat.WriteName(_buffer, Encoding.Latin1.GetBytes(key));
+                    if (key.Length == 0)
+                    {
+                        Ascii("/");
+                    }
+                    else
+                    {
+                        PdfFormat.WriteName(_buffer, Encoding.Latin1.GetBytes(key));
+                    }
+
                     Ascii(" ");
                     Value(item, depth + 1);
                     Ascii(" ");

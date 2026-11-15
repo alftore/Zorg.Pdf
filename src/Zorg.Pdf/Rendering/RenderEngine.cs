@@ -177,7 +177,7 @@ internal sealed partial class RenderEngine : IDisposable
         Preflight.Check(document, styles, fonts, defaultFamily, options, synchronous, sink);
         if (options.Signature is { } signing)
         {
-            CheckSignature(signing);
+            CheckSignature(signing, synchronous);
         }
 
         if (sink.HasErrors)
@@ -198,7 +198,7 @@ internal sealed partial class RenderEngine : IDisposable
     public void Dispose() => _writer.Dispose();
 
     /// <summary>Checks the signature options before anything is written; a mistake there is the caller's, so it throws.</summary>
-    internal static void CheckSignature(PdfSignatureOptions signature)
+    internal static void CheckSignature(PdfSignatureOptions signature, bool synchronous = false, bool existingFile = false)
     {
         IPdfSigner signer = signature.Signer ?? throw new ArgumentException("PdfSignatureOptions.Signer is null.", nameof(signature));
         if (signer.Certificate is null)
@@ -211,13 +211,21 @@ internal sealed partial class RenderEngine : IDisposable
             throw new ArgumentException($"The signer's digest {signer.DigestAlgorithm.Name} isn't supported. Use SHA256, SHA384 or SHA512.", nameof(signature));
         }
 
-        if (string.IsNullOrEmpty(signature.FieldName) || signature.FieldName.Contains('.', StringComparison.Ordinal))
+        // A new field's name has no periods (they separate a hierarchy); an existing file's field may be "parent.child".
+        if (string.IsNullOrEmpty(signature.FieldName) || (!existingFile && signature.FieldName.Contains('.', StringComparison.Ordinal)))
         {
             throw new ArgumentException("PdfSignatureOptions.FieldName must be a non-empty name without periods.", nameof(signature));
         }
 
-        // The certificates and about 2 KB besides: attributes, algorithm identifiers and a signature of up to 4096-bit RSA.
-        int needed = signer.Certificate.RawDataMemory.Length + (signer.Chain?.Sum(c => c.RawDataMemory.Length) ?? 0) + 2048;
+        if (synchronous && signature.Timestamp is not null)
+        {
+            // A timestamp authority is a network call: refused here, before anything is written, not after the last page.
+            throw new ArgumentException("A timestamp needs RenderAsync: the synchronous Render can't wait for a timestamp authority.", nameof(signature));
+        }
+
+        // The certificates and about 2 KB besides (attributes, algorithm identifiers, a signature of up to 4096-bit
+        // RSA), and room for a timestamp token with the authority's certificates.
+        int needed = signer.Certificate.RawDataMemory.Length + (signer.Chain?.Sum(c => c.RawDataMemory.Length) ?? 0) + 2048 + (signature.Timestamp is null ? 0 : 8192);
         if (signature.ReservedSize is < 1024 or > 1024 * 1024 || needed > signature.ReservedSize)
         {
             throw new ArgumentException($"PdfSignatureOptions.ReservedSize ({signature.ReservedSize:N0} bytes) must be between 1 KB and 1 MB and hold the certificates, about {needed:N0} bytes here.", nameof(signature));

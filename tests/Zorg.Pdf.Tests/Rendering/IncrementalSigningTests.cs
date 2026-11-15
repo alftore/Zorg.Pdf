@@ -79,9 +79,99 @@ public sealed partial class IncrementalSigningTests
         Assert.Matches(@"/T \(customer\) [^\n]*/V \d+ 0 R", update); // and the signature as its value.
         Assert.Contains("/Subtype /Form /BBox [0 0 170.0", update, StringComparison.Ordinal);
         Assert.Contains("/FontFile2", update, StringComparison.Ordinal); // Its own subset, embedded in the update.
-        Assert.DoesNotContain("/MCID", update, StringComparison.Ordinal); // No marked content in an appearance.
+        int form = int.Parse(Regex.Match(update, @"/AP <</N (\d+) 0 R").Groups[1].Value, CultureInfo.InvariantCulture);
+        var cos = new Zorg.Pdf.Reading.CosFile(signed, PdfReadLimits.Default, []);
+        string drawing = Encoding.Latin1.GetString(cos.Decode((Zorg.Pdf.Reading.CosStream)cos.Object(form)));
+        Assert.Contains(" Tj", drawing.Replace("TJ", " Tj", StringComparison.Ordinal), StringComparison.Ordinal); // Text is drawn,
+        Assert.DoesNotContain("BDC", drawing, StringComparison.Ordinal); // with no marked content in an appearance.
         PdfFileInfo info = await PdfFileInfo.ReadAsync(new MemoryStream(signed), cancellationToken: TestContext.Current.CancellationToken);
         Assert.Empty(info.Diagnostics);
+    }
+
+    /// <summary>One page with an empty signature field "customer" as object 5, the given catalog extras and field extras.</summary>
+    private static byte[] WithField(string catalog = "", string field = "", string fieldReference = "5 0 R", string trailer = "") => HandMadePdf(
+    [
+        $"<</Type /Catalog /Pages 2 0 R /AcroForm <</Fields [{fieldReference}]>>{catalog}>>",
+        "<</Type /Pages /Kids [3 0 R] /Count 1>>",
+        $"<</Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [{fieldReference}]>>",
+        "<</Title (Hand made)>>",
+        $"<</Type /Annot /Subtype /Widget /FT /Sig /T (customer) /Rect [0 0 0 0] /P 3 0 R{field}>>",
+    ], trailer);
+
+    [Theory]
+    [InlineData(" /Size 50000000")]
+    [InlineData(" /Size 2147483647")]
+    public async Task AHugeClaimedObjectCountIsRefusedBeforeAnythingIsAllocated(string size)
+    {
+        byte[] file = HandMadePdf(["<</Type /Catalog /Pages 2 0 R>>", "<</Type /Pages /Kids [3 0 R] /Count 1>>", "<</Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]>>", "<</Title (x)>>"], size);
+        PdfException error = await Assert.ThrowsAsync<PdfException>(() => SignAsync(file, Options()));
+        Assert.Contains("MaxObjects", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UnusualValuesAreRewrittenAsTheyWereAndBadGenerationsRefused()
+    {
+        byte[] file = WithField(catalog: " /Huge 1000000000000000000000000 /Fine 0.123456789 / 1 /Empty /");
+        string update = Encoding.Latin1.GetString((await SignAsync(file, Options("customer")))[file.Length..]);
+        Assert.Contains("/Huge 1000000000000000000000000", update, StringComparison.Ordinal);
+        Assert.Contains("/Fine 0.123456789", update, StringComparison.Ordinal);
+        Assert.Contains("/Empty /", update, StringComparison.Ordinal);
+
+        byte[] generation = WithField(fieldReference: "5 123456 R");
+        PdfException error = await Assert.ThrowsAsync<PdfException>(() => SignAsync(generation, Options("customer")));
+        Assert.Contains("generation 123456", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CertificationAndLocksAreRespected()
+    {
+        // DocMDP P 1: no changes at all.
+        string DocMdp(int p) => $" /Perms <</DocMDP <</Type /Sig /Reference [<</TransformMethod /DocMDP /TransformParams <</P {p} /V /1.2>>>>]>>>>";
+        PdfException none = await Assert.ThrowsAsync<PdfException>(() => SignAsync(WithField(catalog: DocMdp(1)), Options("customer")));
+        Assert.Contains("no changes allowed", none.Message, StringComparison.Ordinal);
+
+        // P 2: an existing empty field may be signed, a new one may not be added.
+        Assert.Single(VerifyAll(await SignAsync(WithField(catalog: DocMdp(2)), Options("customer"))));
+        PdfException added = await Assert.ThrowsAsync<PdfException>(() => SignAsync(WithField(catalog: DocMdp(2)), Options("someone-else")));
+        Assert.Contains("only its existing signature fields", added.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FieldsAreFoundUnderUnnamedParentsAndByFullNameAndADanglingValueIsEmpty()
+    {
+        byte[] unnamed = HandMadePdf(
+        [
+            "<</Type /Catalog /Pages 2 0 R /AcroForm <</Fields [6 0 R]>>>>",
+            "<</Type /Pages /Kids [3 0 R] /Count 1>>",
+            "<</Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [5 0 R]>>",
+            "<</Title (x)>>",
+            "<</Type /Annot /Subtype /Widget /FT /Sig /T (customer) /Rect [0 0 0 0] /P 3 0 R /Parent 6 0 R>>",
+            "<</Kids [5 0 R]>>",
+        ]);
+        string update = Encoding.Latin1.GetString((await SignAsync(unnamed, Options("customer")))[unnamed.Length..]);
+        Assert.Matches(@"5 0 obj\n<<[^\n]*/T \(customer\)[^\n]*/V \d+ 0 R", update); // The existing field, not a second "customer".
+
+        byte[] dotted = HandMadePdf(
+        [
+            "<</Type /Catalog /Pages 2 0 R /AcroForm <</Fields [6 0 R]>>>>",
+            "<</Type /Pages /Kids [3 0 R] /Count 1>>",
+            "<</Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [5 0 R]>>",
+            "<</Title (x)>>",
+            "<</Type /Annot /Subtype /Widget /FT /Sig /T (customer) /Rect [0 0 0 0] /P 3 0 R /Parent 6 0 R>>",
+            "<</T (form) /Kids [5 0 R]>>",
+        ]);
+        Assert.Single(VerifyAll(await SignAsync(dotted, Options("form.customer"))));
+        await Assert.ThrowsAsync<PdfException>(() => SignAsync(dotted, Options("form.nobody")));
+
+        Assert.Single(VerifyAll(await SignAsync(WithField(field: " /V 99 0 R"), Options("customer"))));
+    }
+
+    [Fact]
+    public async Task AFileTheReaderHadToRepairIsRefused()
+    {
+        byte[] damaged = HandMadePdf(["<</Type /Catalog /Pages 2 0 R>>", "<</Type /Pages /Kids [3 0 R] /Count 1>>", "<</Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]>>", "<</Title (x)>>"], shift: 3);
+        PdfException error = await Assert.ThrowsAsync<PdfException>(() => SignAsync(damaged, Options()));
+        Assert.Contains("damaged", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -122,20 +212,22 @@ public sealed partial class IncrementalSigningTests
     }
 
     /// <summary>A minimal one-page PDF with a classic cross-reference table, offsets computed here.</summary>
-    internal static byte[] HandMadePdf()
+    internal static byte[] HandMadePdf() => HandMadePdf(
+    [
+        "<</Type /Catalog /Pages 2 0 R>>",
+        "<</Type /Pages /Kids [3 0 R] /Count 1>>",
+        "<</Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]>>",
+        "<</Title (Hand made)>>",
+    ]);
+
+    /// <summary>A PDF of the given objects, numbered from 1, with a classic table; object 4 is the Info dictionary.</summary>
+    internal static byte[] HandMadePdf(string[] objects, string trailer = "", int shift = 0)
     {
-        string[] objects =
-        [
-            "<</Type /Catalog /Pages 2 0 R>>",
-            "<</Type /Pages /Kids [3 0 R] /Count 1>>",
-            "<</Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]>>",
-            "<</Title (Hand made)>>",
-        ];
         var text = new StringBuilder("%PDF-1.4\n");
         var offsets = new long[objects.Length];
         for (int i = 0; i < objects.Length; i++)
         {
-            offsets[i] = text.Length;
+            offsets[i] = text.Length + shift; // A shift makes the table wrong, as in a damaged file.
             text.Append(CultureInfo.InvariantCulture, $"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
         }
 
@@ -146,7 +238,7 @@ public sealed partial class IncrementalSigningTests
             text.Append(CultureInfo.InvariantCulture, $"{offset:D10} 00000 n\r\n");
         }
 
-        text.Append(CultureInfo.InvariantCulture, $"trailer\n<</Size {objects.Length + 1} /Root 1 0 R /Info 4 0 R>>\nstartxref\n{xref}\n%%EOF\n");
+        text.Append(CultureInfo.InvariantCulture, $"trailer\n<</Size {objects.Length + 1} /Root 1 0 R /Info 4 0 R{trailer}>>\nstartxref\n{xref}\n%%EOF\n");
         return Encoding.ASCII.GetBytes(text.ToString());
     }
 
