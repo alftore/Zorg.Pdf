@@ -227,6 +227,7 @@
         "padding": { "$ref": "#/$defs/thickness" },
         "borderColor": { "$ref": "#/$defs/color" },
         "borderWidth": { "description": "Default 0.5 pt when there's a border colour.", "$ref": "#/$defs/length" },
+        "fill": { "description": "The background colour, drawn as an artifact under the text. Default none.", "$ref": "#/$defs/color" },
         "overflow": { "description": "Text that doesn't fit: shrinkToFit (the default) makes it smaller down to minSize, then cuts whole lines; clip cuts whole lines; visible draws past the box.", "enum": ["shrinkToFit", "clip", "visible"] },
         "minSize": { "description": "The smallest body text size shrinkToFit uses. Default 6 pt.", "$ref": "#/$defs/length" }
       }
@@ -506,7 +507,8 @@
         "headerFill": { "$ref": "#/$defs/color" },
         "ruleColor": { "$ref": "#/$defs/color" },
         "ruleWidth": { "description": "Width of the rule under each row; 0 draws none.", "$ref": "#/$defs/length" },
-        "cellPadding": { "$ref": "#/$defs/length" }
+        "cellPadding": { "$ref": "#/$defs/length" },
+        "stripeFill": { "description": "The background of every second body row. Default none.", "$ref": "#/$defs/color" }
       }
     },
     "imageSource": {

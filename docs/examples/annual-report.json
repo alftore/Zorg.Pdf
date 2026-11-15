@@ -1,0 +1,958 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Fjordlys AS: annual report 2026",
+  "language": "en-GB",
+  "page": {
+    "size": "A4",
+    "margin": "2cm"
+  },
+  "outlineLevels": 2,
+  "styles": {
+    "styles": {
+      "body": {
+        "size": "10pt",
+        "lineHeight": 1.45,
+        "color": "#1E293B"
+      },
+      "heading1": {
+        "size": "22pt",
+        "weight": "bold",
+        "color": "#0F2A3D"
+      },
+      "heading2": {
+        "size": "13pt",
+        "weight": "bold",
+        "color": "#1F6F8B"
+      },
+      "tableHeader": {
+        "size": "9pt",
+        "weight": "bold",
+        "color": "#FFFFFF"
+      },
+      "tableCell": {
+        "size": "9pt"
+      },
+      "header": {
+        "size": "8pt",
+        "color": "#64748B"
+      },
+      "footer": {
+        "size": "8pt",
+        "color": "#64748B"
+      },
+      "toc1": {
+        "size": "11pt",
+        "weight": "bold",
+        "color": "#0F2A3D"
+      },
+      "toc2": {
+        "size": "10pt",
+        "color": "#334155"
+      },
+      "eyebrow": {
+        "size": "10pt",
+        "weight": "bold",
+        "color": "#F2A541"
+      },
+      "coverTitle": {
+        "size": "40pt",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "lineHeight": 1.1
+      },
+      "coverSubtitle": {
+        "size": "16pt",
+        "color": "#CBD5E1"
+      },
+      "coverNote": {
+        "size": "9pt",
+        "color": "#94A3B8"
+      },
+      "kpiValue": {
+        "size": "20pt",
+        "weight": "bold",
+        "color": "#0F2A3D",
+        "lineHeight": 1.15
+      },
+      "kpiLabel": {
+        "size": "8.5pt",
+        "color": "#475569"
+      },
+      "kpiUp": {
+        "size": "8.5pt",
+        "weight": "bold",
+        "color": "#15803D"
+      },
+      "lede": {
+        "size": "12pt",
+        "lineHeight": 1.5,
+        "color": "#334155"
+      },
+      "muted": {
+        "size": "8.5pt",
+        "color": "#64748B"
+      },
+      "signature": {
+        "weight": "bold",
+        "color": "#0F2A3D"
+      }
+    }
+  },
+  "content": [
+    {
+      "type": "textBox",
+      "x": "0mm",
+      "y": "0mm",
+      "width": "210mm",
+      "height": "110mm",
+      "padding": {
+        "top": "34mm",
+        "left": "20mm",
+        "right": "20mm",
+        "bottom": "0mm"
+      },
+      "fill": "#0F2A3D",
+      "overflow": "visible",
+      "content": [
+        {
+          "type": "paragraph",
+          "style": "eyebrow",
+          "spaceAfter": "6pt",
+          "inlines": [
+            "ANNUAL REPORT 2026"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "style": "coverTitle",
+          "spaceAfter": "10pt",
+          "inlines": [
+            "Fjordlys AS"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "style": "coverSubtitle",
+          "spaceAfter": "18pt",
+          "inlines": [
+            "Light, made to last"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "style": "coverNote",
+          "inlines": [
+            "Ålesund, Norway · Published 12 March 2027"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "textBox",
+      "x": "20mm",
+      "y": "124mm",
+      "width": "39.5mm",
+      "height": "30mm",
+      "padding": "4mm",
+      "fill": "#F1F5F9",
+      "content": [
+        {
+          "type": "paragraph",
+          "style": "kpiValue",
+          "inlines": [
+            "412 m"
+          ],
+          "spaceAfter": "3pt"
+        },
+        {
+          "type": "paragraph",
+          "style": "kpiLabel",
+          "inlines": [
+            "Revenue, NOK"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "style": "kpiUp",
+          "inlines": [
+            "▲ 18 % on 2025"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "textBox",
+      "x": "63.5mm",
+      "y": "124mm",
+      "width": "39.5mm",
+      "height": "30mm",
+      "padding": "4mm",
+      "fill": "#F1F5F9",
+      "content": [
+        {
+          "type": "paragraph",
+          "style": "kpiValue",
+          "inlines": [
+            "14.2 %"
+          ],
+          "spaceAfter": "3pt"
+        },
+        {
+          "type": "paragraph",
+          "style": "kpiLabel",
+          "inlines": [
+            "Operating margin"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "style": "kpiUp",
+          "inlines": [
+            "▲ 2.1 points"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "textBox",
+      "x": "107mm",
+      "y": "124mm",
+      "width": "39.5mm",
+      "height": "30mm",
+      "padding": "4mm",
+      "fill": "#F1F5F9",
+      "content": [
+        {
+          "type": "paragraph",
+          "style": "kpiValue",
+          "inlines": [
+            "96 400"
+          ],
+          "spaceAfter": "3pt"
+        },
+        {
+          "type": "paragraph",
+          "style": "kpiLabel",
+          "inlines": [
+            "Lamps delivered"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "style": "kpiUp",
+          "inlines": [
+            "▲ 11 % on 2025"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "textBox",
+      "x": "150.5mm",
+      "y": "124mm",
+      "width": "39.5mm",
+      "height": "30mm",
+      "padding": "4mm",
+      "fill": "#F1F5F9",
+      "content": [
+        {
+          "type": "paragraph",
+          "style": "kpiValue",
+          "inlines": [
+            "93 %"
+          ],
+          "spaceAfter": "3pt"
+        },
+        {
+          "type": "paragraph",
+          "style": "kpiLabel",
+          "inlines": [
+            "Parts reused"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "style": "kpiUp",
+          "inlines": [
+            "▲ 5 points"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "spacer",
+      "height": "148mm"
+    },
+    {
+      "type": "paragraph",
+      "style": "lede",
+      "spaceAfter": "14pt",
+      "inlines": [
+        "Fjordlys designs and builds lamps in Ålesund that are meant to be repaired, not replaced. In 2026 we grew faster than our market, opened in Germany and took back more old lamps than ever before."
+      ]
+    },
+    {
+      "type": "barcode",
+      "kind": "qr",
+      "data": "https://example.com/fjordlys/annual-report-2026",
+      "size": "2.6cm",
+      "alt": "QR code linking to the online version of this report",
+      "align": "left"
+    },
+    {
+      "type": "paragraph",
+      "style": "muted",
+      "inlines": [
+        "Read online: example.com/fjordlys/annual-report-2026"
+      ]
+    },
+    {
+      "type": "sectionBreak",
+      "numbering": "number",
+      "header": {
+        "content": [
+          {
+            "type": "paragraph",
+            "style": "header",
+            "align": "right",
+            "inlines": [
+              "Fjordlys AS · Annual report 2026"
+            ]
+          }
+        ]
+      },
+      "footer": {
+        "content": [
+          {
+            "type": "paragraph",
+            "style": "footer",
+            "align": "right",
+            "inlines": [
+              "Page ",
+              {
+                "field": "pageNumber"
+              },
+              " of ",
+              {
+                "field": "pageCount"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "tableOfContents",
+      "title": "Contents",
+      "maxLevel": 2
+    },
+    {
+      "type": "spacer",
+      "height": "12pt"
+    },
+    {
+      "type": "heading",
+      "inlines": [
+        "Letter from the chief executive"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "style": "lede",
+      "inlines": [
+        "2026 was the year repair became our biggest selling point. Customers bought a Fjordlys lamp because they knew they would never have to throw it away."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "justify",
+      "inlines": [
+        "Revenue rose 18 per cent to NOK 412 million, and the operating margin widened to 14.2 per cent as the new assembly line in Ålesund reached full speed. Our German shop opened in May and passed its first-year target by October. We took back 11 200 old lamps, repaired three in four of them and recycled the rest down to the screws."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "justify",
+      "inlines": [
+        "None of this would have happened without the 214 people who work here and the 38 workshops across Europe that service our lamps. Thank you. In 2027 we will open a second repair centre, in Rotterdam, and put a spare-parts catalogue online so that anyone with a screwdriver can fix their own lamp."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "style": "signature",
+      "inlines": [
+        "Ingrid Fjeldstad"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "style": "muted",
+      "spaceAfter": "12pt",
+      "inlines": [
+        "Chief executive"
+      ]
+    },
+    {
+      "type": "pageBreak"
+    },
+    {
+      "type": "heading",
+      "inlines": [
+        "The year in numbers"
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "keepWithNext": true,
+      "inlines": [
+        "Revenue by quarter"
+      ]
+    },
+    {
+      "type": "chart",
+      "kind": "line",
+      "categories": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4"
+      ],
+      "series": [
+        {
+          "name": "2025",
+          "values": [
+            74,
+            81,
+            79,
+            115
+          ],
+          "color": "#94A3B8"
+        },
+        {
+          "name": "2026",
+          "values": [
+            86,
+            97,
+            92,
+            137
+          ],
+          "color": "#0F2A3D"
+        }
+      ],
+      "valueFormat": "N0",
+      "minimum": 0,
+      "height": "5.5cm",
+      "alt": "Revenue in millions of NOK was higher in every quarter of 2026 than in 2025, peaking at 137 in the fourth quarter against 115 a year earlier."
+    },
+    {
+      "type": "paragraph",
+      "style": "muted",
+      "spaceAfter": "10pt",
+      "inlines": [
+        "Millions of NOK, excluding VAT. The fourth quarter carries the Christmas season."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "keepWithNext": true,
+      "inlines": [
+        "Where we sell"
+      ]
+    },
+    {
+      "type": "chart",
+      "kind": "pie",
+      "categories": [
+        "Norway",
+        "Sweden and Denmark",
+        "Germany",
+        "Rest of Europe"
+      ],
+      "series": [
+        {
+          "name": "Share of revenue",
+          "values": [
+            52,
+            23,
+            14,
+            11
+          ]
+        }
+      ],
+      "height": "5cm",
+      "alt": "Norway brings in about half of revenue, Sweden and Denmark a quarter, Germany 14 per cent in its first year and the rest of Europe 11 per cent."
+    },
+    {
+      "type": "spacer",
+      "height": "6pt"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "keepWithNext": true,
+      "inlines": [
+        "Product lines"
+      ]
+    },
+    {
+      "type": "table",
+      "tableStyle": {
+        "headerFill": "#0F2A3D",
+        "stripeFill": "#F4F6F9",
+        "ruleColor": "#D9DEE5",
+        "ruleWidth": "0.4pt",
+        "cellPadding": "4.5pt"
+      },
+      "columns": [
+        {
+          "header": "Product line",
+          "width": "3*"
+        },
+        {
+          "header": "Lamps",
+          "width": "2*",
+          "align": "right"
+        },
+        {
+          "header": "Revenue, NOK m",
+          "width": "2*",
+          "align": "right"
+        },
+        {
+          "header": "Share",
+          "width": "*",
+          "align": "right"
+        },
+        {
+          "header": "Change",
+          "width": "*",
+          "align": "right"
+        }
+      ],
+      "rows": [
+        [
+          "Desk lamps (Fjordlys FL)",
+          "41 800",
+          "168.4",
+          "41 %",
+          "+21 %"
+        ],
+        [
+          "Floor lamps (Stavn)",
+          "17 300",
+          "104.9",
+          "25 %",
+          "+14 %"
+        ],
+        [
+          "Pendants (Bøye)",
+          "22 600",
+          "82.3",
+          "20 %",
+          "+26 %"
+        ],
+        [
+          "Wall lamps (Nøst)",
+          "14 700",
+          "41.2",
+          "10 %",
+          "+4 %"
+        ],
+        [
+          "Spare parts and repairs",
+          "–",
+          "15.2",
+          "4 %",
+          "+38 %"
+        ],
+        [
+          {
+            "inlines": [
+              {
+                "text": "Total",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "96 400",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "412.0",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "100 %",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "+18 %",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "type": "pageBreak"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "keepWithNext": true,
+      "inlines": [
+        "Growth by product line"
+      ]
+    },
+    {
+      "type": "chart",
+      "kind": "bar",
+      "horizontal": true,
+      "categories": [
+        "Desk lamps",
+        "Floor lamps",
+        "Pendants",
+        "Wall lamps",
+        "Parts and repairs"
+      ],
+      "series": [
+        {
+          "name": "2025",
+          "values": [
+            139.2,
+            92.0,
+            65.3,
+            39.6,
+            11.0
+          ],
+          "color": "#94A3B8"
+        },
+        {
+          "name": "2026",
+          "values": [
+            168.4,
+            104.9,
+            82.3,
+            41.2,
+            15.2
+          ],
+          "color": "#F2A541"
+        }
+      ],
+      "valueFormat": "N0",
+      "height": "6.5cm",
+      "alt": "Every product line grew in 2026. Desk lamps remain the largest at NOK 168 million; pendants and spare parts grew fastest."
+    },
+    {
+      "type": "paragraph",
+      "style": "muted",
+      "spaceAfter": "14pt",
+      "inlines": [
+        "Revenue in millions of NOK, excluding VAT."
+      ]
+    },
+    {
+      "type": "heading",
+      "inlines": [
+        "Sustainability"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "align": "justify",
+      "inlines": [
+        "A lamp that lasts thirty years does more for the climate than any material we could switch to. We measure ourselves on how many lamps come back, how many we can repair and how much of the rest we can use again."
+      ]
+    },
+    {
+      "type": "table",
+      "tableStyle": {
+        "headerFill": "#0F2A3D",
+        "stripeFill": "#F4F6F9",
+        "ruleColor": "#D9DEE5",
+        "ruleWidth": "0.4pt",
+        "cellPadding": "4.5pt"
+      },
+      "columns": [
+        {
+          "header": "Measure",
+          "width": "4*"
+        },
+        {
+          "header": "2025",
+          "width": "*",
+          "align": "right"
+        },
+        {
+          "header": "2026",
+          "width": "*",
+          "align": "right"
+        },
+        {
+          "header": "2027 goal",
+          "width": "*",
+          "align": "right"
+        }
+      ],
+      "rows": [
+        [
+          "Lamps taken back",
+          "8 400",
+          "11 200",
+          "14 000"
+        ],
+        [
+          "Share of returned lamps repaired",
+          "71 %",
+          "76 %",
+          "80 %"
+        ],
+        [
+          "Parts repairable or recycled",
+          "88 %",
+          "93 %",
+          "95 %"
+        ],
+        [
+          "Recycled aluminium in new lamps",
+          "62 %",
+          "74 %",
+          "85 %"
+        ],
+        [
+          "Renewable electricity in our plant",
+          "100 %",
+          "100 %",
+          "100 %"
+        ],
+        [
+          "CO2e per lamp, cradle to gate (kg)",
+          "9.8",
+          "8.6",
+          "7.5"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "keepWithNext": true,
+      "inlines": [
+        "What we promise"
+      ]
+    },
+    {
+      "type": "list",
+      "items": [
+        "Spare parts for every lamp we have made since 2009, for at least twenty years after its last sale.",
+        "Free repair advice by video, in Norwegian, Swedish, Danish, German and English.",
+        "A take-back price for old Fjordlys lamps, whatever their state, credited against a new one or a repair.",
+        "Packaging without plastic, from recycled board printed with water-based ink."
+      ]
+    },
+    {
+      "type": "pageBreak"
+    },
+    {
+      "type": "heading",
+      "keepWithNext": true,
+      "inlines": [
+        "Income statement"
+      ]
+    },
+    {
+      "type": "table",
+      "tableStyle": {
+        "headerFill": "#0F2A3D",
+        "stripeFill": "#F4F6F9",
+        "ruleColor": "#D9DEE5",
+        "ruleWidth": "0.4pt",
+        "cellPadding": "4.5pt"
+      },
+      "columns": [
+        {
+          "header": "NOK thousand",
+          "width": "3*"
+        },
+        {
+          "header": "2026",
+          "width": "*",
+          "align": "right"
+        },
+        {
+          "header": "2025",
+          "width": "*",
+          "align": "right"
+        }
+      ],
+      "rows": [
+        [
+          "Revenue",
+          "412 000",
+          "349 100"
+        ],
+        [
+          "Cost of goods sold",
+          "-218 360",
+          "-190 260"
+        ],
+        [
+          {
+            "inlines": [
+              {
+                "text": "Gross profit",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "193 640",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "158 840",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          }
+        ],
+        [
+          "Payroll",
+          "-92 700",
+          "-80 300"
+        ],
+        [
+          "Other operating costs",
+          "-34 440",
+          "-35 870"
+        ],
+        [
+          "Depreciation",
+          "-8 000",
+          "-1 330"
+        ],
+        [
+          {
+            "inlines": [
+              {
+                "text": "Operating profit",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "58 500",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "41 340",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          }
+        ],
+        [
+          "Net financial items",
+          "-1 900",
+          "-2 250"
+        ],
+        [
+          "Tax",
+          "-12 450",
+          "-8 600"
+        ],
+        [
+          {
+            "inlines": [
+              {
+                "text": "Profit for the year",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "44 150",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "inlines": [
+              {
+                "text": "30 490",
+                "style": {
+                  "weight": "bold"
+                }
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "style": "muted",
+      "inlines": [
+        "Figures are unaudited and for illustration. Fjordlys AS is a fictional company."
+      ]
+    }
+  ]
+}

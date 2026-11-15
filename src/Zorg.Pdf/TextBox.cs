@@ -42,13 +42,14 @@ public sealed record TextBox : Block
         Thickness? padding = null,
         Color? borderColor = null,
         Length? borderWidth = null,
+        Color? fill = null,
         TextOverflow overflow = TextOverflow.ShrinkToFit,
         Length? minSize = null,
         string? style = null,
         bool keepWithNext = false,
         string? id = null) =>
-        (Content, Preset, X, Y, Width, Height, Padding, BorderColor, BorderWidth, Overflow, MinSize, Style, KeepWithNext, Id) =
-        (content, preset, x, y, width, height, padding, borderColor, borderWidth, overflow, minSize, style, keepWithNext, id);
+        (Content, Preset, X, Y, Width, Height, Padding, BorderColor, BorderWidth, Fill, Overflow, MinSize, Style, KeepWithNext, Id) =
+        (content, preset, x, y, width, height, padding, borderColor, borderWidth, fill, overflow, minSize, style, keepWithNext, id);
 
     /// <summary>A box of paragraphs. Set its place with <see cref="Preset"/>, or <see cref="X"/>, <see cref="Y"/>, <see cref="Width"/> and <see cref="Height"/>.</summary>
     /// <param name="content">Paragraphs, or template parts that make paragraphs.</param>
@@ -83,6 +84,12 @@ public sealed record TextBox : Block
 
     /// <summary>The border's width. Null: 0.5 pt when there's a border colour.</summary>
     public Length? BorderWidth { get; init; }
+
+    /// <summary>
+    /// The box's background colour, such as a coloured band across a cover page or a light card behind key figures.
+    /// It's drawn as an artifact under the text. Null: none. Choose text colours with enough contrast against it.
+    /// </summary>
+    public Color? Fill { get; init; }
 
     /// <summary>What happens to text that doesn't fit: made smaller (the default), cut, or drawn past the box.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

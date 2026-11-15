@@ -287,6 +287,23 @@ internal sealed partial class RenderEngine
                 .RestoreState().EndMarkedContent();
         }
 
+        if (!isHeader && layout.Look.StripeFill is { } stripe && group.Exists(row => row.Index % 2 == 1))
+        {
+            _content.BeginArtifact("Layout"u8, []).SaveState().SetFillRgb(stripe.R / 255.0, stripe.G / 255.0, stripe.B / 255.0);
+            double top = _y;
+            foreach (TableRow row in group)
+            {
+                if (row.Index % 2 == 1)
+                {
+                    _content.FillRectangle(_geometry.Left, top - row.Height, layout.Widths.Sum(), row.Height);
+                }
+
+                top -= row.Height;
+            }
+
+            _content.RestoreState().EndMarkedContent();
+        }
+
         // Which columns a rule may cross under each row: not one a cell spans down past it.
         bool[][] open = [.. group.Select(_ => new bool[layout.Widths.Length])];
         for (int r = 0; r < group.Count; r++)

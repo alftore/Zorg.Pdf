@@ -69,6 +69,13 @@ internal sealed partial class RenderEngine
         double left = x + padding.Left.Points;
         double cursor = top - padding.Top.Points;
         double bottom = top - height + padding.Bottom.Points;
+        if (box.Fill is { } fill)
+        {
+            _content.BeginArtifact("Layout"u8, []).SaveState().SetFillRgb(fill.R / 255.0, fill.G / 255.0, fill.B / 255.0)
+                .FillRectangle(x, top - height, width, height)
+                .RestoreState().EndMarkedContent();
+        }
+
         if (box.BorderColor is { } color)
         {
             double line = box.BorderWidth?.Points ?? 0.5;

@@ -145,6 +145,20 @@ public sealed class TableRenderTests
     }
 
     [Fact]
+    public async Task StripesFillEverySecondBodyRow()
+    {
+        PdfDocument document = Invoice with
+        {
+            Content = [new Table([new Column("A")]) { Rows = TableRows.Inline([["1"], ["2"], ["3"], ["4"], ["5"]]), TableStyle = new TableStyle { StripeFill = Color.Parse("#336699") } }],
+        };
+
+        string page = PdfInspect.PageContents((await RenderAsync(document, PdfInspect.Options())).File)[0];
+
+        // Rows are drawn one group at a time: the second and fourth rows each get a stripe artifact, the others none.
+        Assert.Equal(2, Regex.Count(page, @"/Artifact <</Type /Layout>> BDC\nq\n0.2 0.4 0.6 rg\n[\d. ]+re\nf\nQ\nEMC"));
+    }
+
+    [Fact]
     public async Task RepeatHeaderCanBeTurnedOff()
     {
         PdfDocument document = Invoice with { Content = [Invoice.Content[2] is Table table ? table with { RepeatHeader = false } : throw new InvalidOperationException()] };

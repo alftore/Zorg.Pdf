@@ -158,6 +158,24 @@ public sealed partial class TextBoxTests
         Assert.Equal(3, PdfInspect.Elements(file, "P").Count);
     }
 
+    [Fact]
+    public async Task AFillIsAnArtifactUnderTheBorderAndText()
+    {
+        PdfDocument document = PdfDocument.ParseJson("""
+            { "title": "x", "content": [{ "type": "textBox", "x": "0mm", "y": "0mm", "width": "210mm", "height": "40mm", "fill": "#336699", "borderColor": "#000000",
+              "content": [{ "type": "paragraph", "inlines": ["Cover"] }] }] }
+            """);
+        Assert.Equal(PdfDocument.ParseJson(document.ToJson()).ToJson(), document.ToJson());
+
+        (byte[] file, RenderResult result) = await RenderTests.RenderAsync(document, PdfInspect.Options(PdfConformance.PdfUA1));
+
+        Assert.Empty(result.Diagnostics);
+        string page = PdfInspect.PageContents(file)[0];
+        Assert.Matches(@"/Artifact <</Type /Layout>> BDC\nq\n0.2 0.4 0.6 rg\n0 [\d.]+ [\d.]+ [\d.]+ re\nf\nQ\nEMC", page);
+        Assert.True(page.IndexOf("0.2 0.4 0.6 rg", StringComparison.Ordinal) < page.IndexOf(" RG", StringComparison.Ordinal), "The fill comes before the border.");
+        Assert.Single(PdfInspect.Elements(file, "P"));
+    }
+
     private static IEnumerable<(double X, double Y)> Positions(string content) =>
         PositionPattern().Matches(content).Select(m => (double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture)));
 

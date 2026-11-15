@@ -1130,6 +1130,8 @@ Zorg.Pdf.TableStyle.RuleColor.get -> Zorg.Pdf.Color?
 Zorg.Pdf.TableStyle.RuleColor.init -> void
 Zorg.Pdf.TableStyle.RuleWidth.get -> Zorg.Pdf.Length?
 Zorg.Pdf.TableStyle.RuleWidth.init -> void
+Zorg.Pdf.TableStyle.StripeFill.get -> Zorg.Pdf.Color?
+Zorg.Pdf.TableStyle.StripeFill.init -> void
 Zorg.Pdf.TableStyle.TableStyle() -> void
 override Zorg.Pdf.TableStyle.ToString() -> string!
 static Zorg.Pdf.TableStyle.operator !=(Zorg.Pdf.TableStyle? left, Zorg.Pdf.TableStyle? right) -> bool
@@ -1150,6 +1152,8 @@ Zorg.Pdf.TextBox.Content.init -> void
 override sealed Zorg.Pdf.TextBox.Equals(Zorg.Pdf.Block? other) -> bool
 Zorg.Pdf.TextBox.Equals(Zorg.Pdf.TextBox? other) -> bool
 override Zorg.Pdf.TextBox.Equals(object? obj) -> bool
+Zorg.Pdf.TextBox.Fill.get -> Zorg.Pdf.Color?
+Zorg.Pdf.TextBox.Fill.init -> void
 override Zorg.Pdf.TextBox.GetHashCode() -> int
 Zorg.Pdf.TextBox.Height.get -> Zorg.Pdf.Length?
 Zorg.Pdf.TextBox.Height.init -> void

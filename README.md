@@ -1,8 +1,8 @@
 # Zorg.Pdf
 
-Async-first PDF generation for .NET 10, written in C# only. Documents and reports from code, from a JSON document model, or from templates and data, in the spirit of jsreport, with tagged (accessible) output, no native binaries and no NuGet dependencies.
+Async-first PDF for .NET 10, written in C# only. You can build documents, reports, letters and invoices from code, from a JSON document model, or from templates and data. Output is tagged and accessible, and the core has no native binaries and no NuGet dependencies. It can also read, merge and split existing PDFs.
 
-**Status: 0.1 in development, not released.** Build a document in C# or JSON (schema in [schema/](schema/document-0.1.schema.json), thirteen examples with data in [docs/examples/](docs/examples)), validate it (codes in [docs/diagnostics.md](docs/diagnostics.md)), and render headings, paragraphs with bold, italic and fallback fonts, bulleted and numbered lists, tables with rows from `IAsyncEnumerable`, JPEG and PNG images, and headers and footers with "Page X of Y" as compact tagged PDF. Every example passes veraPDF PDF/UA-1 and PDF/A-2a and comes out byte for byte the same on Windows and Linux. `Zorg.Pdf.Imaging` adds WebP, GIF, BMP and TIFF, EXIF orientation, sRGB conversion and downsampling through Zorg.Imaging, and PNG previews of pages for checking layouts by eye or by agent. `Zorg.Pdf.Markdown` renders Markdown, and `Zorg.Pdf.Hyphenation` hyphenates six languages. A tagged 1,000-row invoice renders in 30 ms (MigraDoc 6.2.4: 260 ms). What isn't supported is in [docs/limits.md](docs/limits.md).
+**Status: not released yet.** Versions 0.1 to 0.4 are complete and 0.5 is under way; the maintainer is reviewing them before the first preview on NuGet. Read [the guide](docs/guide/README.md) to get started, and [docs/limits.md](docs/limits.md) for what isn't supported.
 
 ```csharp
 var document = new PdfDocument("Invoice 2026-0042")
@@ -19,32 +19,55 @@ var options = new RenderOptions
 await document.RenderAsync(output, options, cancellationToken);
 ```
 
-Or from the command line, with the `zorg-pdf` tool (`dotnet tool install --global Zorg.Pdf.Tool`):
+The same document can be written as JSON (described by [the schema](schema/document-0.1.schema.json)) and rendered with the `zorg-pdf` tool:
 
+```bash
+zorg-pdf render docs/examples/annual-report.json --pdfua --pdfa 2a --preview
 ```
-zorg-pdf render docs/examples/invoice.json --data docs/examples/data/invoice.json --pdfua
-zorg-pdf watch docs/examples/letter.json --fonts ./fonts
-```
+
+## What it does
+
+- **Documents:** headings, paragraphs with styled runs and fallback fonts, lists, tables with repeating headers, spans, stripes, and rows streamed from `IAsyncEnumerable`. It also handles images, text boxes at fixed places, watermarks, and headers and footers with "Page X of Y".
+- **Reports:** tables of contents, bookmarks, links, sections with their own page numbering, headers and footers, and bar, stacked, line and pie charts drawn as vectors.
+- **Templates:** values, repeats and conditions bound from a JSON model, so one document renders many invoices.
+- **Letters:** address boxes for DIN 5008 and Norwegian window envelopes, letterhead from an existing PDF behind the page, QR codes, Code 128, GS1-128 and EAN-13 barcodes, EPC payment codes and KID check digits.
+- **Accessible and archivable:** tagged PDF by default, with PDF/UA-1 and PDF/A-2 and -3 (a, u and b) checked against veraPDF. Attachments, and Factur-X/ZUGFeRD e-invoices through `Zorg.Pdf.Invoicing`.
+- **Existing PDFs:** page count, sizes and metadata of any PDF, including damaged ones and ones encrypted without a password; merge, extract and split.
+- **For agents:** one document model with a published JSON Schema, diagnostics with stable codes and JSON pointers ([docs/diagnostics.md](docs/diagnostics.md)), PNG previews to check a layout by eye, and ready-made `AIFunction` tools.
+- **Fast and small:** a tagged 1,000-row invoice renders in 30 ms (MigraDoc 6.2.4: 260 ms). Output is byte for byte the same on Windows and Linux. The library is clean under NativeAOT and trimming.
+
+## Packages
+
+| Package | What it adds |
+|---|---|
+| `Zorg.Pdf` | The document model, JSON, rendering, reading and merging. No dependencies |
+| `Zorg.Pdf.Imaging` | WebP, GIF, BMP and TIFF images, EXIF orientation, sRGB conversion, downsampling and PNG page previews, through Zorg.Imaging |
+| `Zorg.Pdf.Markdown` | Markdown to PDF, on Markdig |
+| `Zorg.Pdf.Hyphenation` | Hyphenation for English, German, French, Norwegian and Danish |
+| `Zorg.Pdf.Invoicing` | Factur-X and ZUGFeRD e-invoices |
+| `Zorg.Pdf.Extensions.AI` | Tools that let an AI agent validate and render documents |
+| `Zorg.Pdf.Tool` | The `zorg-pdf` command-line tool: render, watch, preview, info, merge, extract, split |
+
+## Examples
+
+[docs/examples/](docs/examples) has fifteen documents, from a receipt to a staff handbook. Each one is rendered by the tests and checked with veraPDF. [annual-report.json](docs/examples/annual-report.json) shows the most at once: a cover with a colour band and key-figure cards, a table of contents, line, bar and pie charts, striped tables and a QR code.
 
 ## Roadmap
 
-0.1 is built in nine slices; all nine are done, and it is being reviewed before its first preview release.
-
 | Version | Scope | State |
 |---|---|---|
-| 0.1 | The document model and its JSON Schema; rendering headings, paragraphs, tables, images, headers and footers with page numbers; bold and italic; tagged output with PDF/UA-1; object streams for small files; agent tools as a stretch goal | Complete, in review: the library and `Zorg.Pdf.Extensions.AI` |
-| 0.2 | Templates and data binding, lists, cell spans, watermarks, text boxes, PNG page previews, a `zorg-pdf` command-line tool | Complete, in review |
-| 0.3 | Markdown, tables of contents and links, hyphenation, right-to-left and Arabic text, PDF/A | Planned |
-| 0.4 | Reading and merging PDFs, page groups, attachments, ZUGFeRD/Factur-X invoices | Planned |
-| 0.5 | Charts, barcodes, ASP.NET Core report jobs, signing | Planned |
+| 0.1 | The document model and JSON Schema; headings, paragraphs, tables, images, headers and footers; PDF/UA-1; agent tools | Done |
+| 0.2 | Templates and data binding, lists, cell spans, watermarks, text boxes, PNG previews, the `zorg-pdf` tool | Done |
+| 0.3 | PDF/A-2, bookmarks and links, tables of contents, sections and page labels, hyphenation, Markdown | Done |
+| 0.4 | Reading PDFs, letterhead backgrounds, merging and splitting, attachments and PDF/A-3, Factur-X, encrypted input | Done |
+| 0.5 | Barcodes and payment codes, charts, digital signatures (PAdES), an ASP.NET Core result | Barcodes and charts done, signatures next |
 
 ## Goals
 
-- **Async first:** fonts, images and data load asynchronously, table rows can come from `IAsyncEnumerable<T>`, pages stream to the output while layout continues, and every operation can be cancelled.
-- **Easy for agents:** one document model described by a published JSON Schema, validation errors that point at the exact path, PNG page previews for visual self-checks, and ready-made `AIFunction` tools.
-- **Easy reports:** templates plus data, with headers and footers, page X of Y, repeating table headers, tables of contents, page groups and charts.
-- **Accessible and archivable:** tagged PDF by default, with PDF/UA and PDF/A checked against veraPDF.
-- MIT licensed, with no runtime dependencies in the core package, NativeAOT and trimming clean.
+- **Async first:** fonts, images and data load asynchronously, and table rows can come from `IAsyncEnumerable<T>`. Pages stream to the output while layout continues, and every operation can be cancelled.
+- **Easy for agents:** one document model, a published schema, precise diagnostics and previews for visual self-checks.
+- **Accessible and archivable by default,** checked by veraPDF rather than claimed.
+- MIT licensed, with no runtime dependencies in the core package, and clean under NativeAOT and trimming.
 - Native code only as an opt-in add-on, never a requirement.
 
 ## How this is built

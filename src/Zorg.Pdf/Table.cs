@@ -80,6 +80,12 @@ public sealed record TableStyle
     /// <summary>Space between a cell's edge and its text, on every side.</summary>
     public Length? CellPadding { get; init; }
 
+    /// <summary>
+    /// The background of every second body row (the second, fourth and so on), which helps the eye follow wide rows.
+    /// Null: none. A row taller than a page, which splits, isn't striped.
+    /// </summary>
+    public Color? StripeFill { get; init; }
+
     /// <summary>This style with every property <paramref name="over"/> sets taking its place.</summary>
     /// <param name="over">The style on top, or null.</param>
     /// <returns>The merged style.</returns>
@@ -89,6 +95,7 @@ public sealed record TableStyle
         RuleColor = over.RuleColor ?? RuleColor,
         RuleWidth = over.RuleWidth ?? RuleWidth,
         CellPadding = over.CellPadding ?? CellPadding,
+        StripeFill = over.StripeFill ?? StripeFill,
     };
 }
 
