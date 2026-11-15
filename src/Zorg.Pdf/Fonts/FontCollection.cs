@@ -68,9 +68,13 @@ public sealed class FontCollection
         foreach (string path in paths)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(paths));
-            foreach ((string family, bool bold, bool italic, int weight, int face, int width) in SystemFontResolver.DescribeFaces(path))
+            foreach ((string family, bool bold, bool italic, int weight, int face, int width, string? alias) in SystemFontResolver.DescribeFaces(path))
             {
                 faces.Add((family, bold, italic, weight, Path.GetFullPath(path), face, width));
+                if (alias is not null && !string.Equals(alias, family, StringComparison.OrdinalIgnoreCase))
+                {
+                    faces.Add((alias, bold, italic, weight, Path.GetFullPath(path), face, width)); // "Arial Narrow" by its own name too.
+                }
             }
         }
 

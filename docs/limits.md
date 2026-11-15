@@ -1,6 +1,6 @@
 # Known limits
 
-Zorg.Pdf 0.1 is in development. What it doesn't do yet, and the limits it puts on input.
+What Zorg.Pdf 0.5 doesn't do yet, and the limits it puts on input.
 
 ## Input limits
 
@@ -13,8 +13,9 @@ Every limit is checked before anything is written, except page and row counts, w
 | Rows in one table | 1,000,000 | `RenderOptions.Limits.MaxTableRows` (`PdfLimitException`) |
 | Image file | 50 MB | `RenderOptions.Limits.MaxImageBytes` (ZPDF-I002) |
 | Image pixels | 50 million | `RenderOptions.Limits.MaxImagePixels` (ZPDF-I002) |
-| Room for a signature | 16 KB (1 KB to 1 MB) | `PdfSignatureOptions.ReservedSize`; too small for the certificates is an `ArgumentException` before anything is written, a signature that outgrows it a `PdfException` naming the size it needs |
-| Timestamp authority's response | 256 KB | `Rfc3161TimestampClient` (`PdfException`) |
+| Room for a signature | 16 KB (1 KB to 1 MB) | `PdfSignatureOptions.ReservedSize`; outside that range, or too small for the certificates (and 8 KB for a timestamp token), is an `ArgumentException` before anything is written; a signature that still outgrows it is a `PdfException` naming the size it needs |
+| Timestamp authority's response | 256 KB, within 30 seconds | `Rfc3161TimestampClient`, `Timeout` (`PdfException`) |
+| Objects in a file signed with `PdfSigning` | 1,000,000 | `PdfReadLimits.MaxObjects`, the update's numbers included (`PdfException`) |
 | Swiss QR-bill code data | 997 characters | SIX's guidelines (ZPDF-J035) |
 
 Fonts come from the caller, never from a document; a damaged font is ZPDF-F005.
@@ -35,7 +36,7 @@ Fonts come from the caller, never from a document; a damaged font is ZPDF-F005.
 - **Tables of contents** list top-level headings only, one per document, with arabic page numbers; the number column is as wide as the largest page count allowed (`Limits.MaxPages`).
 - **Links** work in headings, paragraphs and list items; not yet in table cells, text boxes, headers or footers. They're coloured, not underlined.
 - **Ids and bookmarks:** ids work on top-level blocks only; a table, image or list that moves to the next page whole is found a page early by its destination. Headings in lists, tables and boxes don't become bookmarks.
-- **PDF/A-2 only** (2b, 2u, 2a), with an sRGB output intent: no PDF/A-3 (attachments) or PDF/A-4 yet, and CMYK images must be converted to RGB (`ImagingProcessor` does).
+- **PDF/A-2 and PDF/A-3** (a, u and b), with an sRGB output intent: no PDF/A-1 or PDF/A-4, and CMYK images must be converted to RGB (`ImagingProcessor` does).
 - **Page previews read only Zorg.Pdf's own PDFs** (`PdfPreview` refuses others), draw DeviceCMYK images with a plain conversion rather than a colour profile.
 - **Fonts:** TrueType outlines only (`.ttf`, and the TrueType faces of collections, `.ttc`); no CFF (`.otf` with PostScript outlines), no symbol fonts.
 - **Markdown** (`Zorg.Pdf.Markdown`): raw HTML is left out; strikethrough is drawn plain; an image inside a line of text keeps only its description; links in table cells keep only their text; headings, tables and code inside list items are flattened or left out; footnotes, definition lists and maths aren't read. Each is reported.

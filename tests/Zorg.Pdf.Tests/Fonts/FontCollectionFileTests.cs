@@ -80,4 +80,22 @@ public sealed class FontCollectionFileTests
 
         return ttc;
     }
+
+    [Fact]
+    public void SystemFontsPreferNormalWidthAndTheRegularOrBoldWeight()
+    {
+        // A family shipped in many weights and widths, as Noto Sans and Arial are; paths sort the light, black and
+        // narrow faces first, as their file names do on Windows.
+        (string, bool, bool, int, int, int)[] faces =
+        [
+            ("ARIALN.TTF", false, false, 0, 3, 400),
+            ("NotoSans-Black.ttf", true, false, 0, 5, 900),
+            ("NotoSans-ExtraLight.ttf", false, false, 0, 5, 250),
+            ("NotoSans-Bold.ttf", true, false, 0, 5, 700),
+            ("NotoSans-Regular.ttf", false, false, 0, 5, 400),
+        ];
+        Assert.Equal("NotoSans-Regular.ttf", SystemFontResolver.Rank(faces, bold: false, italic: false).First().Path);
+        Assert.Equal("NotoSans-Bold.ttf", SystemFontResolver.Rank(faces, bold: true, italic: false).First().Path);
+        Assert.Equal("ARIALN.TTF", SystemFontResolver.Rank([faces[0]], bold: false, italic: false).First().Path); // A family of only condensed faces still resolves.
+    }
 }

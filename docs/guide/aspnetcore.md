@@ -25,7 +25,7 @@ app.MapGet("/invoices/{id}.pdf", async (int id, InvoiceService invoices, Cancell
 }
 ```
 
-  If you've called `AddProblemDetails`, your customisations apply to it.
+  If you've called `AddProblemDetails`, your customisations apply to it when the request accepts JSON; otherwise ASP.NET Core writes the plain ProblemDetails.
 - **A client that leaves:** the render is cancelled through `HttpContext.RequestAborted`, so no work goes on for nobody.
 - **A failure partway:** once the first bytes are sent, the status can't change any more. If something fails after that, such as a data source throwing on page 40, the connection is aborted and the error logged. The client sees a broken download, not a truncated file that looks whole.
 

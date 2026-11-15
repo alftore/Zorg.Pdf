@@ -328,6 +328,18 @@ internal sealed class CliArguments
             }
         }
 
+        if (result.Command == "sign" && (result.Input == "-" || result.Output == "-"))
+        {
+            error = "sign reads and writes files, not standard input or output: give the PDF's path and -o out.pdf.";
+            return false;
+        }
+
+        if (result.Command is "render" or "watch" or "preview" && options.Find(o => o is "--certificate" or "--field" or "--reason" or "--location" or "--name" or "--contact" or "--timestamp") is { } signOnly)
+        {
+            error = $"{signOnly} is for sign: zorg-pdf sign <file.pdf> --certificate signer.pfx.";
+            return false;
+        }
+
         if (result.Command == "sign" && result.Certificate is null)
         {
             error = "sign needs --certificate: zorg-pdf sign contract.pdf --certificate signer.pfx -o signed.pdf. The .pfx file's password goes in the ZORG_PDF_CERTIFICATE_PASSWORD environment variable.";

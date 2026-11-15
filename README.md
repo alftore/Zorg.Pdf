@@ -53,7 +53,7 @@ Most apps need `Zorg.Pdf` alone. The others each bring a dependency, a framework
 
 ## Examples
 
-[docs/examples/](docs/examples) has sixteen documents, from a receipt to a staff handbook. Each one is rendered by the tests and checked with veraPDF. [annual-report.json](docs/examples/annual-report.json) shows the most at once: a cover with a colour band and key-figure cards, a table of contents, line, bar and pie charts, striped tables and a QR code.
+[docs/examples/](docs/examples) has fifteen documents, from a receipt to a staff handbook. Each one is rendered by the tests and checked with veraPDF. [annual-report.json](docs/examples/annual-report.json) shows the most at once: a cover with a colour band and key-figure cards, a table of contents, line, bar and pie charts, striped tables and a QR code.
 
 ## Roadmap
 

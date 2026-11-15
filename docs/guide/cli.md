@@ -28,7 +28,7 @@ dotnet tool install --global Zorg.Pdf.Tool
 - `--facturx invoice.xml`: make a Factur-X invoice.
 - `--title`, `--author`, `--subject`, `--keywords` and `--lang`: metadata for Markdown, merge and extract.
 - `--warnaserror`: exit with 1 on warnings, for build pipelines.
-- `--json`: results as JSON lines, for scripts and agents.
+- `--json`: results as JSON lines, for scripts and agents (render, validate, info, merge, extract and split).
 - `--preview`: with render and watch, also writes PNG previews beside the PDF.
 
 ## Examples

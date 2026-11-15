@@ -77,7 +77,7 @@ var signature = new PdfSignatureOptions(signer)
 };
 ```
 
-Only a digest of the signature is sent. Zorg.Pdf sends a random nonce with it and checks that the token answers it: the request was granted, for the same digest, with the same nonce. It also bounds the response to 256 KB. Anything else stops the render with a `PdfException` that names the TSA. The token's own signature is for validators to check, as with any timestamp. Pass your own `HttpClient` for proxies, retries or a TSA that needs credentials, or implement `ITimestampClient` for another transport.
+Only a digest of the signature is sent. Zorg.Pdf sends a random nonce with it and checks that the token answers it: the request was granted, for the same digest, with the same nonce. It also checks that the token is signed: its signer's message digest matches its content, and the signature verifies with the certificate the token carries. A token that's been swapped or damaged on the way is refused. Whether that certificate belongs to an authority you trust is for validators to judge, as with any signature. The response is bounded to 256 KB, and the whole exchange to `Timeout` (30 seconds). Anything else, including a network failure, stops the render with a `PdfException` that names the TSA. Pass your own `HttpClient` for proxies, retries or a TSA that needs credentials, or implement `ITimestampClient` for another transport.
 
 A token with the TSA's certificate adds 5 to 7 KB, which fits the default `ReservedSize`.
 
@@ -97,9 +97,11 @@ public sealed class KeyVaultSigner(CryptographyClient client, X509Certificate2 c
 }
 ```
 
-`CryptographyClient` here stands for your key service's client (Azure.Security.KeyVault.Keys has one with this shape). Zorg.Pdf has no dependency on any of them. An ECDSA signer returns r and s side by side (IEEE P1363), which is what key services return.
+`CryptographyClient` here stands for your key service's client (Azure.Security.KeyVault.Keys has one with this shape). Zorg.Pdf has no dependency on any of them. An ECDSA signer returns r and s side by side (IEEE P1363), as Azure Key Vault does, or as a DER sequence, as AWS KMS does; both are accepted.
 
-A remote signer or a timestamp needs `RenderAsync`. The synchronous `Render` throws `PdfException` if either doesn't complete at once.
+A remote signer or a timestamp needs `RenderAsync`. The synchronous `Render` refuses a timestamp with an `ArgumentException` before anything is written, and throws `PdfException` if a signer doesn't complete at once.
+
+A signed file is byte-identical from run to run only with an RSA key and PKCS #1 v1.5 padding, a fixed `SigningTime` and no timestamp: PSS and ECDSA signatures are randomised, a timestamp's nonce is random, and `SigningTime` defaults to the current time.
 
 ## How it works
 

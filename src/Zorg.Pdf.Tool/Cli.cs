@@ -229,7 +229,6 @@ internal static class Cli
         return Ok;
     }
 
-    /// <summary>merge, extract and split: pages of existing PDFs into new files.</summary>
     /// <summary>Signs a PDF by incremental update, with a .pfx file's key; the password comes from the environment.</summary>
     private static async Task<int> SignAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken)
     {
@@ -238,7 +237,9 @@ internal static class Cli
         try
         {
             string password = Environment.GetEnvironmentVariable("ZORG_PDF_CERTIFICATE_PASSWORD") ?? "";
-            using X509Certificate2 certificate = X509CertificateLoader.LoadPkcs12FromFile(args.Certificate!, password, X509KeyStorageFlags.EphemeralKeySet);
+            // Ephemeral keys stay off the disk; macOS doesn't support them, so its default store is used there.
+            X509KeyStorageFlags storage = OperatingSystem.IsMacOS() ? X509KeyStorageFlags.DefaultKeySet : X509KeyStorageFlags.EphemeralKeySet;
+            using X509Certificate2 certificate = X509CertificateLoader.LoadPkcs12FromFile(args.Certificate!, password, storage);
             var options = new PdfSignatureOptions(PdfSigners.FromCertificate(certificate))
             {
                 FieldName = args.Field ?? "Signature1",
@@ -263,7 +264,7 @@ internal static class Cli
             await console.Out.WriteLineAsync($"{target}: signed in field \"{options.FieldName}\" by {certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: false)}{(options.Timestamp is null ? "" : ", with a timestamp")}").ConfigureAwait(false);
             return Ok;
         }
-        catch (CryptographicException)
+        catch (Exception ex) when (ex is CryptographicException or PlatformNotSupportedException)
         {
             // The message could echo nothing secret, but say only what to check.
             await console.Error.WriteLineAsync($"zorg-pdf sign: couldn't open {args.Certificate} as a .pfx file with the password in ZORG_PDF_CERTIFICATE_PASSWORD. Check the file and the password.").ConfigureAwait(false);
@@ -285,6 +286,7 @@ internal static class Cli
         }
     }
 
+    /// <summary>merge, extract and split: pages of existing PDFs into new files.</summary>
     private static async Task<int> PagesAsync(CliArguments args, CliConsole console, CancellationToken cancellationToken)
     {
         var options = new PdfFileOptions { Title = args.Title, Author = args.Author, Subject = args.Subject, Keywords = args.Keywords, Language = args.Language };

@@ -354,6 +354,13 @@ public sealed class CliTests : IDisposable
         (int missing, _, string usage) = await RunAsync("sign", input);
         Assert.Equal(Cli.Usage, missing);
         Assert.Contains("--certificate", usage, StringComparison.Ordinal);
+
+        (int stdin, _, string piped) = await RunAsync("sign", "-", "--certificate", pfx, "-o", Path.Combine(_folder, "x.pdf"));
+        Assert.Equal((Cli.Usage, true), (stdin, piped.Contains("not standard input or output", StringComparison.Ordinal)));
+        (int url, _, string badUrl) = await RunAsync("sign", input, "--certificate", pfx, "--timestamp", "ftp://tsa.example.com");
+        Assert.Equal((Cli.Usage, true), (url, badUrl.Contains("http or https URL", StringComparison.Ordinal)));
+        (int stray, _, string misplaced) = await RunAsync("render", Copy("letter.json"), "--certificate", pfx);
+        Assert.Equal((Cli.Usage, true), (stray, misplaced.Contains("--certificate is for sign", StringComparison.Ordinal)));
     }
 
     private async Task<(int Code, string Output, string Error)> RunAsync(params string[] args)
