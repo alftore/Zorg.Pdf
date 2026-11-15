@@ -71,6 +71,10 @@ public sealed class TimestampTests
     [InlineData("garbage", "isn't RFC 3161")]
     [InlineData("huge", "more than")]
     [InlineData("empty", "sent no token")]
+    [InlineData("badsig", "signature doesn't verify")]
+    [InlineData("nocert", "doesn't carry the certificate")]
+    [InlineData("trickle", "didn't answer within 1 seconds")]
+    [InlineData("unreachable", "couldn't be reached")]
     public async Task ABadAnswerStopsTheRenderAndSaysWhy(string fault, string message)
     {
         var tsa = new FakeAuthority { Fault = fault };
@@ -79,7 +83,43 @@ public sealed class TimestampTests
         Assert.Contains("tsa.test", error.Message, StringComparison.Ordinal);
     }
 
-    private static Rfc3161TimestampClient Client(FakeAuthority tsa) => new(new Uri("https://tsa.test/stamp"), new HttpClient(tsa));
+    private static Rfc3161TimestampClient Client(FakeAuthority tsa) => new(new Uri("https://tsa.test/stamp"), new HttpClient(tsa)) { Timeout = TimeSpan.FromSeconds(1) };
+
+    [Fact]
+    public async Task TheSyncRenderRefusesATimestampBeforeWritingAnything()
+    {
+        using var output = new System.IO.MemoryStream();
+        RenderOptions options = Options(Client(new FakeAuthority()));
+        ArgumentException error = Assert.Throws<ArgumentException>(() => SignatureTests.Document().Render(output, options));
+        Assert.Contains("RenderAsync", error.Message, StringComparison.Ordinal);
+        Assert.Equal(0, output.Length);
+        await Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task AnEcdsaSignerThatReturnsDerIsAccepted()
+    {
+        (byte[] file, _) = await RenderTests.RenderAsync(SignatureTests.Document(), PdfInspect.Options() with { Signature = new PdfSignatureOptions(new DerSigner(SignatureTests.Pki.Value.Ec)) });
+        SignatureTests.Verify(file);
+    }
+
+    /// <summary>An ECDSA key that returns DER signatures, as AWS KMS does.</summary>
+    private sealed class DerSigner(X509Certificate2 certificate) : IPdfSigner
+    {
+        public X509Certificate2 Certificate => certificate;
+
+        public System.Collections.Generic.IReadOnlyList<X509Certificate2> Chain => [];
+
+        public PdfSignatureAlgorithm Algorithm => PdfSignatureAlgorithm.Ecdsa;
+
+        public HashAlgorithmName DigestAlgorithm => HashAlgorithmName.SHA256;
+
+        public ValueTask<byte[]> SignDigestAsync(ReadOnlyMemory<byte> digest, CancellationToken cancellationToken)
+        {
+            using ECDsa key = certificate.GetECDsaPrivateKey()!;
+            return ValueTask.FromResult(key.SignHash(digest.Span, DSASignatureFormat.Rfc3279DerSequence));
+        }
+    }
 
     private static X509Certificate2 CreateAuthority()
     {
@@ -87,6 +127,47 @@ public sealed class TimestampTests
         var request = new CertificateRequest("CN=Zorg.Pdf Test TSA", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension([new Oid("1.3.6.1.5.5.7.3.8")], critical: true));
         return request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+    }
+
+    /// <summary>A body that sends a byte and then waits, as a stalled server does.</summary>
+    private sealed class Trickle : System.IO.Stream
+    {
+        private bool _sent;
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (!_sent)
+            {
+                _sent = true;
+                buffer.Span[0] = 0x30;
+                return 1;
+            }
+
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return 0;
+        }
+
+        public override long Seek(long offset, System.IO.SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     /// <summary>A timestamp authority in memory: answers requests with signed tokens, or with the fault it's told to make.</summary>
@@ -109,6 +190,8 @@ public sealed class TimestampTests
             {
                 "http" => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
                 "garbage" => Answer([1, 2, 3]),
+                "unreachable" => throw new HttpRequestException("No such host is known."),
+                "trickle" => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new Trickle()) },
                 "huge" => Answer(new byte[Rfc3161TimestampClient.MaxResponseBytes + 1]),
                 _ => Answer(Response()),
             };
@@ -156,7 +239,19 @@ public sealed class TimestampTests
             response.PopSequence();
             if (Fault != "empty")
             {
-                response.WriteEncodedValue(cms.Encode());
+                byte[] token = cms.Encode();
+                if (Fault == "badsig")
+                {
+                    token[^1] ^= 1; // The last bytes are the signature value.
+                }
+
+                if (Fault == "nocert")
+                {
+                    cms.RemoveCertificate(Authority.Value);
+                    token = cms.Encode();
+                }
+
+                response.WriteEncodedValue(token);
             }
 
             response.PopSequence();

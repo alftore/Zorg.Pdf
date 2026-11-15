@@ -623,7 +623,10 @@ internal sealed class IncrementalUpdate
     {
         for (int i = 0; i < ranges.Length; i++)
         {
-            _ = ranges[i].TryFormat(byteRange.Slice(3 + (i * (ByteRangeField + 1)), ByteRangeField), out _, provider: CultureInfo.InvariantCulture);
+            if (!ranges[i].TryFormat(byteRange.Slice(3 + (i * (ByteRangeField + 1)), ByteRangeField), out _, provider: CultureInfo.InvariantCulture))
+            {
+                throw new PdfException("The file is over 9,999,999,999 bytes, too big for a signature's byte range.");
+            }
         }
     }
 

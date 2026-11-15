@@ -224,9 +224,35 @@ internal static class CmsSignature
         writer.PopSequence();
     }
 
+    /// <summary>Whether the bytes are exactly a DER SEQUENCE of two positive INTEGERs, as an ECDSA signature in DER is.</summary>
+    private static bool IsDerSignature(byte[] value)
+    {
+        if (value.Length < 8 || value[0] != 0x30)
+        {
+            return false;
+        }
+
+        try
+        {
+            var reader = new AsnReader(value, AsnEncodingRules.DER);
+            AsnReader sequence = reader.ReadSequence();
+            bool positive = sequence.ReadInteger().Sign > 0 && sequence.ReadInteger().Sign > 0;
+            return positive && !sequence.HasData && !reader.HasData;
+        }
+        catch (AsnContentException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>r and s, each half of an IEEE P1363 signature, as the DER <c>Ecdsa-Sig-Value</c> CMS carries.</summary>
     private static byte[] EcdsaToDer(byte[] p1363)
     {
+        if (IsDerSignature(p1363))
+        {
+            return p1363; // Some services (AWS KMS) already return the DER Ecdsa-Sig-Value.
+        }
+
         if (p1363.Length == 0 || p1363.Length % 2 != 0)
         {
             throw new PdfException("The signer returned an ECDSA signature that isn't r and s of equal length (IEEE P1363).");

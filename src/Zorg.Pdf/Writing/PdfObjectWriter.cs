@@ -1,7 +1,6 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
@@ -544,8 +543,10 @@ internal sealed class PdfObjectWriter : IDisposable
         long[] ranges = [contentsStart, contentsEnd, Position - contentsEnd];
         for (int i = 0; i < ranges.Length; i++)
         {
-            bool formatted = ranges[i].TryFormat(written.Slice(byteRange + 3 + (i * (ByteRangeField + 1)), ByteRangeField), out _, provider: System.Globalization.CultureInfo.InvariantCulture);
-            Debug.Assert(formatted, "A byte range number is at most ten digits.");
+            if (!ranges[i].TryFormat(written.Slice(byteRange + 3 + (i * (ByteRangeField + 1)), ByteRangeField), out _, provider: System.Globalization.CultureInfo.InvariantCulture))
+            {
+                throw new PdfException("The file is over 9,999,999,999 bytes, too big for a signature's byte range.");
+            }
         }
 
         int holeStart = (int)(contentsStart - _flushed), holeEnd = (int)(contentsEnd - _flushed);

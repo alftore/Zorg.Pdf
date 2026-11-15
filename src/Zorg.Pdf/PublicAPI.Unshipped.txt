@@ -1120,6 +1120,8 @@ static Zorg.Pdf.Signing.PdfSigning.SignAsync(System.IO.Stream! input, System.IO.
 Zorg.Pdf.Signing.Rfc3161TimestampClient
 Zorg.Pdf.Signing.Rfc3161TimestampClient.GetTokenAsync(System.ReadOnlyMemory<byte> digest, System.Security.Cryptography.HashAlgorithmName digestAlgorithm, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<byte[]!>
 Zorg.Pdf.Signing.Rfc3161TimestampClient.Rfc3161TimestampClient(System.Uri! url, System.Net.Http.HttpClient? httpClient = null) -> void
+Zorg.Pdf.Signing.Rfc3161TimestampClient.Timeout.get -> System.TimeSpan
+Zorg.Pdf.Signing.Rfc3161TimestampClient.Timeout.init -> void
 Zorg.Pdf.SlotImageSource
 override Zorg.Pdf.SlotImageSource.<Clone>$() -> Zorg.Pdf.SlotImageSource!
 Zorg.Pdf.SlotImageSource.Deconstruct(out string! Slot) -> void
