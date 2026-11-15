@@ -104,30 +104,40 @@ fi
 stage "Reader against qpdf"
 # PdfFileInfo (zorg-pdf info) reads each smoke PDF as other tools rewrite it: object streams packed or unpacked, a
 # classic cross-reference table, QDF, linearized, cleaned and decompressed by MuPDF, and encrypted with an empty user
-# password. Its page count must match qpdf's, and only the encrypted copy may say it's encrypted.
+# password in each cipher (object streams encrypted too). Its page count and title must match the original's, and
+# only the encrypted copies may say they're encrypted. A decrypted extract of the AES-256 copy must pass qpdf.
 info() { timeout 60 dotnet src/Zorg.Pdf.Tool/bin/Release/net10.0/Zorg.Pdf.Tool.dll info --json "$1"; }
+tool() { timeout 60 dotnet src/Zorg.Pdf.Tool/bin/Release/net10.0/Zorg.Pdf.Tool.dll "$@"; }
+summary() { python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d.get("pageCount", "error: " + d.get("error", "?")), d.get("encrypted"), d.get("title"))' "$1" 2>&1 || echo "no output"; }
 mkdir -p /tmp/variants
 for pdf in /out/*.pdf; do
   name="$(basename "$pdf" .pdf)"
   expected="$(qpdf --show-npages "$pdf")"
+  title="$(summary "$(info "$pdf" || true)" | cut -d' ' -f3-)"
   rm -f /tmp/variants/*.pdf
   qpdf --object-streams=generate "$pdf" /tmp/variants/objstm.pdf
   qpdf --object-streams=disable --compress-streams=n "$pdf" /tmp/variants/classic.pdf
   qpdf --qdf "$pdf" /tmp/variants/qdf.pdf
   qpdf --linearize "$pdf" /tmp/variants/linear.pdf
-  qpdf --object-streams=disable --encrypt "" owner 256 -- "$pdf" /tmp/variants/encrypted.pdf
   mutool clean -gggg "$pdf" /tmp/variants/mupdf.pdf
   mutool clean -d "$pdf" /tmp/variants/decompressed.pdf
+  qpdf --allow-weak-crypto --encrypt "" owner 40 -- "$pdf" /tmp/variants/enc-rc4-40.pdf
+  qpdf --allow-weak-crypto --encrypt "" owner 128 --use-aes=n -- "$pdf" /tmp/variants/enc-rc4-128.pdf
+  qpdf --encrypt "" owner 128 --use-aes=y -- "$pdf" /tmp/variants/enc-aes-128.pdf
+  qpdf --encrypt "" owner 256 --print=none -- "$pdf" /tmp/variants/enc-aes-256.pdf
+  qpdf --object-streams=disable --encrypt "" owner 256 -- "$pdf" /tmp/variants/enc-aes-256-flat.pdf
   for variant in /tmp/variants/*.pdf; do
     kind="$(basename "$variant" .pdf)"
-    json="$(info "$variant" || true)"
-    got="$(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d.get("pageCount", "error: " + d.get("error", "?")), d.get("encrypted"))' "$json" 2>&1 || echo "no output")"
-    want="$expected $([ "$kind" = encrypted ] && echo True || echo False)"
+    got="$(summary "$(info "$variant" || true)")"
+    want="$expected $(case "$kind" in enc-*) echo True ;; *) echo False ;; esac) $title"
     if [ "$got" != "$want" ]; then
-      echo "FAIL reader $name ($kind): got \"$got\", qpdf says \"$want\""; failed=1
+      echo "FAIL reader $name ($kind): got \"$got\", expected \"$want\""; failed=1
     fi
   done
-  echo "ok   reader $name: $expected pages in 7 rewrites"
+  if ! tool extract /tmp/variants/enc-aes-256.pdf -o /tmp/variants/decrypted.out >/dev/null || ! qpdf --check /tmp/variants/decrypted.out >/dev/null 2>&1; then
+    echo "FAIL reader $name: the decrypted extract doesn't pass qpdf"; failed=1
+  fi
+  echo "ok   reader $name: $expected pages in 11 rewrites"
 done
 
 stage "Previews against MuPDF"

@@ -56,11 +56,6 @@ public static class PdfFiles
         {
             var read = new List<PdfDiagnostic>();
             var file = new CosFile(list[i].File, options.ReadLimits, read);
-            if (file.IsEncrypted)
-            {
-                throw new PdfReadException($"File {i + 1} is encrypted, so its pages can't be copied.");
-            }
-
             List<CosPage> pages = CosPages.Read(file, options.ReadLimits, read);
             int[] selected = PageRanges.Parse(list[i].Pages, pages.Count, $"file {i + 1}");
             total += selected.Length;

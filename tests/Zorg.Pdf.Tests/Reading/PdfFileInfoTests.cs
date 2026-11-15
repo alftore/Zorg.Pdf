@@ -157,7 +157,7 @@ public sealed class PdfFileInfoTests
     }
 
     [Fact]
-    public void EncryptedFilesSayso()
+    public void AnEncryptionDictionaryWithoutKeysIsRefused()
     {
         var pdf = new TestPdf();
         pdf.Add(1, "<< /Type /Catalog /Pages 2 0 R >>");
@@ -167,9 +167,8 @@ public sealed class PdfFileInfoTests
         pdf.Add(5, "<< /Filter /Standard /V 2 /R 3 /Length 128 >>");
         pdf.Section("/Root 1 0 R /Info 4 0 R /Encrypt 5 0 R");
 
-        PdfFileInfo info = PdfFileInfo.Read(pdf.Bytes());
-
-        Assert.Equal((true, null, 1), (info.IsEncrypted, info.Title, info.PageCount));
+        // No /O or /U: nothing to check a password against, so it can't be decrypted (EncryptionTests covers real ones).
+        Assert.Contains("encryption", Assert.Throws<PdfReadException>(() => PdfFileInfo.Read(pdf.Bytes())).Message, StringComparison.Ordinal);
     }
 
     [Fact]

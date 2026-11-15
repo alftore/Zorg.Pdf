@@ -69,7 +69,25 @@ internal sealed class CosFile
 
         Trailer = trailer;
         IsEncrypted = Trailer["Encrypt"] is not null and not CosNull;
+        if (IsEncrypted)
+        {
+            // Opened with the empty user password, or refused. Objects read so far were read encrypted: read them again.
+            _encryptObject = Trailer["Encrypt"] is CosReference r ? r.Number : -1;
+            if (Resolve(Trailer["Encrypt"]) is not CosDictionary encrypt)
+            {
+                throw PdfReadException.Malformed("The encryption dictionary is missing.");
+            }
+
+            _security = CosSecurity.Open(encrypt, CosSecurity.FirstId(Trailer, Resolve), Resolve);
+            _objects.Clear();
+            _objectStreams.Clear();
+            string restricted = _security.Restrictions() is { } denied ? $" Its author doesn't allow {denied}; respect that in what you do with it." : "";
+            Note(DiagnosticCodes.ReadDecrypted, DiagnosticSeverity.Info, $"The file is encrypted ({_security.Cipher}) but opens without a password, so it was decrypted to read it.{restricted}");
+        }
     }
+
+    private readonly int _encryptObject = -1;
+    private readonly CosSecurity? _security;
 
     /// <summary>The trailer, merged over incremental updates (newest entries win).</summary>
     public CosDictionary Trailer { get; }
@@ -77,7 +95,7 @@ internal sealed class CosFile
     /// <summary>The version in the header, such as "1.7".</summary>
     public string Version { get; }
 
-    /// <summary>True when the trailer names an encryption dictionary: strings and streams are then encrypted.</summary>
+    /// <summary>True when the trailer names an encryption dictionary. Such a file is read only if it opens without a password, and is then decrypted as it's read.</summary>
     public bool IsEncrypted { get; }
 
     /// <summary>The catalog (the document's root).</summary>
@@ -117,11 +135,6 @@ internal sealed class CosFile
     /// <summary>A stream's data with its filters undone, counted against the total decode budget.</summary>
     public byte[] Decode(CosStream stream)
     {
-        if (IsEncrypted)
-        {
-            throw new PdfReadException("The file is encrypted: its streams can't be read.");
-        }
-
         long left = _limits.MaxDecodedBytes - _decoded;
         byte[] data = CosFilters.Decode(stream, Resolve, Math.Min(_limits.MaxStreamBytes, Math.Max(0, left)), out bool damaged);
         _decoded += data.LongLength;
@@ -420,7 +433,7 @@ internal sealed class CosFile
         }
 
         var lexer = new CosLexer(data, offset);
-        if (lexer.TryInteger() != number || lexer.TryInteger() is null || !lexer.TryKeyword("obj"))
+        if (lexer.TryInteger() != number || lexer.TryInteger() is not { } generation || !lexer.TryKeyword("obj"))
         {
             return false;
         }
@@ -429,10 +442,17 @@ internal sealed class CosFile
         if (parsed is CosDictionary dictionary && lexer.TryKeyword("stream"))
         {
             value = ReadStream(dictionary, lexer.Position);
-            return true;
+        }
+        else
+        {
+            value = parsed is CosOperator ? CosNull.Value : parsed;
         }
 
-        value = parsed is CosOperator ? CosNull.Value : parsed;
+        if (_security is not null && number != _encryptObject)
+        {
+            value = _security.Decrypt(value, number, (int)Math.Clamp(generation, 0, 65535));
+        }
+
         return true;
     }
 

@@ -81,7 +81,7 @@ public sealed class BackgroundTests
 
         Assert.Equal(("ZPDF-G001", "/background/source"), (notPdf.Diagnostics[0].Code, notPdf.Diagnostics[0].Path));
         Assert.Equal(("ZPDF-G002", "/background/otherPages"), (missing.Diagnostics[0].Code, missing.Diagnostics[0].Path));
-        Assert.Contains("encrypted", Assert.Single(locked.Diagnostics).Message, StringComparison.Ordinal);
+        Assert.Contains("encryption", Assert.Single(locked.Diagnostics).Message, StringComparison.Ordinal); // A bare /Encrypt: no keys to open it with.
         Assert.Equal("ZPDF-J030", Assert.Single(new PdfDocument("x") { Background = new PageBackground(ImageSource.FromSlot("a")) { FirstPage = -1 } }.Validate().Diagnostics).Code);
     }
 

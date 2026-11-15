@@ -79,6 +79,7 @@ internal static class DiagnosticCodes
     public const string ReadStreamLength = "ZPDF-P002";
     public const string ReadDamagedStream = "ZPDF-P003";
     public const string ReadPageTree = "ZPDF-P004";
+    public const string ReadDecrypted = "ZPDF-P005";
     public const string BadBackground = "ZPDF-J030";
     public const string BadAttachment = "ZPDF-J031";
     public const string AttachmentNeedsPdfA3 = "ZPDF-A005";

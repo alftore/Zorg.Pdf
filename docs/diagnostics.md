@@ -63,6 +63,7 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-P002 | Info | Reading an existing PDF: a stream's `/Length` is wrong, so its end was found by searching for `endstream`. | Nothing, usually; the writer that made the file has a bug. |
 | ZPDF-P003 | Warning | Reading an existing PDF: a compressed stream is damaged, and only what could be decompressed was used. | Check the result; the page may be incomplete. |
 | ZPDF-P004 | Warning | Reading an existing PDF: its page tree has loops, missing pages or nodes that aren't pages, which were skipped. | Check the page count. |
+| ZPDF-P005 | Info | Reading an existing PDF: it's encrypted (RC4, AES-128 or AES-256) but opens without a password, so it was decrypted to read it. The message names what its author doesn't allow (printing, changing, copying, assembling). | Respect the author's restrictions in what you do with it. |
 | ZPDF-G001 | Error | The background's PDF can't be used: it isn't a PDF, it's damaged beyond reading, it's encrypted, or its page's content uses a filter that can't be read. The message says which. | Save the letterhead again as a plain PDF (Print to PDF, or "Save as" without a password). |
 | ZPDF-G002 | Error | The background asks for a page the PDF doesn't have. | Use a page number from 1 to the file's page count, or 0 for none. |
 | ZPDF-G003 | Info | The background's page is a different size from the document's: it's scaled to fit and centred. | Make the letterhead the same paper size, or accept the scaling. |

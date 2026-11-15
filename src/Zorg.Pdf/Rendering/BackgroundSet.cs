@@ -43,12 +43,6 @@ internal sealed class BackgroundSet
         try
         {
             var cos = new CosFile(file, PdfReadLimits.Default, read);
-            if (cos.IsEncrypted)
-            {
-                sink.Error(DiagnosticCodes.BackgroundUnreadable, "The background's PDF is encrypted, so it can't be copied. Save it again without a password or restrictions.", Path);
-                return null;
-            }
-
             List<CosPage> pages = CosPages.Read(cos, PdfReadLimits.Default, read);
             var used = new Dictionary<int, (CosPage, byte[])>();
             bool conformance = options.Conformance == PdfConformance.PdfUA1 || options.Archive != PdfArchive.None;

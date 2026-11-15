@@ -38,8 +38,8 @@ public sealed class PdfFileInfo
     public int PageCount => Pages.Length;
 
     /// <summary>
-    /// True when the file is encrypted. Its page sizes are still read when they can be, but not its metadata. A file
-    /// encrypted to stop copying or printing, with no password to open it, is still encrypted.
+    /// True when the file is encrypted. One that opens without a password (often encrypted only to stop copying or
+    /// printing) is decrypted to read it, with information ZPDF-P005; one that needs a password is refused.
     /// </summary>
     public bool IsEncrypted { get; init; }
 
@@ -82,7 +82,7 @@ public sealed class PdfFileInfo
         var cos = new CosFile(file, limits, diagnostics);
         CosDictionary catalog = cos.Catalog;
         List<CosPage> pages = CosPages.Read(cos, limits, diagnostics);
-        CosDictionary? info = cos.IsEncrypted ? null : cos.Resolve(cos.Trailer["Info"]) as CosDictionary;
+        CosDictionary? info = cos.Resolve(cos.Trailer["Info"]) as CosDictionary;
         string? Get(CosDictionary? from, string key) =>
             from is not null && cos.Resolve(from[key]) is CosString s && CosPages.Text(s) is { Length: > 0 } text ? text.TrimEnd('\0') : null;
         string version = cos.Version;
@@ -104,7 +104,7 @@ public sealed class PdfFileInfo
             Keywords = Get(info, "Keywords"),
             Creator = Get(info, "Creator"),
             Producer = Get(info, "Producer"),
-            Language = cos.IsEncrypted ? null : Get(catalog, "Lang"),
+            Language = Get(catalog, "Lang"),
             Diagnostics = [.. diagnostics],
         };
     }
