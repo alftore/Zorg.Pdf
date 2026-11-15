@@ -957,6 +957,8 @@ Zorg.Pdf.RenderOptions.MetadataSchemas.init -> void
 Zorg.Pdf.RenderOptions.Progress.get -> System.IProgress<Zorg.Pdf.RenderProgress>?
 Zorg.Pdf.RenderOptions.Progress.init -> void
 Zorg.Pdf.RenderOptions.RenderOptions() -> void
+Zorg.Pdf.RenderOptions.Signature.get -> Zorg.Pdf.Signing.PdfSignatureOptions?
+Zorg.Pdf.RenderOptions.Signature.init -> void
 override Zorg.Pdf.RenderOptions.ToString() -> string!
 static Zorg.Pdf.RenderOptions.operator !=(Zorg.Pdf.RenderOptions? left, Zorg.Pdf.RenderOptions? right) -> bool
 static Zorg.Pdf.RenderOptions.operator ==(Zorg.Pdf.RenderOptions? left, Zorg.Pdf.RenderOptions? right) -> bool
@@ -1026,6 +1028,45 @@ Zorg.Pdf.SectionBreak.StartAt.init -> void
 override Zorg.Pdf.SectionBreak.ToString() -> string!
 static Zorg.Pdf.SectionBreak.operator !=(Zorg.Pdf.SectionBreak? left, Zorg.Pdf.SectionBreak? right) -> bool
 static Zorg.Pdf.SectionBreak.operator ==(Zorg.Pdf.SectionBreak? left, Zorg.Pdf.SectionBreak? right) -> bool
+Zorg.Pdf.Signing.IPdfSigner
+Zorg.Pdf.Signing.IPdfSigner.Algorithm.get -> Zorg.Pdf.Signing.PdfSignatureAlgorithm
+Zorg.Pdf.Signing.IPdfSigner.Certificate.get -> System.Security.Cryptography.X509Certificates.X509Certificate2!
+Zorg.Pdf.Signing.IPdfSigner.Chain.get -> System.Collections.Generic.IReadOnlyList<System.Security.Cryptography.X509Certificates.X509Certificate2!>!
+Zorg.Pdf.Signing.IPdfSigner.DigestAlgorithm.get -> System.Security.Cryptography.HashAlgorithmName
+Zorg.Pdf.Signing.IPdfSigner.SignDigestAsync(System.ReadOnlyMemory<byte> digest, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<byte[]!>
+Zorg.Pdf.Signing.PdfSignatureAlgorithm
+Zorg.Pdf.Signing.PdfSignatureAlgorithm.Ecdsa = 2 -> Zorg.Pdf.Signing.PdfSignatureAlgorithm
+Zorg.Pdf.Signing.PdfSignatureAlgorithm.RsaPkcs1 = 0 -> Zorg.Pdf.Signing.PdfSignatureAlgorithm
+Zorg.Pdf.Signing.PdfSignatureAlgorithm.RsaPss = 1 -> Zorg.Pdf.Signing.PdfSignatureAlgorithm
+Zorg.Pdf.Signing.PdfSignatureOptions
+Zorg.Pdf.Signing.PdfSignatureOptions.<Clone>$() -> Zorg.Pdf.Signing.PdfSignatureOptions!
+Zorg.Pdf.Signing.PdfSignatureOptions.ContactInfo.get -> string?
+Zorg.Pdf.Signing.PdfSignatureOptions.ContactInfo.init -> void
+Zorg.Pdf.Signing.PdfSignatureOptions.Deconstruct(out Zorg.Pdf.Signing.IPdfSigner! Signer) -> void
+const Zorg.Pdf.Signing.PdfSignatureOptions.DefaultReservedSize = 16384 -> int
+Zorg.Pdf.Signing.PdfSignatureOptions.Equals(Zorg.Pdf.Signing.PdfSignatureOptions? other) -> bool
+override Zorg.Pdf.Signing.PdfSignatureOptions.Equals(object? obj) -> bool
+Zorg.Pdf.Signing.PdfSignatureOptions.FieldName.get -> string!
+Zorg.Pdf.Signing.PdfSignatureOptions.FieldName.init -> void
+override Zorg.Pdf.Signing.PdfSignatureOptions.GetHashCode() -> int
+Zorg.Pdf.Signing.PdfSignatureOptions.Location.get -> string?
+Zorg.Pdf.Signing.PdfSignatureOptions.Location.init -> void
+Zorg.Pdf.Signing.PdfSignatureOptions.Name.get -> string?
+Zorg.Pdf.Signing.PdfSignatureOptions.Name.init -> void
+Zorg.Pdf.Signing.PdfSignatureOptions.PdfSignatureOptions(Zorg.Pdf.Signing.IPdfSigner! Signer) -> void
+Zorg.Pdf.Signing.PdfSignatureOptions.Reason.get -> string?
+Zorg.Pdf.Signing.PdfSignatureOptions.Reason.init -> void
+Zorg.Pdf.Signing.PdfSignatureOptions.ReservedSize.get -> int
+Zorg.Pdf.Signing.PdfSignatureOptions.ReservedSize.init -> void
+Zorg.Pdf.Signing.PdfSignatureOptions.Signer.get -> Zorg.Pdf.Signing.IPdfSigner!
+Zorg.Pdf.Signing.PdfSignatureOptions.Signer.init -> void
+Zorg.Pdf.Signing.PdfSignatureOptions.SigningTime.get -> System.DateTimeOffset?
+Zorg.Pdf.Signing.PdfSignatureOptions.SigningTime.init -> void
+override Zorg.Pdf.Signing.PdfSignatureOptions.ToString() -> string!
+static Zorg.Pdf.Signing.PdfSignatureOptions.operator !=(Zorg.Pdf.Signing.PdfSignatureOptions? left, Zorg.Pdf.Signing.PdfSignatureOptions? right) -> bool
+static Zorg.Pdf.Signing.PdfSignatureOptions.operator ==(Zorg.Pdf.Signing.PdfSignatureOptions? left, Zorg.Pdf.Signing.PdfSignatureOptions? right) -> bool
+Zorg.Pdf.Signing.PdfSigners
+static Zorg.Pdf.Signing.PdfSigners.FromCertificate(System.Security.Cryptography.X509Certificates.X509Certificate2! certificate, System.Collections.Generic.IEnumerable<System.Security.Cryptography.X509Certificates.X509Certificate2!>? chain = null, System.Security.Cryptography.HashAlgorithmName digestAlgorithm = default(System.Security.Cryptography.HashAlgorithmName), bool rsaPss = false) -> Zorg.Pdf.Signing.IPdfSigner!
 Zorg.Pdf.SlotImageSource
 override Zorg.Pdf.SlotImageSource.<Clone>$() -> Zorg.Pdf.SlotImageSource!
 Zorg.Pdf.SlotImageSource.Deconstruct(out string! Slot) -> void

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Zorg.Pdf.Fonts;
 using Zorg.Pdf.Layout;
+using Zorg.Pdf.Signing;
 using Zorg.Pdf.Validation;
 using Zorg.Pdf.Writing;
 
@@ -44,6 +45,7 @@ internal sealed partial class RenderEngine : IDisposable
     private readonly PdfObjectWriter _writer;
     private readonly DocumentWriter _documentWriter;
     private readonly Tagger _tagger;
+    private readonly PdfReference _signatureField; // The invisible signature field's widget, on the first page.
     private PageGeometry _geometry; // The content area: the page inside its margins, less the header and footer.
     private readonly PageGeometry _pageGeometry; // The page inside its margins.
     private readonly Dictionary<int, PreparedText> _prepared = [];
@@ -85,6 +87,12 @@ internal sealed partial class RenderEngine : IDisposable
         _geometry = _pageGeometry;
         _documentWriter = new DocumentWriter(_writer, _pageGeometry);
         _tagger = new Tagger(_writer);
+        if (options.Signature is { } signature)
+        {
+            _signatureField = _writer.Allocate();
+            _writer.Sign(_writer.Allocate(), signature);
+        }
+
         _geometry = MeasureBands();
         PrepareWatermark();
     }
@@ -150,6 +158,11 @@ internal sealed partial class RenderEngine : IDisposable
             }
         }
         Preflight.Check(document, styles, fonts, defaultFamily, options, synchronous, sink);
+        if (options.Signature is { } signing)
+        {
+            CheckSignature(signing);
+        }
+
         if (sink.HasErrors)
         {
             throw new PdfDocumentException(sink.ToImmutable());
@@ -166,6 +179,33 @@ internal sealed partial class RenderEngine : IDisposable
     }
 
     public void Dispose() => _writer.Dispose();
+
+    /// <summary>Checks the signature options before anything is written; a mistake there is the caller's, so it throws.</summary>
+    private static void CheckSignature(PdfSignatureOptions signature)
+    {
+        IPdfSigner signer = signature.Signer ?? throw new ArgumentException("PdfSignatureOptions.Signer is null.", nameof(signature));
+        if (signer.Certificate is null)
+        {
+            throw new ArgumentException("The signer has no certificate.", nameof(signature));
+        }
+
+        if (!CmsSignature.IsSupportedDigest(signer.DigestAlgorithm))
+        {
+            throw new ArgumentException($"The signer's digest {signer.DigestAlgorithm.Name} isn't supported. Use SHA256, SHA384 or SHA512.", nameof(signature));
+        }
+
+        if (string.IsNullOrEmpty(signature.FieldName) || signature.FieldName.Contains('.', StringComparison.Ordinal))
+        {
+            throw new ArgumentException("PdfSignatureOptions.FieldName must be a non-empty name without periods.", nameof(signature));
+        }
+
+        // The certificates and about 2 KB besides: attributes, algorithm identifiers and a signature of up to 4096-bit RSA.
+        int needed = signer.Certificate.RawDataMemory.Length + (signer.Chain?.Sum(c => c.RawDataMemory.Length) ?? 0) + 2048;
+        if (signature.ReservedSize is < 1024 or > 1024 * 1024 || needed > signature.ReservedSize)
+        {
+            throw new ArgumentException($"PdfSignatureOptions.ReservedSize ({signature.ReservedSize:N0} bytes) must be between 1 KB and 1 MB and hold the certificates, about {needed:N0} bytes here.", nameof(signature));
+        }
+    }
 
     private async ValueTask RunAsync(CancellationToken cancellationToken)
     {
@@ -245,7 +285,12 @@ internal sealed partial class RenderEngine : IDisposable
         }
 
         _tagger.Finish(_documentWriter.Pages);
-        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot, _outline, _destinations, PageLabels(), _attachments);
+        if (_signatureField.IsValid)
+        {
+            _documentWriter.WriteSignatureField(_signatureField, _writer.SignatureReference, _options.Signature!.FieldName);
+        }
+
+        PdfReference info = _documentWriter.Finish(_document, _options, _tagger.StructTreeRoot, _outline, _destinations, PageLabels(), _attachments, _signatureField);
         await _writer.FinishAsync(_documentWriter.Catalog, info, cancellationToken).ConfigureAwait(false);
     }
 
@@ -745,6 +790,11 @@ internal sealed partial class RenderEngine : IDisposable
         PdfReference? toc = TocStream();
         PdfReference? band = BandStream();
         PdfReference[] annotations = WriteLinkAnnotations();
+        if (_page == 0 && _signatureField.IsValid)
+        {
+            annotations = [.. annotations, _signatureField];
+        }
+
         _documentWriter.WritePage(_page, _tagger.PageKey(_page), _content.WrittenSpan, fonts, images, under, [.. toc is { } t ? [t] : Array.Empty<PdfReference>(), .. band is { } b ? [b] : Array.Empty<PdfReference>(), .. WatermarkOver()], WatermarkState(), annotations);
         await _writer.FlushIfNeededAsync(cancellationToken).ConfigureAwait(false);
         _options.Progress?.Report(new RenderProgress(_page + 1, _writer.Position));

@@ -31,6 +31,7 @@ Rules:
 | Package | Licence | Why | Risk |
 |---|---|---|---|
 | xunit.v3 4.0.2 | Apache-2.0 | Test framework | Low. |
+| System.Security.Cryptography.Pkcs 10.0.15 | MIT (checked in the `.nuspec`, 2026-11-15; published 2026-11-10, no advisories); no dependencies on `net10.0` | `SignedCms` checks the signatures Zorg.Pdf builds with `System.Formats.Asn1`: an independent CMS implementation as the oracle | Low. Tests only; the library ships without it. Microsoft's own packages don't wait out the 7-day age rule (maintainer, 2026-11-15). |
 | coverlet.MTP 10.1.0 | MIT | Coverage | Low. |
 
 ## Fonts (not shipped)
@@ -47,7 +48,7 @@ No font file is committed. Tests and the smoke run use a font installed on the m
 |---|---|---|---|
 | BenchmarkDotNet 0.15.8 | MIT (same version and review as Zorg.Imaging) | Measures speed and allocations | Low. Its dependencies stay in the benchmark project; nothing reaches `src/`. |
 | PDFsharp-MigraDoc 6.2.4 (and PDFsharp 6.2.4) | MIT (checked in both `.nuspec` files, 2026-11-14) | The managed baseline: the same invoice through MigraDoc's layout | Medium, contained. 6.2.4 is the **last MIT release**; 6.5.0 and later are AGPL-3.0 or commercial, so Dependabot ignores `>= 6.5.0` and the version must never be raised. Benchmarks only, never referenced from `src/` or `tests/`, and its source is never read (clean-room rule). |
-| System.Security.Cryptography.Pkcs 10.0.15 | MIT | Pinned up from the 8.0.1 MigraDoc asks for, which has advisories GHSA-2fmv-rv2c-59x7 and GHSA-846f-f764-76mx | Low. Benchmarks only. |
+| System.Security.Cryptography.Pkcs 10.0.15 | MIT | Pinned up from the 8.0.1 MigraDoc asks for, which has advisories GHSA-2fmv-rv2c-59x7 and GHSA-846f-f764-76mx. The same version as the tests | Low. Benchmarks only. |
 
 ## Considered and rejected
 

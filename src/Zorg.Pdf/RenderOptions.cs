@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Zorg.Pdf.Fonts;
 using Zorg.Pdf.Json;
+using Zorg.Pdf.Signing;
 
 namespace Zorg.Pdf;
 
@@ -73,6 +74,12 @@ public sealed record RenderOptions
 
     /// <summary>Extra XMP metadata, such as Factur-X's <c>fx:</c> properties. Described in the PDF/A extension schema under PDF/A.</summary>
     public ImmutableArray<XmpSchema> MetadataSchemas { get; init; } = [];
+
+    /// <summary>
+    /// Signs the document as it's written: a PAdES B-B signature in an invisible field. Null (the default): unsigned.
+    /// The key is only ever given here, in code; a JSON document can't carry one.
+    /// </summary>
+    public PdfSignatureOptions? Signature { get; init; }
 
     /// <summary>Told after each page reaches the output.</summary>
     public IProgress<RenderProgress>? Progress { get; init; }

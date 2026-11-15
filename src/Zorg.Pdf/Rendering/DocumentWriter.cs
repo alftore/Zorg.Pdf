@@ -171,8 +171,41 @@ internal sealed class DocumentWriter
         _writer.EndObject();
     }
 
+    /// <summary>
+    /// Writes an invisible signature field: the field and its widget in one dictionary, on the first page, with a
+    /// zero-size rectangle (ISO 32000-1, 12.7.4.5), its value the signature dictionary the writer finishes the file with.
+    /// </summary>
+    public void WriteSignatureField(PdfReference field, PdfReference signature, string name)
+    {
+        _writer.BeginObject(field);
+        _writer.BeginDictionary();
+        _writer.Name("Type"u8);
+        _writer.Name("Annot"u8);
+        _writer.Name("Subtype"u8);
+        _writer.Name("Widget"u8);
+        _writer.Name("FT"u8);
+        _writer.Name("Sig"u8);
+        _writer.Name("T"u8);
+        _writer.TextString(name);
+        _writer.Name("V"u8);
+        _writer.Reference(signature);
+        _writer.Name("Rect"u8);
+        _writer.BeginArray();
+        _writer.Integer(0);
+        _writer.Integer(0);
+        _writer.Integer(0);
+        _writer.Integer(0);
+        _writer.EndArray();
+        _writer.Name("F"u8);
+        _writer.Integer(132); // Print (PDF/A requires it) and Locked.
+        _writer.Name("P"u8);
+        _writer.Reference(_pages[0]);
+        _writer.EndDictionary();
+        _writer.EndObject();
+    }
+
     /// <summary>Writes the page tree, Info, XMP and catalog. Returns the Info dictionary for the trailer.</summary>
-    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot, IReadOnlyList<OutlineEntry> outline, IReadOnlyDictionary<string, (int Page, double Top)> destinations, IReadOnlyList<PageSection> labels, IReadOnlyList<(Attachment Attachment, ReadOnlyMemory<byte> Bytes)> attachments)
+    public PdfReference Finish(PdfDocument document, RenderOptions options, PdfReference structTreeRoot, IReadOnlyList<OutlineEntry> outline, IReadOnlyDictionary<string, (int Page, double Top)> destinations, IReadOnlyList<PageSection> labels, IReadOnlyList<(Attachment Attachment, ReadOnlyMemory<byte> Bytes)> attachments, PdfReference signatureField = default)
     {
         List<(byte[] Key, PdfReference Spec)> files = WriteAttachments(attachments, options);
         PdfReference? outlines = outline.Count > 0 ? WriteOutline(outline) : null;
@@ -326,6 +359,20 @@ internal sealed class DocumentWriter
                 _writer.EndDictionary();
             }
 
+            _writer.EndDictionary();
+        }
+
+        if (signatureField.IsValid)
+        {
+            // SigFlags 3: the document has signatures, and changes must be appended (ISO 32000-1, 12.7.2).
+            _writer.Name("AcroForm"u8);
+            _writer.BeginDictionary();
+            _writer.Name("Fields"u8);
+            _writer.BeginArray();
+            _writer.Reference(signatureField);
+            _writer.EndArray();
+            _writer.Name("SigFlags"u8);
+            _writer.Integer(3);
             _writer.EndDictionary();
         }
 

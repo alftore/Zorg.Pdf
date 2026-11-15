@@ -1,12 +1,15 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Zorg.Pdf.Signing;
 
 namespace Zorg.Pdf.Writing;
 
@@ -62,6 +65,9 @@ internal sealed class PdfObjectWriter : IDisposable
     private bool _finished;
     private bool _writingTrailer;
     private readonly bool _synchronous;
+    private (PdfReference Reference, PdfSignatureOptions Options)? _signature;
+    private IncrementalHash? _documentHash; // The signature's digest of the file, while signing.
+    private byte[]? _id;
 
     /// <param name="output">Where the file goes. Not closed.</param>
     /// <param name="version">The header version.</param>
@@ -101,6 +107,26 @@ internal sealed class PdfObjectWriter : IDisposable
         _offsets.Add(-1);
         return new PdfReference(_offsets.Count - 1);
     }
+
+    /// <summary>
+    /// Signs the file as it's finished: <paramref name="reference"/> becomes the signature dictionary, the last object
+    /// before the cross-reference section, with a <c>/ByteRange</c> covering every byte but its <c>/Contents</c>.
+    /// Must be called before anything is flushed.
+    /// </summary>
+    public void Sign(PdfReference reference, PdfSignatureOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (_flushed > 0 || _hashedInBuffer > 0 || _signature is not null)
+        {
+            throw new InvalidOperationException("Sign must be called once, before anything is flushed.");
+        }
+
+        _signature = (reference, options);
+        _documentHash = IncrementalHash.CreateHash(options.Signer.DigestAlgorithm);
+    }
+
+    /// <summary>The signature dictionary <see cref="Sign"/> was given, or the default reference when unsigned.</summary>
+    public PdfReference SignatureReference => _signature?.Reference ?? default;
 
     /// <summary>Starts an indirect object. Write exactly one value, then call <see cref="EndObject"/>.</summary>
     public void BeginObject(PdfReference reference)
@@ -321,6 +347,11 @@ internal sealed class PdfObjectWriter : IDisposable
     public ValueTask FinishAsync(PdfReference root, PdfReference info = default, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (_signature is not null)
+        {
+            return FinishSignedAsync(root, info, cancellationToken);
+        }
+
         WriteTrailer(root, info);
         if (_synchronous)
         {
@@ -359,14 +390,23 @@ internal sealed class PdfObjectWriter : IDisposable
             WriteObjectStream();
         }
 
+        CheckAllWritten(except: 0);
+        WriteCrossReferenceAndTrailer(root, info);
+    }
+
+    private void CheckAllWritten(int except)
+    {
         for (int i = 1; i < _offsets.Count; i++)
         {
-            if (_offsets[i] == -1)
+            if (_offsets[i] == -1 && i != except)
             {
                 throw new InvalidOperationException($"Object {i} was allocated but never written.");
             }
         }
+    }
 
+    private void WriteCrossReferenceAndTrailer(PdfReference root, PdfReference info)
+    {
         if (_objectStreams)
         {
             WriteCrossReferenceStream(root, info);
@@ -375,12 +415,7 @@ internal sealed class PdfObjectWriter : IDisposable
 
         long xref = Position;
         WriteCrossReferenceTable();
-
-        // The identifier hashes every byte so far, so two different documents never share one.
-        HashPending();
-        byte[] id = _hash!.GetHashAndReset().AsSpan(0, 16).ToArray();
-        _hash.Dispose();
-        _hash = null;
+        byte[] id = TakeId();
 
         _writingTrailer = true;
         PdfFormat.WriteAscii(_buffer, "trailer\n"u8);
@@ -407,7 +442,161 @@ internal sealed class PdfObjectWriter : IDisposable
         _finished = true;
     }
 
-    public void Dispose() => _hash?.Dispose();
+    /// <summary>
+    /// The file identifier: a hash of every byte so far, so two different documents never share one. A signed
+    /// file's covers everything before the signature dictionary.
+    /// </summary>
+    private byte[] TakeId()
+    {
+        if (_id is null)
+        {
+            HashPending();
+            _id = _hash!.GetHashAndReset().AsSpan(0, 16).ToArray();
+            _hash.Dispose();
+            _hash = null;
+        }
+
+        return _id;
+    }
+
+    /// <summary>The width of each byte range number: up to 9,999,999,999 bytes.</summary>
+    private const int ByteRangeField = 10;
+
+    /// <summary>The byte range's text: "[0 " and three blank fields, each followed by a space or the closing bracket.</summary>
+    private const int ByteRangeLength = 3 + (3 * (ByteRangeField + 1));
+
+    /// <summary>
+    /// Finishes a signed file. Everything is written as usual up to the signature dictionary; from there to the end
+    /// (the dictionary, a hole for the signature, the cross-reference section and trailer) stays in the buffer, so the
+    /// byte range can be filled in, the rest hashed and signed, and the signature put in the hole before the flush.
+    /// </summary>
+    private async ValueTask FinishSignedAsync(PdfReference root, PdfReference info, CancellationToken cancellationToken)
+    {
+        (PdfReference reference, PdfSignatureOptions options) = _signature!.Value;
+        EnsureNotFinished();
+        if (_open.IsValid)
+        {
+            throw new InvalidOperationException($"Object {_open.Number} is still open.");
+        }
+
+        if (_objectStreams)
+        {
+            WriteObjectStream();
+        }
+
+        CheckAllWritten(except: reference.Number);
+        TakeId(); // Also brings the document hash up to the signature dictionary.
+        using IncrementalHash documentHash = _documentHash!;
+        _documentHash = null;
+        int hashedTo = _hashedInBuffer;
+
+        (int byteRange, long contentsStart, long contentsEnd) = WriteSignatureDictionary(reference, options);
+        WriteCrossReferenceAndTrailer(root, info);
+
+        // Everything from the signature dictionary on is still in the buffer: fill in the byte range, then hash.
+        Span<byte> written = MemoryMarshal.AsMemory(_main.WrittenMemory).Span;
+        long[] ranges = [contentsStart, contentsEnd, Position - contentsEnd];
+        for (int i = 0; i < ranges.Length; i++)
+        {
+            bool formatted = ranges[i].TryFormat(written.Slice(byteRange + 3 + (i * (ByteRangeField + 1)), ByteRangeField), out _, provider: System.Globalization.CultureInfo.InvariantCulture);
+            Debug.Assert(formatted, "A byte range number is at most ten digits.");
+        }
+
+        int holeStart = (int)(contentsStart - _flushed), holeEnd = (int)(contentsEnd - _flushed);
+        documentHash.AppendData(written[hashedTo..holeStart]);
+        documentHash.AppendData(written[holeEnd..]);
+        byte[] digest = documentHash.GetHashAndReset();
+
+        ValueTask<byte[]> signing = CmsSignature.CreateAsync(options.Signer, digest, cancellationToken);
+        if (_synchronous && !signing.IsCompleted)
+        {
+            throw new PdfException("The signer didn't sign synchronously. Render with RenderAsync when the key is in a remote service.");
+        }
+
+        byte[] cms = await signing.ConfigureAwait(false);
+        if (cms.Length > options.ReservedSize)
+        {
+            throw new PdfException($"The signature is {cms.Length:N0} bytes, more than PdfSignatureOptions.ReservedSize ({options.ReservedSize:N0}). Set ReservedSize to at least {cms.Length}.");
+        }
+
+        Span<byte> hole = MemoryMarshal.AsMemory(_main.WrittenMemory).Span[(holeStart + 1)..];
+        for (int i = 0; i < cms.Length; i++)
+        {
+            hole[2 * i] = (byte)"0123456789ABCDEF"[cms[i] >> 4];
+            hole[(2 * i) + 1] = (byte)"0123456789ABCDEF"[cms[i] & 0xF];
+        }
+        if (_synchronous)
+        {
+            FinishSync();
+            return;
+        }
+
+        await FinishCoreAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Writes the signature dictionary (ISO 32000-1, 12.8.1) outside any object stream. The byte range is left as
+    /// fixed-width blanks and the contents as zeros, both filled in when the rest of the file is known. Returns where
+    /// the byte range starts in the buffer, and where the contents' hex string starts and ends in the file.
+    /// </summary>
+    private (int ByteRange, long ContentsStart, long ContentsEnd) WriteSignatureDictionary(PdfReference reference, PdfSignatureOptions options)
+    {
+        StartObject(reference, stream: true); // Not in an object stream: its bytes must be addressable.
+        _openIsStream = false;
+        BeginDictionary();
+        Name("Type"u8);
+        Name("Sig"u8);
+        Name("Filter"u8);
+        Name("Adobe.PPKLite"u8);
+        Name("SubFilter"u8);
+        Name("ETSI.CAdES.detached"u8);
+        TextEntry("Name"u8, options.Name);
+        Name("M"u8);
+        TextString(Rendering.DocumentWriter.PdfDate(options.SigningTime ?? DateTimeOffset.Now));
+        TextEntry("Reason"u8, options.Reason);
+        TextEntry("Location"u8, options.Location);
+        TextEntry("ContactInfo"u8, options.ContactInfo);
+
+        Name("ByteRange"u8);
+        Separate();
+        int byteRange = _main.WrittenCount;
+        Span<byte> blanks = _main.GetSpan(ByteRangeLength)[..ByteRangeLength];
+        blanks.Fill((byte)' ');
+        "[0"u8.CopyTo(blanks);
+        blanks[^1] = (byte)']';
+        _main.Advance(ByteRangeLength);
+        _needsSpace = true;
+
+        Name("Contents"u8);
+        Separate();
+        long contentsStart = Position;
+        int holeLength = 2 + (2 * options.ReservedSize);
+        Span<byte> hole = _main.GetSpan(holeLength)[..holeLength];
+        hole.Fill((byte)'0');
+        hole[0] = (byte)'<';
+        hole[^1] = (byte)'>';
+        _main.Advance(holeLength);
+        long contentsEnd = Position;
+        _needsSpace = true;
+        EndDictionary();
+        EndObject();
+        return (byteRange, contentsStart, contentsEnd);
+    }
+
+    private void TextEntry(ReadOnlySpan<byte> key, string? value)
+    {
+        if (value is not null)
+        {
+            Name(key);
+            TextString(value);
+        }
+    }
+
+    public void Dispose()
+    {
+        _hash?.Dispose();
+        _documentHash?.Dispose();
+    }
 
     private void WriteCrossReferenceTable()
     {
@@ -534,9 +723,10 @@ internal sealed class PdfObjectWriter : IDisposable
 
     private void HashPending()
     {
-        if (_hash is not null && _main.WrittenCount > _hashedInBuffer)
+        if (_main.WrittenCount > _hashedInBuffer)
         {
-            _hash.AppendData(_main.WrittenSpan[_hashedInBuffer..]);
+            _hash?.AppendData(_main.WrittenSpan[_hashedInBuffer..]);
+            _documentHash?.AppendData(_main.WrittenSpan[_hashedInBuffer..]);
         }
 
         _hashedInBuffer = _main.WrittenCount;
@@ -588,11 +778,7 @@ internal sealed class PdfObjectWriter : IDisposable
     {
         PdfReference self = Allocate();
         long xref = Position; // Where the stream object starts: nothing is written between here and it.
-
-        HashPending();
-        byte[] id = _hash!.GetHashAndReset().AsSpan(0, 16).ToArray();
-        _hash.Dispose();
-        _hash = null;
+        byte[] id = TakeId();
 
         int offsetBytes = 1;
         while (offsetBytes < 8 && xref >= 1L << (8 * offsetBytes))
