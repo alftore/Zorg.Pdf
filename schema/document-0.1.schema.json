@@ -217,7 +217,7 @@
         "keepWithNext": { "type": "boolean", "default": false },
         "id": { "$ref": "#/$defs/id" },
         "content": { "description": "Paragraphs, or repeat and when blocks that make them.", "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/block" } },
-        "preset": { "description": "din5008A: 85 x 45 mm at 20 mm from the left and 27 mm from the top; din5008B: the same at 45 mm from the top. Text starts 5 mm in.", "enum": ["none", "din5008A", "din5008B"] },
+        "preset": { "description": "din5008A: 85 x 45 mm at 20 mm from the left and 27 mm from the top; din5008B: the same at 45 mm from the top, text 5 mm in. norwegianWindow: 90 x 40 mm at 20 mm from the left and 40 mm from the top, text from 21.27 mm, with Posten's address rules checked.", "enum": ["none", "din5008A", "din5008B", "norwegianWindow"] },
         "x": { "$ref": "#/$defs/length" },
         "y": { "$ref": "#/$defs/length" },
         "width": { "$ref": "#/$defs/length" },

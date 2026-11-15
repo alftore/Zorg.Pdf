@@ -99,6 +99,9 @@ public sealed record TextBox : Block
             // DIN 5008: the address field is 85 × 45 mm, 20 mm from the left edge; its text starts at the 25 mm margin.
             TextBoxPreset.Din5008A => (Length.Mm(20), Length.Mm(27), Length.Mm(85), Length.Mm(45), new Thickness(Length.Zero, Length.Zero, Length.Zero, Length.Mm(5))),
             TextBoxPreset.Din5008B => (Length.Mm(20), Length.Mm(45), Length.Mm(85), Length.Mm(45), new Thickness(Length.Zero, Length.Zero, Length.Zero, Length.Mm(5))),
+            // Norwegian window letters: text at 21.27 mm (the common NS 4129 grid's first tab) and from 40 mm down,
+            // Posten's least distance from the envelope's top, in a field that stays above the first fold at 99 mm.
+            TextBoxPreset.NorwegianWindow => (Length.Mm(20), Length.Mm(40), Length.Mm(90), Length.Mm(40), new Thickness(Length.Zero, Length.Zero, Length.Zero, Length.Mm(1.27))),
             _ => ((Length?)null, (Length?)null, (Length?)null, (Length?)null, default(Thickness)),
         };
         x = X ?? x;
@@ -111,7 +114,7 @@ public sealed record TextBox : Block
     }
 }
 
-/// <summary>Standard places for a <see cref="TextBox"/>. In JSON <c>"din5008A"</c> or <c>"din5008B"</c>.</summary>
+/// <summary>Standard places for a <see cref="TextBox"/>. In JSON <c>"din5008A"</c>, <c>"din5008B"</c> or <c>"norwegianWindow"</c>.</summary>
 [JsonConverter(typeof(CamelCaseEnumConverter<TextBoxPreset>))]
 public enum TextBoxPreset
 {
@@ -129,6 +132,14 @@ public enum TextBoxPreset
     /// top, text from 25 mm. Check it against your envelope's window.
     /// </summary>
     Din5008B,
+
+    /// <summary>
+    /// The address field of a Norwegian letter for a window envelope (C5/E65, the A4 sheet folded in three): 90 × 40 mm,
+    /// 20 mm from the left and 40 mm from the top, text from 21.27 mm, where the tab grid common in Norwegian business
+    /// letters starts. Posten's rules for the address are checked (ZPDF-L008, L009). Not a claim of conformance with
+    /// NS 4129, whose text Zorg.Pdf's authors haven't seen. Check it against your envelope's window.
+    /// </summary>
+    NorwegianWindow,
 }
 
 /// <summary>What a <see cref="TextBox"/> does with text that doesn't fit. In JSON <c>"shrinkToFit"</c>, <c>"clip"</c> or <c>"visible"</c>.</summary>

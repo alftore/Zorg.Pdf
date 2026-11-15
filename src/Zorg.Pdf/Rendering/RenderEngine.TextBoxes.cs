@@ -15,6 +15,8 @@ namespace Zorg.Pdf.Rendering;
 internal sealed partial class RenderEngine
 {
     private const double DefaultMinTextSize = 6;
+
+    private static readonly string[] PostenFonts = ["Arial", "Courier New", "Verdana"];
     private const double ShrinkStep = 0.25;
 
     /// <summary>Multiplies every text size while a text box is laid out smaller; 1 otherwise.</summary>
@@ -28,6 +30,10 @@ internal sealed partial class RenderEngine
         double innerHeight = height - padding.Top.Points - padding.Bottom.Points;
         Paragraph[] paragraphs = [.. box.Content.IsDefault ? [] : box.Content.OfType<Paragraph>()];
         double body = paragraphs.Length == 0 ? 10 : _styles.For(paragraphs[0]).Size?.Points ?? 10;
+        if (box.Preset == TextBoxPreset.NorwegianWindow)
+        {
+            CheckPostenAddress(paragraphs, path);
+        }
 
         double scale = 1;
         if (box.Overflow == TextOverflow.ShrinkToFit && TextHeight(Layout(1, report: false), 1) > innerHeight + 0.01)
@@ -155,4 +161,45 @@ internal sealed partial class RenderEngine
     /// <summary>The height of laid-out paragraphs with the space between them (not after the last), scaled.</summary>
     private static double TextHeight(List<PreparedText> texts, double scale) =>
         texts.Sum(t => t.Lines.Sum(l => l.Height)) + texts.Take(texts.Count - 1).Sum(t => t.SpaceAfter * scale);
+
+    /// <summary>
+    /// Posten's rules for an address read by machine (Bring KK-833.12.2022): two lines or more, no blank lines, the
+    /// same font throughout, Arial or Courier New at 10 to 12 pt or Verdana at 9 to 12 pt, not bold, italic or underlined.
+    /// The layout rules are warnings; the type rules, which decide the discount for machine-sorted mail, information.
+    /// </summary>
+    private void CheckPostenAddress(Paragraph[] paragraphs, string path)
+    {
+        string[] lines = [.. paragraphs.Select(p => string.Concat(p.Inlines.Select(i => i is TextRun run ? run.Text : i is LineBreak ? "\n" : "")))];
+        int filled = lines.Count(l => !string.IsNullOrWhiteSpace(l)) + lines.Sum(l => l.Count(c => c == '\n'));
+        if (filled < 2)
+        {
+            _sink.Warning(DiagnosticCodes.AddressLayout, "Posten needs an address of two lines or more: name, then street or box, then postcode and town alone on the last line.", path);
+        }
+
+        int first = Array.FindIndex(lines, l => !string.IsNullOrWhiteSpace(l)), last = Array.FindLastIndex(lines, l => !string.IsNullOrWhiteSpace(l));
+        if (first >= 0 && lines[first..(last + 1)].Any(string.IsNullOrWhiteSpace))
+        {
+            _sink.Warning(DiagnosticCodes.AddressLayout, "The address has a blank line: Posten's machines read an address with even line spacing and no blank lines.", path);
+        }
+
+        var faces = new HashSet<(string? Family, double Size)>();
+        bool emphasis = false;
+        foreach (Paragraph paragraph in paragraphs)
+        {
+            TextStyle style = _styles.For(paragraph);
+            foreach (TextRun run in paragraph.Inlines.OfType<TextRun>())
+            {
+                TextStyle merged = run.Style is { } own ? style.Merge(own) : style;
+                faces.Add((merged.FontFamily ?? _defaultFamily, merged.Size?.Points ?? 10));
+                emphasis |= merged.Weight is FontWeight.Bold || merged.FontStyle is FontStyle.Italic;
+            }
+        }
+
+        bool sizeOk = faces.All(f => f.Family is "Verdana" ? f.Size is >= 9 and <= 12 : f.Size is >= 10 and <= 12);
+        bool familyOk = faces.All(f => f.Family is not null && PostenFonts.Contains(f.Family, StringComparer.OrdinalIgnoreCase));
+        if (emphasis || faces.Count > 1 || !sizeOk || !familyOk)
+        {
+            _sink.Info(DiagnosticCodes.AddressTypography, "For machine-sorted mail Posten wants the address in one font and size, Arial or Courier New at 10 to 12 pt or Verdana at 9 to 12 pt, not bold or italic.", path);
+        }
+    }
 }

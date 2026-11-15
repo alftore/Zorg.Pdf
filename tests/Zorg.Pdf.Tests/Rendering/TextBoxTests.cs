@@ -77,6 +77,27 @@ public sealed partial class TextBoxTests
     }
 
     [Fact]
+    public async Task ANorwegianWindowAddressSitsOnTheGridAndPostensRulesAreChecked()
+    {
+        static PdfDocument Letter(params Block[] address) => new("Brev") { Language = "nb", Content = [new TextBox([.. address]) { Preset = TextBoxPreset.NorwegianWindow }, new Spacer(Length.Mm(70)), new Paragraph("Hei Kari,")] };
+        RenderOptions options = PdfInspect.Options();
+
+        (byte[] file, RenderResult good) = await RenderTests.RenderAsync(Letter(new Paragraph("Kari Nordmann"), new Paragraph("Eksempelveien 12 B"), new Paragraph("0371 OSLO")), options);
+        (_, RenderResult oneLine) = await RenderTests.RenderAsync(Letter(new Paragraph("Kari Nordmann")), options);
+        (_, RenderResult blank) = await RenderTests.RenderAsync(Letter(new Paragraph("Kari Nordmann"), new Paragraph(""), new Paragraph("0371 OSLO")), options);
+        (_, RenderResult bold) = await RenderTests.RenderAsync(Letter(new Paragraph([new TextRun("Kari Nordmann") { Style = new TextStyle { Weight = FontWeight.Bold } }]), new Paragraph("0371 OSLO")), options);
+
+        (double x, double y) first = Positions(PdfInspect.PageContents(file)[0]).First();
+        Assert.Equal(Length.Mm(21.27).Points, first.x, 2);                                   // The grid's first tab.
+        Assert.InRange(Length.Mm(297).Points - Length.Mm(40).Points - first.y, 7, 10);     // From 40 mm down, Posten's least.
+        Assert.DoesNotContain(good.Diagnostics, d => d.Code == "ZPDF-L008");
+        Assert.Contains(oneLine.Diagnostics, d => d.Code == "ZPDF-L008" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.Contains(blank.Diagnostics, d => d.Code == "ZPDF-L008" && d.Message.Contains("blank", StringComparison.Ordinal));
+        Assert.Contains(bold.Diagnostics, d => d.Code == "ZPDF-L009" && d.Severity == DiagnosticSeverity.Info);
+        Assert.Equal(TextBoxPreset.NorwegianWindow, Assert.IsType<TextBox>(PdfDocument.ParseJson("""{"title":"x","content":[{"type":"textBox","preset":"norwegianWindow","content":[]}]}""").Content[0]).Preset);
+    }
+
+    [Fact]
     public async Task LongTextIsMadeSmallerToFitAndSaysSo()
     {
         var box = new TextBox([.. Enumerable.Range(1, 14).Select(i => (Block)new Paragraph($"Line {i}"))]) { Preset = TextBoxPreset.Din5008B };

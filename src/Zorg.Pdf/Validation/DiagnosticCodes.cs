@@ -96,6 +96,8 @@ internal static class DiagnosticCodes
     public const string TextShrunk = "ZPDF-L005";
     public const string TextOverflow = "ZPDF-L006";
     public const string TextBoxOffPage = "ZPDF-L007";
+    public const string AddressLayout = "ZPDF-L008";
+    public const string AddressTypography = "ZPDF-L009";
 
     // I: images.
     public const string ImageUnreadable = "ZPDF-I001";

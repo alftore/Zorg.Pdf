@@ -1047,6 +1047,7 @@ Zorg.Pdf.TextBoxPreset
 Zorg.Pdf.TextBoxPreset.Din5008A = 1 -> Zorg.Pdf.TextBoxPreset
 Zorg.Pdf.TextBoxPreset.Din5008B = 2 -> Zorg.Pdf.TextBoxPreset
 Zorg.Pdf.TextBoxPreset.None = 0 -> Zorg.Pdf.TextBoxPreset
+Zorg.Pdf.TextBoxPreset.NorwegianWindow = 3 -> Zorg.Pdf.TextBoxPreset
 Zorg.Pdf.TextOverflow
 Zorg.Pdf.TextOverflow.Clip = 1 -> Zorg.Pdf.TextOverflow
 Zorg.Pdf.TextOverflow.ShrinkToFit = 0 -> Zorg.Pdf.TextOverflow

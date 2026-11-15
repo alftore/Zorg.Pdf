@@ -78,6 +78,8 @@ Areas: **J** JSON and model shape, **D** data slots, **F** fonts, **T** text, **
 | ZPDF-L005 | Info | A text box's text was made smaller to fit (`overflow: shrinkToFit`). The message gives the size. | Nothing, or shorten the text, or make the box larger. |
 | ZPDF-L006 | Warning | A text box's text doesn't fit: lines were left out (`clip`, or `shrinkToFit` at its minimum size), or run past the box (`visible`). | Shorten the text, make the box larger, or lower `minSize`. |
 | ZPDF-L007 | Warning | A text box reaches past the edge of the page. | Move it or make it smaller. |
+| ZPDF-L008 | Warning | A `norwegianWindow` address has fewer than two lines, or a blank line: Posten's sorting machines may not read it. | Name on the first line, postcode and town alone on the last, no blank lines. |
+| ZPDF-L009 | Info | A `norwegianWindow` address isn't in one font and size from Posten's list (Arial or Courier New 10–12 pt, Verdana 9–12 pt) or is bold or italic, which Posten asks for in machine-sorted mail. | Give the address paragraphs a plain style in one of those fonts, or ignore it for ordinary mail. |
 | ZPDF-L004 | Error | The header and footer leave less than 36 pt of the page for the content. | Shorten the header or footer, use smaller text, or narrow the top and bottom margins. |
 | ZPDF-I001 | Error | An image can't be embedded: it isn't a JPEG or PNG, it's damaged, or it's a kind PDF can't hold (12-bit, lossless or arithmetic-coded JPEG). The message says which. | Save it again as an 8-bit baseline or progressive JPEG, or as a PNG. |
 | ZPDF-I002 | Error | An image is over `RenderOptions.Limits.MaxImageBytes` or `MaxImagePixels`. | Make the image smaller, or raise the limit if the input is trusted. |

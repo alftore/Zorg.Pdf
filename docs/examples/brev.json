@@ -1,0 +1,96 @@
+{
+  "$schema": "https://alftore.github.io/Zorg.Pdf/schema/document-0.1.schema.json",
+  "title": "Tilbud på rehabilitering av bad",
+  "language": "nb-NO",
+  "page": {
+    "size": "A4",
+    "margin": {
+      "top": "2cm",
+      "right": "2cm",
+      "bottom": "3cm",
+      "left": "2.127cm"
+    }
+  },
+  "footer": {
+    "content": [
+      {
+        "type": "paragraph",
+        "style": "sender",
+        "inlines": ["Flis & Fuge AS · Storgata 1, 0155 Oslo · Org.nr. 987 654 321 MVA · Konto 1234.56.78903 · post@flisogfuge.example · Side ", { "field": "pageNumber" }, " av ", { "field": "pageCount" }]
+      }
+    ]
+  },
+  "styles": {
+    "styles": {
+      "body": { "size": "11pt", "lineHeight": 1.3, "hyphens": "auto" },
+      "company": { "size": "16pt", "weight": "bold" },
+      "reference": { "size": "9pt", "lineHeight": 1.4 },
+      "sender": { "size": "7.5pt", "color": "#444444" }
+    }
+  },
+  "content": [
+    {
+      "type": "textBox",
+      "x": "2.127cm",
+      "y": "1.2cm",
+      "width": "8cm",
+      "height": "1.2cm",
+      "content": [{ "type": "paragraph", "style": "company", "inlines": ["Flis & Fuge AS"] }]
+    },
+    {
+      "type": "textBox",
+      "x": "11.27cm",
+      "y": "1.6cm",
+      "width": "7.7cm",
+      "height": "2.4cm",
+      "content": [
+        { "type": "paragraph", "style": "reference", "inlines": ["Vår dato: 15. november 2026"] },
+        { "type": "paragraph", "style": "reference", "inlines": ["Vår referanse: 2026/0042"] },
+        { "type": "paragraph", "style": "reference", "inlines": ["Deres referanse: Kari Nordmann"] },
+        { "type": "paragraph", "style": "reference", "inlines": ["Saksbehandler: Ola Hansen, tlf. 22 00 00 00"] }
+      ]
+    },
+    {
+      "type": "textBox",
+      "preset": "norwegianWindow",
+      "content": [
+        { "type": "paragraph", "inlines": ["Kari Nordmann"] },
+        { "type": "paragraph", "inlines": ["Eksempelveien 12 B"] },
+        { "type": "paragraph", "inlines": ["0371 OSLO"] }
+      ]
+    },
+    { "type": "spacer", "height": "6cm" },
+    {
+      "type": "heading",
+      "level": 1,
+      "inlines": ["Tilbud på rehabilitering av bad"]
+    },
+    { "type": "paragraph", "inlines": ["Hei Kari,"] },
+    {
+      "type": "paragraph",
+      "inlines": ["Takk for befaringen 10. november. Vi tilbyr å rehabilitere badet i 2. etasje som beskrevet under, med membran, nye fliser og montering av sanitærutstyr. Arbeidet tar om lag tre uker, og vi kan starte i uke 2."]
+    },
+    {
+      "type": "table",
+      "columns": [
+        { "header": "Arbeid", "width": "3*" },
+        { "header": "Pris eks. mva.", "width": "1*", "align": "right" }
+      ],
+      "rows": [
+        ["Riving og bortkjøring", "18 500,00"],
+        ["Membran og sluk", "24 000,00"],
+        ["Flislegging, vegg og gulv", "61 200,00"],
+        [{ "inlines": [{ "text": "Sum eks. mva.", "style": { "weight": "bold" } }] }, { "inlines": [{ "text": "103 700,00", "style": { "weight": "bold" } }] }]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": ["Tilbudet gjelder i 30 dager. Ta gjerne kontakt om noe er uklart."]
+    },
+    { "type": "paragraph", "inlines": ["Med vennlig hilsen"] },
+    { "type": "paragraph", "inlines": ["Flis & Fuge AS"] },
+    { "type": "spacer", "height": "0.8cm" },
+    { "type": "paragraph", "inlines": ["Ola Hansen", { "lineBreak": true }, "prosjektleder"] },
+    { "type": "paragraph", "inlines": ["Vedlegg: Beskrivelse av arbeidet"] }
+  ]
+}
