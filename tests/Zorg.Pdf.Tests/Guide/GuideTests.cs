@@ -17,7 +17,7 @@ public sealed partial class GuideTests
     [MemberData(nameof(Pages))]
     public void EveryCSharpBlockIsCompiledInGuideSnippets(string page)
     {
-        string snippets = Normalize(File.ReadAllText(RepoFiles.Path("tests", "Zorg.Pdf.Tests", "Guide", "GuideSnippets.cs")));
+        string snippets = string.Join('\n', Directory.GetFiles(RepoFiles.Path("tests", "Zorg.Pdf.Tests", "Guide"), "GuideSnippets*.cs").Order(StringComparer.Ordinal).Select(path => Normalize(File.ReadAllText(path))));
         foreach (Match block in Block().Matches(File.ReadAllText(RepoFiles.Path("docs", "guide", page))).Where(m => m.Groups[1].Value == "csharp"))
         {
             string code = Normalize(block.Groups[2].Value);
