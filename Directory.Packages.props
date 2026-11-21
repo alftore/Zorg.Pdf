@@ -13,7 +13,7 @@
 
   <ItemGroup Label="Runtime (add-on packages only)">
     <!-- Zorg.Pdf.Extensions.AI only. 10.11.0 rather than 11.0.0, which was four days old when this was added. -->
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="11.0.0" />
     <!-- Zorg.Pdf.Markdown only. BSD-2-Clause, no dependencies on net8.0+; 1.6.0 was 10 days old when added. -->
     <PackageVersion Include="Markdig" Version="1.6.0" />
     <!-- Zorg.Pdf.Imaging only. First-party, so it doesn't wait out the age rule. -->
@@ -25,12 +25,12 @@
     <!-- The last MIT release. 6.5.0 and later are AGPL-3.0 or commercial: never upgrade (see docs/dependencies.md). -->
     <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.4" />
     <!-- MigraDoc 6.2.4 asks for 8.0.1, which has advisories GHSA-2fmv-rv2c-59x7 and GHSA-846f-f764-76mx: pinned up. -->
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="11.0.0" />
   </ItemGroup>
 
   <ItemGroup Label="Tests">
     <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
-    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.15" />
   </ItemGroup>
 </Project>
